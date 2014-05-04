@@ -38,7 +38,7 @@ function testCoreRemoteConnectInternal() {
 
     local hn1 hn2
     hn1=$(hostname -f)
-    hn2=$(:remote:connect _ host-8c.unit-tests.mgmt.site -- hostname -f)
+    hn2=$(:remote:connect _ host-8c.unit-tests.mgmt.simbol -- hostname -f)
     assertTrue   1.1 $?
     assertEquals 1.2 "${hn1}" "${hn2}"
 }
@@ -49,7 +49,7 @@ function testCoreRemoteConnectPublic() {
 
     local hn1 hn2
     hn1=$(hostname -f)
-    hn2=$(core:wrapper remote connect -T _ host-8c.unit-tests.mgmt.site -- hostname -f)
+    hn2=$(core:wrapper remote connect -T _ host-8c.unit-tests.mgmt.simbol -- hostname -f)
     assertTrue   1.1 $?
     assertEquals 1.2 "${hn1}" "${hn2}"
 }
@@ -58,20 +58,20 @@ function testCoreRemoteConnectPublic() {
 function testCoreRemoteCopyInternal() {
     core:import remote
 
-    rm -f ${SITE_USER_CACHE}/hosts
+    rm -f ${SIMBOL_USER_CACHE}/hosts
 
-    :remote:copy _ host-8c.unit-tests.mgmt.site\
+    :remote:copy _ host-8c.unit-tests.mgmt.simbol\
         /etc/hosts\
-        ${SITE_USER_CACHE}/hosts
+        ${SIMBOL_USER_CACHE}/hosts
     assertTrue 1.1 $?
 
-    [ -f ${SITE_USER_CACHE}/hosts ]
+    [ -f ${SIMBOL_USER_CACHE}/hosts ]
     assertTrue 1.2 $?
 
-    if [ -f ${SITE_USER_CACHE}/hosts ]; then
+    if [ -f ${SIMBOL_USER_CACHE}/hosts ]; then
         local same
         same=$(
-            md5sum /etc/hosts ${SITE_USER_CACHE}/hosts |
+            md5sum /etc/hosts ${SIMBOL_USER_CACHE}/hosts |
             awk '{print$1}' |
             sort -u |
             wc -l
@@ -79,32 +79,32 @@ function testCoreRemoteCopyInternal() {
         assertEquals 1.3 1 ${same}
     fi
 
-    rm -f ${SITE_USER_CACHE}/hosts
+    rm -f ${SIMBOL_USER_CACHE}/hosts
 }
 #. }=-
 #. testCoreRemoteCopyPublic -={
 function testCoreRemoteCopyPublic() {
     core:import remote
 
-    rm -f ${SITE_USER_CACHE}/hosts
+    rm -f ${SIMBOL_USER_CACHE}/hosts
 
-    core:wrapper remote copy -T _ host-8c.unit-tests.mgmt.site\
-        /etc/hosts ${SITE_USER_CACHE}/hosts >${stdoutF?} 2>${stderrF?}
+    core:wrapper remote copy -T _ host-8c.unit-tests.mgmt.simbol\
+        /etc/hosts ${SIMBOL_USER_CACHE}/hosts >${stdoutF?} 2>${stderrF?}
     assertTrue 1.1 $?
 
-    [ -f ${SITE_USER_CACHE}/hosts ]
+    [ -f ${SIMBOL_USER_CACHE}/hosts ]
     assertTrue 1.2 $?
 
     local same
     same=$(
-        md5sum /etc/hosts ${SITE_USER_CACHE}/hosts |
+        md5sum /etc/hosts ${SIMBOL_USER_CACHE}/hosts |
         awk '{print$1}' |
         sort -u |
         wc -l
     )
     assertEquals 1.3 1 ${same}
 
-    rm -f ${SITE_USER_CACHE}/hosts
+    rm -f ${SIMBOL_USER_CACHE}/hosts
 }
 #. }=-
 #. testCoreRemoteSudoInternal -={

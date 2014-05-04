@@ -1,13 +1,13 @@
 #!/bin/bash
-source ~/.site/etc/site.conf
+source ~/.simbol/etc/simbol.conf
 
-_site() {
+_simbol() {
     COMPREPLY=()
 
     local cur="${COMP_WORDS[COMP_CWORD]}"
     local prev="${COMP_WORDS[COMP_CWORD-1]}"
     case ${prev} in
-        site)
+        simbol)
             local opts
             for profile in USER_MODULES CORE_MODULES; do
                 eval $(core:dereference.eval profile) #. Will create ${profile}
@@ -26,4 +26,4 @@ _site() {
         ;;
     esac
 }
-complete -F _site site
+complete -F _simbol simbol

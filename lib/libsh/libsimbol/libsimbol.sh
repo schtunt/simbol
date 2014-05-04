@@ -5,73 +5,73 @@ export NOW=$(date --utc +%s)
 #. FIXME: Mac OS X needs this instead:
 #. FIXME: export NOW=$(date -u +%s)
 
-export PS4=":\${BASH_SOURCE//\${SITE_USER}/}:\${LINENO} -> "
+export PS4=":\${BASH_SOURCE//\${SIMBOL_USER}/}:\${LINENO} -> "
 #. }=-
 #. 1.2  Paths -={
-: ${SITE_PROFILE?}
-export SITE_SITE_BASENAME=$(basename $0)
+: ${SIMBOL_PROFILE?}
+export SIMBOL_SIMBOL_BASENAME=$(basename $0)
 
-export SITE_SCM=$(readlink ~/.site/.scm)
+export SIMBOL_SCM=$(readlink ~/.simbol/.scm)
 
-export SITE_CORE=$(readlink ~/.site/.scm)
-export SITE_CORE_MOD=${SITE_CORE}/module
-export SITE_CORE_LIBEXEC=${SITE_CORE}/libexec
-export SITE_CORE_BIN=${SITE_CORE}/bin
-export SITE_CORE_LIB=${SITE_CORE}/lib
-export SITE_CORE_LIBPY=${SITE_CORE}/lib/libpy
-export SITE_CORE_LIBJS=${SITE_CORE}/lib/libjs
-export SITE_CORE_LIBSH=${SITE_CORE}/lib/libsh
-export SITE_UNIT=${SITE_CORE}/share/unit
-export SITE_UNIT_TESTS=${SITE_CORE}/share/unit/tests
-export SITE_UNIT_FILES=${SITE_CORE}/share/unit/tests
+export SIMBOL_CORE=$(readlink ~/.simbol/.scm)
+export SIMBOL_CORE_MOD=${SIMBOL_CORE}/module
+export SIMBOL_CORE_LIBEXEC=${SIMBOL_CORE}/libexec
+export SIMBOL_CORE_BIN=${SIMBOL_CORE}/bin
+export SIMBOL_CORE_LIB=${SIMBOL_CORE}/lib
+export SIMBOL_CORE_LIBPY=${SIMBOL_CORE}/lib/libpy
+export SIMBOL_CORE_LIBJS=${SIMBOL_CORE}/lib/libjs
+export SIMBOL_CORE_LIBSH=${SIMBOL_CORE}/lib/libsh
+export SIMBOL_UNIT=${SIMBOL_CORE}/share/unit
+export SIMBOL_UNIT_TESTS=${SIMBOL_CORE}/share/unit/tests
+export SIMBOL_UNIT_FILES=${SIMBOL_CORE}/share/unit/tests
 
-export SITE_USER=${HOME}/.site
-export SITE_USER_VAR=${SITE_USER}/var
-export SITE_USER_RUN=${SITE_USER}/var/run
-export SITE_USER_SCM=${SITE_USER}/var/scm
-export SITE_USER_CACHE=${SITE_USER}/var/cache
-export SITE_USER_ETC=${SITE_USER}/etc
-export SITE_USER_LOG=${SITE_USER}/var/log/site.log
-export SITE_USER_TMP=${SITE_USER}/var/tmp
-export SITE_USER_MOD=${SITE_USER}/module
-export SITE_USER_LIB=${SITE_USER}/var/lib
-export SITE_USER_LIBSH=${SITE_USER}/var/lib/libsh
-export SITE_USER_LIBPY=${SITE_USER}/var/lib/libpy
-export SITE_USER_LIBEXEC=${SITE_USER}/var/libexec
+export SIMBOL_USER=${HOME}/.simbol
+export SIMBOL_USER_VAR=${SIMBOL_USER}/var
+export SIMBOL_USER_RUN=${SIMBOL_USER}/var/run
+export SIMBOL_USER_SCM=${SIMBOL_USER}/var/scm
+export SIMBOL_USER_CACHE=${SIMBOL_USER}/var/cache
+export SIMBOL_USER_ETC=${SIMBOL_USER}/etc
+export SIMBOL_USER_LOG=${SIMBOL_USER}/var/log/simbol.log
+export SIMBOL_USER_TMP=${SIMBOL_USER}/var/tmp
+export SIMBOL_USER_MOD=${SIMBOL_USER}/module
+export SIMBOL_USER_LIB=${SIMBOL_USER}/var/lib
+export SIMBOL_USER_LIBSH=${SIMBOL_USER}/var/lib/libsh
+export SIMBOL_USER_LIBPY=${SIMBOL_USER}/var/lib/libpy
+export SIMBOL_USER_LIBEXEC=${SIMBOL_USER}/var/libexec
 
 #. Site's PATH
-PATH+=:${SITE_CORE_LIBEXEC}
-PATH+=:${SITE_USER_LIBEXEC}
+PATH+=:${SIMBOL_CORE_LIBEXEC}
+PATH+=:${SIMBOL_USER_LIBEXEC}
 export PATH
 
 export RBENV_VERSION=2.1.1
 #. Ruby -={
 #. rbenv
-RBENV_ROOT=${SITE_USER_VAR}/rbenv
+RBENV_ROOT=${SIMBOL_USER_VAR}/rbenv
 export RBENV_ROOT RBENV_VERSION
 #. }=-
 
 export PYENV_VERSION=3.4.0
 #. Python -={
-PYTHONPATH+=:${SITE_CORE_LIBPY}
-PYTHONPATH+=:${SITE_USER_LIBPY}
+PYTHONPATH+=:${SIMBOL_CORE_LIBPY}
+PYTHONPATH+=:${SIMBOL_USER_LIBPY}
 export PYTHONPATH
 
 #. pyenv
-PYENV_ROOT=${SITE_USER_VAR}/pyenv
+PYENV_ROOT=${SIMBOL_USER_VAR}/pyenv
 export PYENV_ROOT PYENV_VERSION
 #. }=-
 
 export PLENV_VERSION=5.18.2
 #. Perl -={
 #. plenv
-PLENV_ROOT=${SITE_USER_VAR}/plenv
+PLENV_ROOT=${SIMBOL_USER_VAR}/plenv
 export PLENV_ROOT PLENV_VERSION
 #. }=-
 
 #. shunit2 and shflags
-export SHUNIT2=${SITE_USER_LIBEXEC}/shunit2
-export SHFLAGS=${SITE_USER_LIBSH}/shflags
+export SHUNIT2=${SIMBOL_USER_LIBEXEC}/shunit2
+export SHFLAGS=${SIMBOL_USER_LIBSH}/shflags
 source ${SHFLAGS?}
 #. }=-
 #. 1.3  User/Profile Configuration -={
@@ -93,9 +93,9 @@ declare -gA USER_TLDS
 declare -gA USER_MON_CMDGRPREMOTE
 declare -gA USER_MON_CMDGRPLOCAL
 declare -g  USER_LOG_LEVEL=INFO
-source ${SITE_USER_ETC}/site.conf
+source ${SIMBOL_USER_ETC}/simbol.conf
 
-test ! -f ~/.siterc || source ~/.siterc
+test ! -f ~/.simbolrc || source ~/.simbolrc
 : ${USER_TLDS[@]?}
 : ${USER_FULLNAME?}
 : ${USER_USERNAME?}
@@ -113,15 +113,15 @@ declare g_TLDID=${USER_TLDID_DEFAULT:-_}
 
 declare -g g_SSH_OPT
 g_SSH_OPTS="-q"
-[ ! -e "${SITE_USER_ETC?}/ssh.conf" ] ||
-    g_SSH_OPTS+=" -F ${SITE_USER_ETC?}/ssh.conf"
+[ ! -e "${SIMBOL_USER_ETC?}/ssh.conf" ] ||
+    g_SSH_OPTS+=" -F ${SIMBOL_USER_ETC?}/ssh.conf"
 #. }=-
 #. 1.4  Core Configuration -={
 unset  CDPATH
-export SITE_DEADMAN=${SITE_USER_CACHE}/deadman
-export SITE_IN_COLOR=1
-export SITE_DATE_FORMAT="%x-%X"
-source ${SITE_CORE_MOD?}/cpf.sh
+export SIMBOL_DEADMAN=${SIMBOL_USER_CACHE}/deadman
+export SIMBOL_IN_COLOR=1
+export SIMBOL_DATE_FORMAT="%x-%X"
+source ${SIMBOL_CORE_MOD?}/cpf.sh
 #. }=-
 #. 1.7  Error Code Constants -={
 true
@@ -161,17 +161,17 @@ CODE_IMPORT_ADMIN=${CODE_E02}     #. administratively disabled
 CODE_IMPORT_UNDEF=${CODE_E03}     #. no such module
 CODE_IMPORT_UNSET=${CODE_E04}     #. no module set
 
-export SITE_DELIM=$(printf "\x07")
-export SITE_DELOM=$(printf "\x08")
+export SIMBOL_DELIM=$(printf "\x07")
+export SIMBOL_DELOM=$(printf "\x08")
 
 CODE_DEFAULT=${CODE_USAGE_FN_LONG?}
 #. }=-
 #. 1.8  Logging -={
-declare -A SITE_LOG_NAMES=(
+declare -A SIMBOL_LOG_NAMES=(
     [EMERG]=0 [ALERT]=1 [CRIT]=2 [ERR]=3
     [WARNING]=4 [NOTICE]=5 [INFO]=6 [DEBUG]=7
 )
-declare -A SITE_LOG_CODES=(
+declare -A SIMBOL_LOG_CODES=(
     [0]=EMERG [1]=ALERT [2]=CRIT [3]=ERR
     [4]=WARNING [5]=NOTICE [6]=INFO [7]=DEBUG
 )
@@ -180,11 +180,11 @@ function core:log() {
     local -i level
     case ${code} in
         EMERG|ALERT|CRIT|ERR|WARNING|NOTICE|INFO|DEBUG)
-            level=${SITE_LOG_NAMES[${code}]}
+            level=${SIMBOL_LOG_NAMES[${code}]}
         ;;
         *)
             code=EMERG
-            level=${SITE_LOG_NAMES[${code}]}
+            level=${SIMBOL_LOG_NAMES[${code}]}
         ;;
     esac
 
@@ -202,21 +202,21 @@ function core:log() {
         local caller=${FUNCNAME[${fi}]}
     fi
 
-    if [ ${SITE_LOG_NAMES[${USER_LOG_LEVEL?}]} -ge ${level} ]; then
-        declare ts=$(date +"${SITE_DATE_FORMAT?}")
+    if [ ${SIMBOL_LOG_NAMES[${USER_LOG_LEVEL?}]} -ge ${level} ]; then
+        declare ts=$(date +"${SIMBOL_DATE_FORMAT?}")
 
         declare msg=$(printf "%s; %5d; %8s[%24s];" "${ts}" "${$--1}" "${code}" "${caller}")
-        [ -e ${SITE_USER_LOG?} ] || touch ${SITE_USER_LOG?}
-        if [ -f ${SITE_USER_LOG} ]; then
-            chmod 600 ${SITE_USER_LOG?}
-            echo "${msg} ${*:2}" >> ${SITE_USER_LOG?}
+        [ -e ${SIMBOL_USER_LOG?} ] || touch ${SIMBOL_USER_LOG?}
+        if [ -f ${SIMBOL_USER_LOG} ]; then
+            chmod 600 ${SIMBOL_USER_LOG?}
+            echo "${msg} ${*:2}" >> ${SIMBOL_USER_LOG?}
         fi
         #printf "%s; %5d; %8s[%24s]; $@\n" "${ts}" "$$" "${code}" "$(sed -e 's/ /<-/g' <<< ${FUNCNAME[@]})" >> ${WMII_LOG}
     fi
 }
 #. }=-
 #. 1.9  Modules -={
-declare -A g_SITE_IMPORTED_EXIT
+declare -A g_SIMBOL_IMPORTED_EXIT
 
 function core:softimport() {
     #. 0: good module
@@ -228,26 +228,26 @@ function core:softimport() {
 
     if [ $# -eq 1 ]; then
         local module=$1
-        if [ -z "${g_SITE_IMPORTED_EXIT[${module}]}" ]; then
+        if [ -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
             if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
-                if [ -f ${SITE_USER_MOD}/${module}.sh ]; then
-                    if source ${SITE_USER_MOD}/${module}.sh >/tmp/site.${module}.ouch 2>&1; then
+                if [ -f ${SIMBOL_USER_MOD}/${module}.sh ]; then
+                    if source ${SIMBOL_USER_MOD}/${module}.sh >/tmp/simbol.${module}.ouch 2>&1; then
                         e=${CODE_IMPORT_GOOOD?}
                     else
                         e=${CODE_IMPORT_ERROR?}
                     fi
-                    rm -f /tmp/site.${module}.ouch
+                    rm -f /tmp/simbol.${module}.ouch
                 else
                     e=${CODE_IMPORT_UNDEF?}
                 fi
             elif [ ${CORE_MODULES[${module}]-9} -eq 1 ]; then
-                if [ -f ${SITE_CORE_MOD}/${module}.sh ]; then
-                    if source ${SITE_CORE_MOD}/${module}.sh >/tmp/site.${module}.ouch 2>&1; then
+                if [ -f ${SIMBOL_CORE_MOD}/${module}.sh ]; then
+                    if source ${SIMBOL_CORE_MOD}/${module}.sh >/tmp/simbol.${module}.ouch 2>&1; then
                         e=${CODE_IMPORT_GOOOD?}
                     else
                         e=${CODE_IMPORT_ERROR?}
                     fi
-                    rm -f /tmp/site.${module}.ouch
+                    rm -f /tmp/simbol.${module}.ouch
                 else
                     e=${CODE_IMPORT_UNDEF?}
                 fi
@@ -259,10 +259,10 @@ function core:softimport() {
             else
                 e=${CODE_IMPORT_UNDEF?}
             fi
-            g_SITE_IMPORTED_EXIT[${module}]=${e}
+            g_SIMBOL_IMPORTED_EXIT[${module}]=${e}
         else
             #. Import already attempted, reuse that result
-            e=${g_SITE_IMPORTED_EXIT[${module}]}
+            e=${g_SIMBOL_IMPORTED_EXIT[${module}]}
         fi
     else
         core:raise EXCEPTION_BAD_FN_CALL
@@ -285,7 +285,7 @@ function core:imported() {
 
     if [ $# -eq 1 ]; then
         local module=${1}
-        e=${g_SITE_IMPORTED_EXIT[${module}]}
+        e=${g_SIMBOL_IMPORTED_EXIT[${module}]}
         [ ${#e} -gt 0 ] || e=-1
     else
         core:raise EXCEPTION_BAD_FN_CALL
@@ -302,19 +302,19 @@ function core:docstring() {
 
         e=2 #. No such module
         if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
-            if [ -f ${SITE_USER_MOD}/${module}.sh ]; then
-                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SITE_USER_MOD}/${module}.sh
+            if [ -f ${SIMBOL_USER_MOD}/${module}.sh ]; then
+                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_USER_MOD}/${module}.sh
                 e=$?
             fi
         elif [ ${CORE_MODULES[${module}]-9} -eq 1 ]; then
-            if [ -f ${SITE_CORE_MOD}/${module}.sh ]; then
-                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SITE_CORE_MOD}/${module}.sh
+            if [ -f ${SIMBOL_CORE_MOD}/${module}.sh ]; then
+                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_CORE_MOD}/${module}.sh
                 e=$?
             fi
         elif [ ${CORE_MODULES[${module}]-9} -eq 0 -o ${USER_MODULES[${module}]-9} -eq 0 ]; then
             e=${CODE_FAILURE} #. Disabled
         fi
-        g_SITE_IMPORTED_EXIT[${module}]=$e
+        g_SIMBOL_IMPORTED_EXIT[${module}]=$e
     fi
 
     return $e
@@ -437,7 +437,7 @@ function core:requires() {
             core:softimport vault
             if [ $? -eq ${CODE_IMPORT_GOOOD?} ]; then
                 for required in ${@:2}; do
-                    if ! :vault:read ${SITE_USER_ETC}/site.vault ${required}; then
+                    if ! :vault:read ${SIMBOL_USER_ETC}/simbol.vault ${required}; then
                         core:log NOTICE "${caller} missing required secret ${required}"
                         e=${CODE_FAILURE}
                     fi
@@ -465,11 +465,11 @@ function core:requires() {
 #. >0 indeicates TTL in seconds
 declare -g g_CACHE_TTL=0
 
-mkdir -p ${SITE_USER_CACHE?}
-chmod 3770 ${SITE_USER_CACHE?} 2>/dev/null
+mkdir -p ${SIMBOL_USER_CACHE?}
+chmod 3770 ${SIMBOL_USER_CACHE?} 2>/dev/null
 
 #. Keep track if cache was used globally
-declare g_CACHE_USED=${SITE_USER_CACHE}/.cache_used
+declare g_CACHE_USED=${SIMBOL_USER_CACHE}/.cache_used
 rm -f ${g_CACHE_USED}
 
 CACHE_OUT='eval :core:cached "${*}" && return ${CODE_SUCCESS}'
@@ -544,7 +544,7 @@ function :core:cache:file() {
             effective_format=text
         fi
 
-        cachefile=${SITE_USER_CACHE}/${1//:/=}
+        cachefile=${SIMBOL_USER_CACHE}/${1//:/=}
         cachefile+=+${g_TLDID}
         cachefile+=+${g_VERBOSE}
         cachefile+=+$(echo -ne "${2}"|md5sum|awk '{print$1}')
@@ -576,7 +576,7 @@ function ::core:cache:cachetype() {
         local cachetype=file
 
         if [ "${cachefile:0:1}" == '/' ]; then
-            if [ "${cachefile//${SITE_USER_CACHE}/}" != "${cachefile}" ]; then
+            if [ "${cachefile//${SIMBOL_USER_CACHE}/}" != "${cachefile}" ]; then
                 cachetype=output
             fi
             e=${CODE_SUCCESS}
@@ -770,7 +770,7 @@ declare -g fn=${fn:-}
     FLAGS "${@}" >/dev/null 2>&1
     if [ $? -eq 0 ]; then
         #. GLOBAL_OPTS 3/4:
-        FLAGS_HELP="site ${module} ${fn} [<flags>]"
+        FLAGS_HELP="simbol ${module} ${fn} [<flags>]"
         #. Booleans get inverted:
         let g_HELP=~${FLAGS_help?}+2; unset FLAGS_help
         let g_VERBOSE=~${FLAGS_verbose?}+2; unset FLAGS_verbose
@@ -826,22 +826,22 @@ function :core:execute() {
 
             if [ "$(type -t ${module}:${fn})" == "function" ]; then
                 case ${g_FORMAT} in
-                    dot|text|png)    SITE_IN_COLOR=0 ${module}:${fn} "${@:3}";;
-                    html|email)      SITE_IN_COLOR=1 ${module}:${fn} "${@:3}";;
+                    dot|text|png)    SIMBOL_IN_COLOR=0 ${module}:${fn} "${@:3}";;
+                    html|email)      SIMBOL_IN_COLOR=1 ${module}:${fn} "${@:3}";;
                     ansi)
                         if [ -t 1 ]; then
-                            SITE_IN_COLOR=1 ${module}:${fn} "${@:3}"
+                            SIMBOL_IN_COLOR=1 ${module}:${fn} "${@:3}"
                         else
-                            SITE_IN_COLOR=0 ${module}:${fn} "${@:3}"
+                            SIMBOL_IN_COLOR=0 ${module}:${fn} "${@:3}"
                         fi
                     ;;
                     *) core:raise EXCEPTION_SHOULD_NOT_GET_HERE "Format checks should have already taken place!";;
                 esac
                 e=$?
 
-                if [ ${SITE_IN_COLOR} -eq 1 ]; then
+                if [ ${SIMBOL_IN_COLOR} -eq 1 ]; then
                     if [ "$(type -t ${module}:${fn}:alert)" == "function" ]; then
-                        cpf "%{r:ALERTS}%{bl:@}%{g:${SITE_PROFILE}} %{!function:${module} ${fn}}:\n"
+                        cpf "%{r:ALERTS}%{bl:@}%{g:${SIMBOL_PROFILE}} %{!function:${module} ${fn}}:\n"
                         while read line; do
                             set ${line}
                             local alert=$1
@@ -878,7 +878,7 @@ function :core:execute() {
         fi
     fi
 
-    if [ ${SITE_IN_COLOR} -eq 1 -a $e -eq 0 -a ${SECONDS} -ge 30 ]; then
+    if [ ${SIMBOL_IN_COLOR} -eq 1 -a $e -eq 0 -a ${SECONDS} -ge 30 ]; then
         theme INFO "Execution time was ${SECONDS} seconds"
     fi
 
@@ -886,7 +886,7 @@ function :core:execute() {
 }
 
 function :core:git() {
-    cd ${SITE_SCM?}
+    cd ${SIMBOL_SCM?}
     git "$@"
     return $?
 }
@@ -950,19 +950,19 @@ function :core:usage() {
     [ $# -eq 2 ] && mode=${3---long}
 
     if [ ${#FUNCNAME[@]} -lt 4 ]; then
-        cpf "%{+bo}%{bl:site}%{-bo} %{@version:%s}, %{wh:the system-administration bash scripting suite}\n" $(:core:git describe "--always")
+        cpf "%{+bo}%{bl:simbol}%{-bo} %{@version:%s}, %{wh:the system-administration bash scripting suite}\n" $(:core:git describe "--always")
         cpf "Using %{@path:%s} %{@version:%s}" "${BASH}" "${BASH_VERSION}"
-        if [ ${#SITE_SHELL} -eq 0 ]; then
-            cpf " %{@comment:(export SITE_SHELL to override)}"
+        if [ ${#SIMBOL_SHELL} -eq 0 ]; then
+            cpf " %{@comment:(export SIMBOL_SHELL to override)}"
         else
-            cpf " %{r:(SITE_SHELL override active)}"
+            cpf " %{r:(SIMBOL_SHELL override active)}"
         fi
         printf "\n\n"
     fi
 
     if [ $# -eq 0 ]; then
-        #. Usage for site
-        cpf "%{wh:usage}%{bl:4}%{@user:${USER_USERNAME}}%{bl:@}%{g:${SITE_PROFILE}}\n"
+        #. Usage for simbol
+        cpf "%{wh:usage}%{bl:4}%{@user:${USER_USERNAME}}%{bl:@}%{g:${SIMBOL_PROFILE}}\n"
         #. FIXME
         for profile in USER_MODULES USER_MODULES CORE_MODULES; do
             eval $(::core:dereference.eval profile) #. Will create ${profile} array
@@ -987,7 +987,7 @@ function :core:usage() {
                 fi
 
                 cpf "%{bl:%s} %{!module:%s}:%{+bo}%{@int:%s}%{-bo}/%{@int:%s}"\
-                    "${SITE_BASENAME}" "${module}"\
+                    "${SIMBOL_BASENAME}" "${module}"\
                     "${#fn_public[@]}" "${#fn_private[@]}"
 
                 if [ $ie -eq ${CODE_IMPORT_GOOOD?} ]; then
@@ -1002,7 +1002,7 @@ function :core:usage() {
         local -i ie=$?
         if [ $ie -eq ${CODE_IMPORT_GOOOD?} ]; then
             if [ ${g_ONCE_WHOAMI:-0} -eq 0 ]; then
-                cpf "%{wh:usage}%{bl:4}%{@user:${USER_USERNAME}}%{bl:@}%{g:${SITE_PROFILE}} %{!module:${module}}\n"
+                cpf "%{wh:usage}%{bl:4}%{@user:${USER_USERNAME}}%{bl:@}%{g:${SIMBOL_PROFILE}} %{!module:${module}}\n"
                 g_ONCE_WHOAMI=1
             fi
 
@@ -1012,17 +1012,17 @@ function :core:usage() {
                 local usagestr="{no-args}"
                 if [ "$(type -t ${usage_fn})" == "function" ]; then
                     usagestr="$(${usage_fn})"
-                    cpf "    %{bl:${SITE_BASENAME}} %{!function:${module}:${fn}} %{c:%s}\n" "${usagestr}"
+                    cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{c:%s}\n" "${usagestr}"
                 else
-                    cpf "    %{bl:${SITE_BASENAME}} %{!function:${module}:${fn}} %{bl:%s}\n" "${usagestr}"
+                    cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{bl:%s}\n" "${usagestr}"
                 fi
             done
 
             if [ ${g_VERBOSE?} -eq 1 -a ${#FUNCNAME[@]} -lt 4 ]; then
                 cpf "\n%{!module:${module}} %{g:changelog}\n"
-                local modfile=${SITE_USER_MOD}/${module}
-                [ -f ${modfile} ] || modfile=${SITE_CORE_MOD}/${module}
-                cd ${SITE_CORE}
+                local modfile=${SIMBOL_USER_MOD}/${module}
+                [ -f ${modfile} ] || modfile=${SIMBOL_CORE_MOD}/${module}
+                cd ${SIMBOL_CORE}
                 :core:git --no-pager\
                     log --follow --all --format=format:'    |___%C(bold blue)%h%C(reset) %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(bold white)— %an%C(reset)%C(bold yellow)%d%C(reset)'\
                     --abbrev-commit --date=relative -- "${modfile}"
@@ -1032,8 +1032,8 @@ function :core:usage() {
             echo
         fi
     elif [ $# -ge 2 ]; then
-        cpf "%{wh:usage}%{bl:4}%{@user:${USER_USERNAME}}%{bl:@}%{g:${SITE_PROFILE}} %{!function:${module}:${fn}}\n"
-        cpf "    %{bl:${SITE_BASENAME}} %{!function:${module}:${fn}} "
+        cpf "%{wh:usage}%{bl:4}%{@user:${USER_USERNAME}}%{bl:@}%{g:${SIMBOL_PROFILE}} %{!function:${module}:${fn}}\n"
+        cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} "
 
         local usage_s=${module}:${fn}:usage
         if [ "$(type -t $usage_s)" == "function" ]; then
@@ -1082,7 +1082,7 @@ function :core:complete() {
 }
 
 function core:wrapper() {
-    if [ -e ${SITE_DEADMAN?} ]; then
+    if [ -e ${SIMBOL_DEADMAN?} ]; then
         theme HAS_FAILED "CRITICAL ERROR; ABORTING!" >&2
         exit 1
     fi
@@ -1123,13 +1123,13 @@ function core:wrapper() {
                     if [ ${g_FORMAT?} == "email" ]; then
                         :core:execute ${module} ${completed} "${@}" 2>&1 |
                             grep --color -E "${regex}" |
-                            ${SITE_CORE_LIBEXEC}/ansi2html |
+                            ${SIMBOL_CORE_LIBEXEC}/ansi2html |
                             mail -a "Content-type: text/html" -s "Site Report [${module} ${completed} ${@}]" ${USER_EMAIL}
                         e=${PIPESTATUS[3]}
                     elif [ ${g_FORMAT?} == "html" ]; then
                         :core:execute ${module} ${completed} "${@}" 2>&1 |
                             grep --color -E "${regex}" |
-                            ${SITE_CORE_LIBEXEC}/ansi2html
+                            ${SIMBOL_CORE_LIBEXEC}/ansi2html
                         e=${PIPESTATUS[2]}
                     elif [ -z "${supported_formats[${g_FORMAT}]}" ]; then
                         theme ERR_USAGE "That is not a supported format."
@@ -1151,7 +1151,7 @@ function core:wrapper() {
             elif [ ${#completed[@]} -gt 1 ]; then
                 theme ERR_USAGE "Did you mean one of the following:"
                 for acfn in ${completed[@]}; do
-                    echo "    ${SITE_BASENAME} ${module} ${acfn}"
+                    echo "    ${SIMBOL_BASENAME} ${module} ${acfn}"
                 done
                 e=${CODE_USAGE_FN_GUESS}
             else
@@ -1166,7 +1166,7 @@ function core:wrapper() {
             e=${CODE_FAILURE}
         ;;
         ${CODE_IMPORT_ERROR?}/*/*)
-            theme HAS_FAILED "Module ${module} has errors; see ${SITE_USER_LOG}"
+            theme HAS_FAILED "Module ${module} has errors; see ${SIMBOL_USER_LOG}"
             e=${CODE_FAILURE}
         ;;
         ${CODE_IMPORT_ADMIN?}/*/*)
@@ -1228,7 +1228,7 @@ function core:raise() {
             local code=$(sed -n "${BASH_LINENO[i]}{s/^ *//;p}" "${BASH_SOURCE[i+1]}")
             cpf "    %{wh:>>>} %{c}${code}%{N}\n"
         done
-    ) > ${SITE_DEADMAN?}
+    ) > ${SIMBOL_DEADMAN?}
 
     local -i e=$1
 
@@ -1240,14 +1240,14 @@ function core:raise() {
         if [ ${#module} -gt 0 ]; then
             if [ ${#fn} -gt 0 ]; then
                 cpf "Function %{c:${module}:${fn}()}" 1>&2
-                echo "Critical failure in function ${module}:${fn}()" >> ${SITE_DEADMAN?}
+                echo "Critical failure in function ${module}:${fn}()" >> ${SIMBOL_DEADMAN?}
             else
                 cpf "Module %{c:${module}}" 1>&2
-                echo "Critical failure in module ${module}" >> ${SITE_DEADMAN?}
+                echo "Critical failure in module ${module}" >> ${SIMBOL_DEADMAN?}
             fi
         else
             cpf "File %{@path:$0}" 1>&2
-            echo "Critical failure in file ${0}" >> ${SITE_DEADMAN?}
+            echo "Critical failure in file ${0}" >> ${SIMBOL_DEADMAN?}
         fi
 
         cpf " %{r:failed with exception} %{g:$e}; %{c:traceback}:\n" 1>&2

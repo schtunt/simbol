@@ -1,7 +1,7 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
 :<<[core:docstring]
-The site remote access/execution module (ssh, ssh/sudo, tmux, etc.)
+The simbol remote access/execution module (ssh, ssh/sudo, tmux, etc.)
 [core:docstring]
 
 #. Remote Execution/Monitoring -={
@@ -197,7 +197,7 @@ function remote:connect() {
 #           local sshproxystr=$(:remote:sshproxystr ${tldid})
 #           if [ $? -eq ${CODE_SUCCESS?} ]; then
 #               #. If bouncing, use the FQDN as we don't know if the remote host
-#               #. will resolve like out local site host:
+#               #. will resolve like out local simbol host:
 #               local hcs=${fqdn}
 #           fi
 
@@ -225,7 +225,7 @@ function :remote:copy:cached() { echo 3600; }
 function :remote:copy:cachefile() { echo $4; }
 function :remote:copy() {
   ${CACHE_OUT?}; {
-    #. Usage: :remote:copy m <fqdn> /etc/security/access.conf ${SITE_USER_CACHE?}/${fqdn}-access.conf
+    #. Usage: :remote:copy m <fqdn> /etc/security/access.conf ${SIMBOL_USER_CACHE?}/${fqdn}-access.conf
 
     local -i e=${CODE_FAILURE?}
 
@@ -358,7 +358,7 @@ function remote:sudo() {
 #           local sshproxystr=$(:remote:sshproxystr ${tldid})
 #           if [ $? -eq ${CODE_SUCCESS?} ]; then
 #               #. If bouncing, use the FQDN as we don't know if the remote host
-#               #. will resolve like out local site host:
+#               #. will resolve like out local simbol host:
 #               local hcs=${fqdn}
 #           fi
 
@@ -521,8 +521,8 @@ function ::remote:tmux() {
                     [ ${lpid} -eq 0 ] || tmux split-window -h
                     cpf "Connection %{g:${tab}}:%{@int:${pid}} to %{@host:${hosts[${pid}]}}..."
                     #if [[ ${hosts[${pid}]} =~ /
-                    tmux send-keys -t "${lpid}" "site remote connect '${hosts[${pid}]}'" C-m
-                    #tmux send-keys -t "${lpid}" "${SITE_CORE_BIN?}/ssh ${hosts[${pid}]}" C-m
+                    tmux send-keys -t "${lpid}" "simbol remote connect '${hosts[${pid}]}'" C-m
+                    #tmux send-keys -t "${lpid}" "${SIMBOL_CORE_BIN?}/ssh ${hosts[${pid}]}" C-m
                     #XXX tmux send-keys -t "${lpid}" "ss${tldid} ${hosts[${pid}]}" C-m
                     tmux select-layout -t "${session}:${tab}" tiled >/dev/null
                     theme HAS_PASSED "${tab}:${pid}"
@@ -695,7 +695,7 @@ function remote:mon() {
                     local script=
 
                     ::xplm:loadvirtenv rb
-                    script="${SITE_CORE_LIBEXEC?}/ssh.rb ${threads} 1 ${timeout} mod_hgd=${csv_hosts} ${rcmd}"
+                    script="${SIMBOL_CORE_LIBEXEC?}/ssh.rb ${threads} 1 ${timeout} mod_hgd=${csv_hosts} ${rcmd}"
                     #echo "#. DEBUG: ${script}" >&2
 
 #                   local sshproxystr=$(:remote:sshproxystr ${tldid})

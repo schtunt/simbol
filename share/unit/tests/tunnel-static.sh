@@ -31,21 +31,21 @@ function tunnelSetUp() {
 function test_1_0_CoreTunnelStartPublic() {
     core:import tunnel
 
-    core:wrapper tunnel start host-8c.unit-tests.mgmt.site >${stdoutF?} 2>${stderrF?}
+    core:wrapper tunnel start host-8c.unit-tests.mgmt.simbol >${stdoutF?} 2>${stderrF?}
     assertTrue "0x1" $?
 }
 
 function test_1_1_CoreTunnelStartInternal() {
     core:import tunnel
 
-    :tunnel:start host-8c.unit-tests.mgmt.site 22
+    :tunnel:start host-8c.unit-tests.mgmt.simbol 22
     assertEquals "0x2" ${CODE_E01?} $?
 }
 
 function test_1_2_CoreTunnelStartPublic() {
     core:import tunnel
 
-    core:wrapper tunnel start host-8c.unit-tests.mgmt.site >${stdoutF?} 2>${stderrF?}
+    core:wrapper tunnel start host-8c.unit-tests.mgmt.simbol >${stdoutF?} 2>${stderrF?}
     assertTrue "0x1" $?
 }
 
@@ -55,20 +55,20 @@ function test_1_3_CoreTunnelCreateInternal() {
     :net:localportping 8000
     assertFalse "0x1" $?
 
-    :tunnel:create host-8c.unit-tests.mgmt.site localhost 8000 localhost 22
+    :tunnel:create host-8c.unit-tests.mgmt.simbol localhost 8000 localhost 22
     assertTrue "0x2" $?
 
     :net:localportping 8000
     assertTrue "0x3" $?
 
-    :tunnel:create host-8c.unit-tests.mgmt.site localhost 8000 localhost 22
+    :tunnel:create host-8c.unit-tests.mgmt.simbol localhost 8000 localhost 22
     assertEquals "0x4" ${CODE_E01?} $?
 }
 
 function test_1_4_CoreTunnelCreatePublic() {
     core:import tunnel
 
-    core:wrapper tunnel create host-8c.unit-tests.mgmt.site\
+    core:wrapper tunnel create host-8c.unit-tests.mgmt.simbol\
         -l localhost 8000 -r localhost 22 >${stdoutF?} 2>${stderrF?}
     assertEquals "0x4" ${CODE_E01?} $?
 }
@@ -76,14 +76,14 @@ function test_1_4_CoreTunnelCreatePublic() {
 function test_1_5_CoreTunnelStatusPublic() {
     core:import tunnel
 
-    core:wrapper tunnel status host-8c.unit-tests.mgmt.site >${stdoutF?} 2>${stderrF?}
+    core:wrapper tunnel status host-8c.unit-tests.mgmt.simbol >${stdoutF?} 2>${stderrF?}
     assertTrue "0x0" $?
 }
 
 function test_1_6_CoreTunnelPidInternal() {
     core:import tunnel
 
-    g_PID=$(:tunnel:pid host-8c.unit-tests.mgmt.site)
+    g_PID=$(:tunnel:pid host-8c.unit-tests.mgmt.simbol)
     assertTrue "0x1" $?
 
     [ ${g_PID} -gt 0 ]
@@ -105,13 +105,13 @@ function test_1_8_CoreTunnelStopInternal() {
     core:import tunnel
 
     local -i pid
-    pid=$(:tunnel:stop host-8c.unit-tests.mgmt.site)
+    pid=$(:tunnel:stop host-8c.unit-tests.mgmt.simbol)
     assertTrue "0x0" $?
 
     [ ${pid} -eq ${g_PID} ]
     assertTrue "0x1" $?
 
-    pid=$(:tunnel:stop host-8c.unit-tests.mgmt.site)
+    pid=$(:tunnel:stop host-8c.unit-tests.mgmt.simbol)
     assertFalse "0x2" $?
 
     [ ${pid} -eq 0 ]
@@ -121,6 +121,6 @@ function test_1_8_CoreTunnelStopInternal() {
 function test_1_9_CoreTunnelStopPublic() {
     core:import tunnel
 
-    core:wrapper tunnel stop host-8c.unit-tests.mgmt.site >${stdoutF?} 2>${stderrF?}
+    core:wrapper tunnel stop host-8c.unit-tests.mgmt.simbol >${stdoutF?} 2>${stderrF?}
     assertTrue "0x1" $?
 }

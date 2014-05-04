@@ -11,10 +11,10 @@ core:requires pwgen
 core:requires shred
 core:requires xclip
 
-g_VAULT=${SITE_USER_ETC?}/site.vault
-g_VAULT_TMP=${SITE_USER_TMP?}/vault.killme
-g_VAULT_TS=${SITE_USER_TMP?}/vault.timestamp
-g_VAULT_BU=${SITE_USER_TMP?}/vault.$(date +'%Y%m%d')
+g_VAULT=${SIMBOL_USER_ETC?}/simbol.vault
+g_VAULT_TMP=${SIMBOL_USER_TMP?}/vault.killme
+g_VAULT_TS=${SIMBOL_USER_TMP?}/vault.timestamp
+g_VAULT_BU=${SIMBOL_USER_TMP?}/vault.$(date +'%Y%m%d')
 
 #. vault:clean -={
 #function ::vault:draw() {
@@ -37,7 +37,7 @@ function ::vault:clean() {
 #    local -i e=${CODE_FAILURE?}
 #
 #    if [ $# -eq 1 ]; then
-#        ${SITE_CORE_LIBEXEC?}/secret $1
+#        ${SIMBOL_CORE_LIBEXEC?}/secret $1
 #        e=$?
 #    else
 #        core:raise EXCEPTION_BAD_FN_CALL

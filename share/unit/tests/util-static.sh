@@ -17,7 +17,7 @@ function testCoreUtilUndelimitInternal() {
 function testCoreUtilJoinInternal() {
     core:import util
 
-    local -a string="b${SITE_DELIM}a${SITE_DELIM}d${SITE_DELIM}b${SITE_DELIM}a${SITE_DELIM}b${SITE_DELIM}e"
+    local -a string="b${SIMBOL_DELIM}a${SIMBOL_DELIM}d${SIMBOL_DELIM}b${SIMBOL_DELIM}a${SIMBOL_DELIM}b${SIMBOL_DELIM}e"
     echo "${string}" | :util:undelimit >${stdoutF?} 2>${stderrF?}
     assertTrue ':util:undelimit.0' $?
     assertEquals ':util:undelimit.1' "$(cat ${stdoutF})" "$(cat <<!

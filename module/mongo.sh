@@ -9,7 +9,7 @@ core:import util
 core:requires mongo
 
 #. mongo:query -={
-#site mongo :query BC 'qdn=/server/' qdn
+#simbol mongo :query BC 'qdn=/server/' qdn
 function :mongo:query() {
     local -i e=${CODE_FAILURE?}
 
@@ -28,7 +28,7 @@ function :mongo:query() {
         done
 
         if [ ${#display[@]} -gt 0 ]; then
-            #"load(\"${SITE_CORE_LIBJS?}/mongo/helper.js\")"
+            #"load(\"${SIMBOL_CORE_LIBJS?}/mongo/helper.js\")"
             local -a jseval=(
                 "var filters = { $(:util:join ', ' filters) }"
                 "var data = db.${collection}.find(filters, { _id: 0 }).toArray()"
@@ -36,7 +36,7 @@ function :mongo:query() {
             )
 
             #mongo --quiet --eval "$(:util:join ';' jseval)"\
-            #    ${db} ${SITE_CORE_LIBJS?}/mongo/host.js |
+            #    ${db} ${SIMBOL_CORE_LIBJS?}/mongo/host.js |
             #    jsontool -a ${display[@]}
             mongo --quiet --eval "$(:util:join ';' jseval)" ${db} |
                 jsontool -a ${display[@]}
@@ -55,6 +55,6 @@ function :mongo:query() {
 #. }=-
 
 function mongo:host() {
-    :mongo:query ${SITE_PROFILE} host "$@"
+    :mongo:query ${SIMBOL_PROFILE} host "$@"
 }
 #. }=-

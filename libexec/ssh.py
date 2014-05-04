@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import libsite
+import libsimbol
 
 import os, sys, getpass
 import paramiko, base64
@@ -12,7 +12,7 @@ from threading import Thread, Lock
 from time import sleep
 from random import random
 
-from libsite.secret import vault
+from libsimbol.secret import vault
 
 import signal
 g_interrupted = False

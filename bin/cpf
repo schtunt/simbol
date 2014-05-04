@@ -1,5 +1,5 @@
 #!/bin/bash
-source etc/site.conf
+source etc/simbol.conf
 if [ $# -ge 1 ]; then
    fmt=$1
    shift

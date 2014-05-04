@@ -5,7 +5,7 @@ Site's color printf module
 [core:docstring]
 
 #. The Color PrintF Module -={
-: ${SITE_IN_COLOR?}
+: ${SIMBOL_IN_COLOR?}
 
 #declare -i ncolors=$(tput colors)
 #if [ ${ncolors:=-2} -ge 8 ]; then
@@ -27,9 +27,9 @@ function ::cpf:module_is_modified() {
     local -i e=9
     local profile=$1
     local module=$2
-    cd ${SITE_CORE?}
-    if [ -e "${SITE_USER_MOD?}/${module}" ]; then
-        local path=$(readlink "${SITE_USER_MOD?}/${module}")
+    cd ${SIMBOL_CORE?}
+    if [ -e "${SIMBOL_USER_MOD?}/${module}" ]; then
+        local path=$(readlink "${SIMBOL_USER_MOD?}/${module}")
         local amended=$(:core:git status --porcelain "${path}"|wc -l)
         [ ${PIPESTATUS[0]} -ne 0 ] || e=${amended}
     fi
@@ -42,8 +42,8 @@ function ::cpf:module_has_alerts() {
 
     local profile=$1
     local module=$2
-    if [ -e "${SITE_USER_MOD?}/${module}" ]; then
-        grep -qE "^function ${module}:[a-z0-9]+:alert()" "${SITE_USER_MOD?}/${module}"
+    if [ -e "${SIMBOL_USER_MOD?}/${module}" ]; then
+        grep -qE "^function ${module}:[a-z0-9]+:alert()" "${SIMBOL_USER_MOD?}/${module}"
         [ $? -ne 0 ] || e=${CODE_SUCCESS?}
     fi
 
@@ -56,7 +56,7 @@ function ::cpf:module() {
     local -i alerts=0
     local -i amended=0
     local fmt
-    if [ -e ${SITE_CORE_MOD?}/${module} ]; then
+    if [ -e ${SIMBOL_CORE_MOD?}/${module} ]; then
         if ::cpf:module_has_alerts core ${module}; then
             alerts=1
             fmt="%{y}"
@@ -66,13 +66,13 @@ function ::cpf:module() {
             amended=$?
         fi
         enabled=${CORE_MODULES[${module}]}
-    elif [ -e ${SITE_USER_MOD?}/${module} ]; then
-        if ::cpf:module_has_alerts ${SITE_PROFILE?} ${module}; then
+    elif [ -e ${SIMBOL_USER_MOD?}/${module} ]; then
+        if ::cpf:module_has_alerts ${SIMBOL_PROFILE?} ${module}; then
             alerts=1
             fmt="%{y}"
         else
             fmt="%{b}"
-            ::cpf:module_is_modified ${SITE_PROFILE?} ${module}
+            ::cpf:module_is_modified ${SIMBOL_PROFILE?} ${module}
             amended=$?
         fi
         enabled=${USER_MODULES[${module}]}
@@ -91,8 +91,8 @@ function ::cpf:function_has_alerts() {
     local profile=$1
     local module=$2
     local fn=$3
-    if [ -e "${SITE_USER_MOD?}/${module}" ]; then
-        grep -qE "^function ${module}:${fn}:alert()" "${SITE_USER_MOD?}/${module}"
+    if [ -e "${SIMBOL_USER_MOD?}/${module}" ]; then
+        grep -qE "^function ${module}:${fn}:alert()" "${SIMBOL_USER_MOD?}/${module}"
         [ $? -ne 0 ] || e=${CODE_SUCCESS?}
     fi
 
@@ -106,7 +106,7 @@ function ::cpf:function() {
     local -i alerts=0
     local -i amended=0
     local fmt
-    if [ -e ${SITE_CORE_MOD?}/${module} ]; then
+    if [ -e ${SIMBOL_CORE_MOD?}/${module} ]; then
         if ::cpf:function_has_alerts core ${module} ${fn}; then
             alerts=1
             fmt="%{y}"
@@ -116,13 +116,13 @@ function ::cpf:function() {
             amended=$?
         fi
         enabled=${CORE_MODULES[${module}]}
-    elif [ -e ${SITE_USER_MOD?}/${module} ]; then
-        if ::cpf:function_has_alerts ${SITE_PROFILE?} ${module} ${fn}; then
+    elif [ -e ${SIMBOL_USER_MOD?}/${module} ]; then
+        if ::cpf:function_has_alerts ${SIMBOL_PROFILE?} ${module} ${fn}; then
             alerts=1
             fmt="%{y}"
         else
             fmt="%{b}"
-            ::cpf:module_is_modified ${SITE_PROFILE?} ${module}
+            ::cpf:module_is_modified ${SIMBOL_PROFILE?} ${module}
             amended=$?
         fi
         enabled=${USER_MODULES[${module}]}
@@ -265,7 +265,7 @@ function cpf() {
                     @*)
                         read _sym _fmt _arg <<< "$(::cpf:theme "${op}" "${token}")"
                         [ "$_sym" != '0' ] || _sym=
-                        if [ ${SITE_IN_COLOR?} -eq 1 ]; then
+                        if [ ${SIMBOL_IN_COLOR?} -eq 1 ]; then
                             if ::cpf:is_fmt ${_fmt}; then
                                 prefix+=( "${_sym}" )
                                 #echo XXX _fmt $_fmt > /dev/stderr
@@ -287,7 +287,7 @@ function cpf() {
                         fi
                     ;;
                     rv|bl|wh|r|g|y|b|m|c)
-                        if [ ${SITE_IN_COLOR?} -eq 1 ]; then
+                        if [ ${SIMBOL_IN_COLOR?} -eq 1 ]; then
                             #XXX echo xxxxxxxxxxxxx ${op} ${token} > /dev/stderr
                             replacement="${COLORS[${op}]}${token}${COLORS[N]}"
                         fi
@@ -300,7 +300,7 @@ function cpf() {
                         #XXX echo zzzzzzzzzzzzz ${fmtstr} > /dev/stderr
                     ;;
                     ul|st|bo)
-                        if [ ${SITE_IN_COLOR?} -eq 1 ]; then
+                        if [ ${SIMBOL_IN_COLOR?} -eq 1 ]; then
                             replacement="${COLORS[+${op}]}${token}${COLORS[-${op}]}"
                         fi
                         if ::cpf:is_fmt ${replacement}; then
@@ -310,7 +310,7 @@ function cpf() {
                     ;;
                 esac
             elif [[ ${arg} =~ ^%\{([^:]+)}$ ]]; then
-                if [ ${SITE_IN_COLOR?} -eq 1 ]; then
+                if [ ${SIMBOL_IN_COLOR?} -eq 1 ]; then
                     op="${BASH_REMATCH[1]}"
                     replacement="${COLORS[${op}]}"
                 fi
@@ -398,13 +398,13 @@ function theme() {
             ;;
         esac
 
-        if [ ${SITE_IN_COLOR?} -eq 1 ]; then
+        if [ ${SIMBOL_IN_COLOR?} -eq 1 ]; then
             cpf "${fmt}" "$@" >${dvc}
         else
             cpf "${fmt}" "$@"
         fi
     else
-        if [ ${SITE_IN_COLOR?} -eq 1 ]; then
+        if [ ${SIMBOL_IN_COLOR?} -eq 1 ]; then
             echo >${dvc}
         else
             echo

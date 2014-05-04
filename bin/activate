@@ -1,13 +1,13 @@
 #!/bin/bash
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
-SITE_PROFILE_L="${HOME}/.site/profiles.d/ACTIVE"
+SIMBOL_PROFILE_L="${HOME}/.simbol/profiles.d/ACTIVE"
 
 function profile_active() {
     local -i e=0
 
-    if [ -e "${SITE_PROFILE_L}" ]; then
-        basename $(readlink ${SITE_PROFILE_L}) || e=2
+    if [ -e "${SIMBOL_PROFILE_L}" ]; then
+        basename $(readlink ${SIMBOL_PROFILE_L}) || e=2
     else
         e=3
     fi
@@ -19,9 +19,9 @@ function profile_exists() {
     local -i e=0
 
     local profile="${1}"
-    local site_profile_d="${HOME}/.site/profiles.d/${profile}"
-    local siteconf="${site_profile_d}/etc/site.conf"
-    [ -e "${siteconf}" ] || e=4
+    local simbol_profile_d="${HOME}/.simbol/profiles.d/${profile}"
+    local simbolconf="${simbol_profile_d}/etc/simbol.conf"
+    [ -e "${simbolconf}" ] || e=4
 
     return $e
 }
@@ -30,15 +30,15 @@ function profile_create() {
     local -i e=0
 
     local profile="${1}"
-    local site_profile_d="${HOME}/.site/profiles.d/${profile}"
-    local siteconf="${site_profile_d}/etc/site.conf"
+    local simbol_profile_d="${HOME}/.simbol/profiles.d/${profile}"
+    local simbolconf="${simbol_profile_d}/etc/simbol.conf"
 
-    mkdir -p "${site_profile_d}/etc"
-    cp share/examples/site.conf.eg "${siteconf}"
+    mkdir -p "${simbol_profile_d}/etc"
+    cp share/examples/simbol.conf.eg "${simbolconf}"
 
-    mkdir -p "${site_profile_d}/lib"
-    mkdir -p "${site_profile_d}/libexec"
-    mkdir -p "${site_profile_d}/module"
+    mkdir -p "${simbol_profile_d}/lib"
+    mkdir -p "${simbol_profile_d}/libexec"
+    mkdir -p "${simbol_profile_d}/module"
 
     return $e
 }
@@ -49,10 +49,10 @@ function profile_activate() {
     local profile="${1}"
 
     if profile_exists "${profile}"; then
-        local site_profile_d="${HOME}/.site/profiles.d/${profile}"
-        local siteconf="${site_profile_d}/etc/site.conf"
-        rm -f "${SITE_PROFILE_L}"
-        ln -sf "${site_profile_d}" "${SITE_PROFILE_L}"
+        local simbol_profile_d="${HOME}/.simbol/profiles.d/${profile}"
+        local simbolconf="${simbol_profile_d}/etc/simbol.conf"
+        rm -f "${SIMBOL_PROFILE_L}"
+        ln -sf "${simbol_profile_d}" "${SIMBOL_PROFILE_L}"
         e=0
     fi
 
@@ -98,7 +98,7 @@ function main() {
 
 e=99
 
-if [ -d ~/.site/.scm/ ]; then
+if [ -d ~/.simbol/.scm/ ]; then
     if [ $# -le 1 ]; then
         main "$@"
         e=$?

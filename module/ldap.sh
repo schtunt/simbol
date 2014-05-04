@@ -1,11 +1,11 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
 :<<[core:docstring]
-The site LDAP module
+The simbol LDAP module
 [core:docstring]
 
 #. LDAP -={
-#. https://access.redhat.com/site/documentation/en-US/Red_Hat_Directory_Server/8.2/html-single/Administration_Guide/index.html#Managing_Replication-Replicating-Password-Attributes
+#. https://access.redhat.com/simbol/documentation/en-US/Red_Hat_Directory_Server/8.2/html-single/Administration_Guide/index.html#Managing_Replication-Replicating-Password-Attributes
 g_MAXDATA=20380119031407Z
 
 core:import dns
@@ -556,7 +556,7 @@ function :ldap:search() {
     #. This function seaches for multiple objects
     #.
     #. Usage:
-    #.       IFS="${SITE_DELOM?}" read -a fred <<< "$(:ldap:search <lhi> netgroup cn=jboss_prd nisNetgroupTriple)"
+    #.       IFS="${SIMBOL_DELOM?}" read -a fred <<< "$(:ldap:search <lhi> netgroup cn=jboss_prd nisNetgroupTriple)"
 
     local -i e=${CODE_FAILURE?}
 
@@ -597,7 +597,7 @@ function :ldap:search() {
 
             local awkfields='$4'
             for ((i=6; i<=${awknf}; i+=2)); do
-                awkfields+=",\"${SITE_DELIM?}\",\$$i"
+                awkfields+=",\"${SIMBOL_DELIM?}\",\$$i"
             done
 
             #. Script-readable dump
@@ -624,7 +624,7 @@ BEGIN{
             match($i, /^([^:]+): +(.*)$/, kv);
             key=tolower(kv[1]);
             value=kv[2];
-            if(length(data[key])>0) data[key]=data[key] "'${SITE_DELOM?}'" value;
+            if(length(data[key])>0) data[key]=data[key] "'${SIMBOL_DELOM?}'" value;
             else data[key]=value;
         }
     }
@@ -638,7 +638,7 @@ BEGIN{
 
     if(hits==total) {
         for(i=1;i<=total;i++) {
-            if(i>1) printf("'${SITE_DELIM?}'");
+            if(i>1) printf("'${SIMBOL_DELIM?}'");
             key = display[i];
             printf("%s", data[key]);
         }
@@ -697,11 +697,11 @@ function ldap:search() {
                     fi
                 done
 
-                while IFS="${SITE_DELIM?}" read ${display[@]}; do
+                while IFS="${SIMBOL_DELIM?}" read ${display[@]}; do
                     for attr in ${display[@]}; do
                         local values_raw=${!attr}
                         if [ ${#values_raw} -gt 0 ]; then
-                            IFS="${SITE_DELOM?}" read -a values <<< "${values_raw}"
+                            IFS="${SIMBOL_DELOM?}" read -a values <<< "${values_raw}"
                             local value
                             for value in ${values[@]}; do
                                 cpf "%{@key:%-32s}%{@val:%s}\n" "${attr}" "${value}"
@@ -737,9 +737,9 @@ function ldap:ngverify() {
         e=$?
         if [ ${e} -eq ${CODE_SUCCESS?} ]; then
             #. Look for filter tokens
-            while IFS="${SITE_DELIM?}" read cn nisNetgroupTripleRaw; do
+            while IFS="${SIMBOL_DELIM?}" read cn nisNetgroupTripleRaw; do
                 local -i hits=0
-                IFS="${SITE_DELOM?}" read -a nisNetgroupTriples <<< "${nisNetgroupTripleRaw}"
+                IFS="${SIMBOL_DELOM?}" read -a nisNetgroupTriples <<< "${nisNetgroupTripleRaw}"
                 for nisNetgroupTriple in ${nisNetgroupTriples[@]}; do
                     if [[ ${nisNetgroupTriple} =~ ${USER_REGEX[NIS_NETGROUP_TRIPLE_PASS]} ]]; then
                         : cpf "%{@netgroup:%-32s} -> %{@pass:%s}\n" ${cn} ${nisNetgroupTriple}

@@ -183,7 +183,7 @@ function :util:dups() {
 }
 
 function :util:undelimit() {
-    tr "${SITE_DELIM?}" "\n"
+    tr "${SIMBOL_DELIM?}" "\n"
 }
 
 function :util:join() {
@@ -214,7 +214,7 @@ function :util:is_int() {
 #. }=-
 #. ANSI2HTML -={
 function :util:ansi2html() {
-    ${SITE_CORE_LIBEXEC?}/ansi2html
+    ${SIMBOL_CORE_LIBEXEC?}/ansi2html
 }
 #. }=-
 #. Markdown Scaffolding -={

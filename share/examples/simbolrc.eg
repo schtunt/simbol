@@ -1,4 +1,4 @@
-#. Copy this file to ~/.siterc, and set/uncomment variables as required.
+#. Copy this file to ~/.simbolrc, and set/uncomment variables as required.
 
 : ${USER_USERNAME:=tyrion}
 : ${USER_FULLNAME:=Tyrion Lannister}
@@ -15,7 +15,7 @@
 #. brew tap homebrew/dupes
 #. brew install homebrew/dupes/grep
 
-#SITE_SHELL=/usr/local/bin/bash
+#SIMBOL_SHELL=/usr/local/bin/bash
 #function sed()   { /usr/local/bin/gsed "$@"; return $?; }
 #function awk()   { /usr/local/bin/gawk "$@"; return $?; }
 #function grep()  { /usr/local/bin/ggrep "$@"; return $?; }

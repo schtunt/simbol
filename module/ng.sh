@@ -37,15 +37,15 @@ function ::ng:tree_data() {
     #. }=-
 
         #. Netgroup->Netgroup via memberNisNetgroup
-        IFS="${SITE_DELOM?}" read -a children <<< "$(:ldap:search -2 netgroup cn=${parent} memberNisNetgroup)"
+        IFS="${SIMBOL_DELOM?}" read -a children <<< "$(:ldap:search -2 netgroup cn=${parent} memberNisNetgroup)"
         for child in ${children[@]}; do
             if [ ${vflag} -eq 0 ]; then
                 echo ${parent}:?+${child}:-
             else
                 local hit="$(:ldap:search -2 netgroup cn=${child} cn)"
                 if [ ${#hit} -gt 0 ]; then
-                    IFS="${SITE_DELOM?}" read -a mnN <<< "$(:ldap:search -2 netgroup cn=${child} memberNisNetgroup)"
-                    IFS="${SITE_DELOM?}" read -a nnT <<< "$(:ldap:search -2 netgroup cn=${child} nisNetgroupTriple)"
+                    IFS="${SIMBOL_DELOM?}" read -a mnN <<< "$(:ldap:search -2 netgroup cn=${child} memberNisNetgroup)"
+                    IFS="${SIMBOL_DELOM?}" read -a nnT <<< "$(:ldap:search -2 netgroup cn=${child} nisNetgroupTriple)"
                     if [ ${#mnN[@]} -gt 0 -o ${#nnT[@]} -gt 0 ]; then
                         echo ${parent}:1+${child}:- #. Child exists and has children
                     else
@@ -63,7 +63,7 @@ function ::ng:tree_data() {
 
         #. Netgroup->Host
         if [ ${hflag} -eq 1 ]; then
-            IFS="${SITE_DELOM?}" read -a children <<< "$(:ldap:search -2 netgroup cn=${parent} nisNetgroupTriple)"
+            IFS="${SIMBOL_DELOM?}" read -a children <<< "$(:ldap:search -2 netgroup cn=${parent} nisNetgroupTriple)"
             local -a tldids
             if [ ${tldid} == '-' ]; then
                 tldids=( ${!USER_TLDS[@]} )
@@ -140,7 +140,7 @@ function ::ng:tree:cpf() {
 function ::ng:tree_draw() {
     : ${#g_TREE[@]?}
     : ${#g_PROCESSED_NETGROUP[@]?}
-    #. site ng tree -VHR edia -fdot |
+    #. simbol ng tree -VHR edia -fdot |
     #.     sfdp -Gsize=67! -Goverlap=prism -Tpng >
     #.     ngtree.png && feh ngtree.png
 
@@ -290,10 +290,10 @@ function ng:tree() {
                 if [ "${g_FORMAT?}" == "png" ]; then
                     cpf "Generating image..."
                     g_FORMAT=dot ::ng:tree_draw 0 ${g_ROOT:2} |
-                        sfdp -Gsize=67! -Goverlap=prism -Tpng > ${SITE_USER_CACHE?}/${g_ROOT:2}.png
+                        sfdp -Gsize=67! -Goverlap=prism -Tpng > ${SIMBOL_USER_CACHE?}/${g_ROOT:2}.png
                     if [ $? -eq 0 ]; then
                         theme HAS_PASSED
-                        feh -q -. ${SITE_USER_CACHE?}/${g_ROOT:2}.png
+                        feh -q -. ${SIMBOL_USER_CACHE?}/${g_ROOT:2}.png
                     else
                         theme HAS_FAILED
                     fi
@@ -337,12 +337,12 @@ function :ng:resolve() {
         if :ng:ping ${ng}; then
             local tld
             if tld=$(core:tld ${tldid}); then
-                IFS="${SITE_DELOM?}" read -a children <<< "$(:ldap:search -2 netgroup cn=${ng} memberNisNetgroup)"
+                IFS="${SIMBOL_DELOM?}" read -a children <<< "$(:ldap:search -2 netgroup cn=${ng} memberNisNetgroup)"
                 for child in ${children[@]}; do
                     ${FUNCNAME?} ${tldid} ${child}
                 done
 
-                IFS="${SITE_DELOM?}" read -a children <<< "$(:ldap:search -2 netgroup cn=${ng} nisNetgroupTriple|tr -d '(),')"
+                IFS="${SIMBOL_DELOM?}" read -a children <<< "$(:ldap:search -2 netgroup cn=${ng} nisNetgroupTriple|tr -d '(),')"
                 for child in ${children[@]}; do
                     if [ ${tldid} != '_' ]; then
                         if echo "${child}"|grep -qE "\.${tld}$"; then
@@ -595,7 +595,7 @@ function ng:summary() {
         local -i i=0
         while read line; do
             ((i++))
-            IFS="${SITE_DELIM?}" read ng desc <<< "${line}"
+            IFS="${SIMBOL_DELIM?}" read ng desc <<< "${line}"
             cpf "%{@int:%04s}. %{@netgroup:%-32s} %{@comment:%s}\n" "${i}" "${ng}" "${desc}"
         done < <( :ldap:search -2 netgroup cn description|sort )
         e=$?
@@ -608,7 +608,7 @@ function ng:summary() {
 function ng:create:usage() { echo "<name> <hgd:fqdn>"; }
 function ng:create() {
 :<<:
-    site ng create nyNetgroupName /^server1.*/
+    simbol ng create nyNetgroupName /^server1.*/
 :
 
     local -i e=${CODE_DEFAULT?}

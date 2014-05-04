@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 import os, sys
 import json, md5
-import libsite
+import libsimbol
 
 from operator import getitem
 
 import SoftLayer
-from libsite.vault import vault
+from libsimbol.vault import vault
 
 CACHE = False
 

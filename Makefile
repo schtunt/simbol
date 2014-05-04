@@ -2,8 +2,8 @@ export MAKEFLAGS := --no-print-directory --warn-undefined-variables
 
 REQUIRED := make sed awk
 
-#. === SITE_USER_VAR
-EXTERN_D := ${HOME}/.site/var
+#. === SIMBOL_USER_VAR
+EXTERN_D := ${HOME}/.simbol/var
 export EXTERN_D
 
 export VCS_D=${CURDIR}
@@ -13,7 +13,7 @@ export VCS_D=${CURDIR}
 #. Site Bootstrap -={
 #. Installation Status Check -={
 #. Additional python modules that you want installed - this should be kept as
-#. small as possible, and each site module should have it's own set of modules
+#. small as possible, and each simbol module should have it's own set of modules
 #. defined via xplm.
 VENV_PKGS :=
 export VENV_PKGS
@@ -45,15 +45,15 @@ install: require sanity .install
 	@echo "Installation complete!"
 
 .install:
-	@printf "Preparing ~/.site..."
-	@mkdir -p $(HOME)/.site
-	@ln -s ${HOME}/.site/profiles.d/ACTIVE/lib ${HOME}/.site/lib
-	@ln -s ${HOME}/.site/profiles.d/ACTIVE/etc ${HOME}/.site/etc
-	@ln -s ${HOME}/.site/profiles.d/ACTIVE/module ${HOME}/.site/module
-	@ln -s ${HOME}/.site/profiles.d/ACTIVE/libexec ${HOME}/.site/libexec
+	@printf "Preparing ~/.simbol..."
+	@mkdir -p $(HOME)/.simbol
+	@ln -s ${HOME}/.simbol/profiles.d/ACTIVE/lib ${HOME}/.simbol/lib
+	@ln -s ${HOME}/.simbol/profiles.d/ACTIVE/etc ${HOME}/.simbol/etc
+	@ln -s ${HOME}/.simbol/profiles.d/ACTIVE/module ${HOME}/.simbol/module
+	@ln -s ${HOME}/.simbol/profiles.d/ACTIVE/libexec ${HOME}/.simbol/libexec
 	@echo "DONE"
 	@printf "Setting up initial profile..."
-	@ln -sf $(PWD) $(HOME)/.site/.scm
+	@ln -sf $(PWD) $(HOME)/.simbol/.scm
 	@if ! bin/activate; then bin/activate DEFAULT; bin/activate; fi
 	@
 	@printf "Preparing ${EXTERN_D}..."
@@ -70,19 +70,19 @@ install: require sanity .install
 	@$(MAKE) -f $(PWD)/share/extern.makefile -C ${EXTERN_D} install
 	@
 	@printf "Installing symbolic links in $(HOME)/bin/..."
-	@mkdir -p $(HOME)/.site/bin
-	@ln -sf $(PWD)/bin/site $(HOME)/.site/bin/site
-	@ln -sf $(PWD)/bin/ssh $(HOME)/.site/bin/ssm
-	@ln -sf $(PWD)/bin/ssh $(HOME)/.site/bin/ssp
-	@ln -sf $(PWD)/bin/activate $(HOME)/.site/bin/activate
+	@mkdir -p $(HOME)/.simbol/bin
+	@ln -sf $(PWD)/bin/simbol $(HOME)/.simbol/bin/simbol
+	@ln -sf $(PWD)/bin/ssh $(HOME)/.simbol/bin/ssm
+	@ln -sf $(PWD)/bin/ssh $(HOME)/.simbol/bin/ssp
+	@ln -sf $(PWD)/bin/activate $(HOME)/.simbol/bin/activate
 	@mkdir -p $(HOME)/bin
-	@ln -sf $(HOME)/.site/bin/site $(HOME)/bin/site
-	@ln -sf $(HOME)/.site/bin/activate $(HOME)/bin/activate
+	@ln -sf $(HOME)/.simbol/bin/simbol $(HOME)/bin/simbol
+	@ln -sf $(HOME)/.simbol/bin/activate $(HOME)/bin/activate
 	@echo "DONE"
 	@
-	@test -f ~/.siterc || touch .initialize
-	@test ! -f .initialize || printf "Installing default ~/.siterc..."
-	@test ! -f .initialize || cp share/examples/siterc.eg ${HOME}/.siterc
+	@test -f ~/.simbolrc || touch .initialize
+	@test ! -f .initialize || printf "Installing default ~/.simbolrc..."
+	@test ! -f .initialize || cp share/examples/simbolrc.eg ${HOME}/.simbolrc
 	@test ! -f .initialize || echo "DONE"
 	@rm -f .initialize
 	@
@@ -97,28 +97,28 @@ uninstall: unsanity
 	find lib/libpy -name '*.pyc' -exec rm -f {} \;
 	find lib/libpy -name '*.pyo' -exec rm -f {} \;
 	@
-	-rm $(HOME)/.site/lib
-	-rm $(HOME)/.site/etc
-	-rm $(HOME)/.site/module
-	-rm $(HOME)/.site/libexec
+	-rm $(HOME)/.simbol/lib
+	-rm $(HOME)/.simbol/etc
+	-rm $(HOME)/.simbol/module
+	-rm $(HOME)/.simbol/libexec
 	@
-	-rm $(HOME)/bin/site
-	-rm $(HOME)/.site/bin/site
-	-rm $(HOME)/.site/bin/ssm
-	-rm $(HOME)/.site/bin/ssp
-	-rm $(HOME)/.site/bin/activate
-	-rmdir $(HOME)/.site/bin
+	-rm $(HOME)/bin/simbol
+	-rm $(HOME)/.simbol/bin/simbol
+	-rm $(HOME)/.simbol/bin/ssm
+	-rm $(HOME)/.simbol/bin/ssp
+	-rm $(HOME)/.simbol/bin/activate
+	-rmdir $(HOME)/.simbol/bin
 	@
-	-rm $(HOME)/.site/.scm
+	-rm $(HOME)/.simbol/.scm
 	@-rm .install
-	@#rmdir $(HOME)/.site
+	@#rmdir $(HOME)/.simbol
 	@
 	@echo "Uninstallation complete!"
 purge:
 	@test ! -d ${EXTERN_D} || $(MAKE) -f $(PWD)/share/extern.makefile -C ${EXTERN_D} purge
-	@test ! -d ~/.site || find ~/.site -type l -exec rm -f {} \;
-	@#test ! -d ~/.site || find ~/.site -depth -type d -empty -exec rmdir {} \;
-	rm -rf $(HOME)/.site/var
+	@test ! -d ~/.simbol || find ~/.simbol -type l -exec rm -f {} \;
+	@#test ! -d ~/.simbol || find ~/.simbol -depth -type d -empty -exec rmdir {} \;
+	rm -rf $(HOME)/.simbol/var
 	rm -f .install
 #. }=-
 #. Devel -={

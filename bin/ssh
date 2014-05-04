@@ -1,8 +1,8 @@
 #!/bin/bash
-#site remote connect -C -T ${0#${0%?}} $@
+#simbol remote connect -C -T ${0#${0%?}} $@
 
-export SITE_PROFILE=$(${HOME}/.site/bin/activate)
-source ~/.site/.scm/lib/libsh/libsite/libsite.sh
+export SIMBOL_PROFILE=$(${HOME}/.simbol/bin/activate)
+source ~/.simbol/.scm/lib/libsh/libsimbol/libsimbol.sh
 
 core:import net
 function myssh() {

@@ -1,7 +1,7 @@
 import os, gpgme
 
 def vault(sid):
-    vault = os.path.join(os.environ['SITE_USER_ETC'], 'site.vault')
+    vault = os.path.join(os.environ['SIMBOL_USER_ETC'], 'simbol.vault')
     if os.path.exists(vault):
         from io import BytesIO
         o = BytesIO()

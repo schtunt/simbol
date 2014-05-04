@@ -3,7 +3,7 @@
 :<<[core:docstring]
 The eXternal Programming (scripting) Language Module manager.
 
-This modules handles Python, Ruby, and Perl modules in site's sandboxed virtual
+This modules handles Python, Ruby, and Perl modules in simbol's sandboxed virtual
 environment.
 [core:docstring]
 
@@ -60,7 +60,7 @@ function ::xplm:loadvirtenv() {
                 local plid="${1}"
                 local version="${2-${g_PROLANG_VERSION[${plid}]}}"
                 local virtenv="${plid}env"
-                local interpreter="${SITE_USER_VAR}/${virtenv}/shims/${g_PROLANG[${plid}]}"
+                local interpreter="${SIMBOL_USER_VAR}/${virtenv}/shims/${g_PROLANG[${plid}]}"
 
                 if [ -x "${interpreter}" ]; then
                     eval "$(${virtenv} init -)" >/dev/null 2>&1
@@ -330,7 +330,7 @@ function :xplm:install() {
 
         local plid="${1}"
         local virtenv="${plid}env"
-        local interpreter=${SITE_USER_VAR}/${virtenv}/shims/${g_PROLANG[${plid}]}
+        local interpreter=${SIMBOL_USER_VAR}/${virtenv}/shims/${g_PROLANG[${plid}]}
 
         if ! ::xplm:loadvirtenv ${plid}; then
             #. Before Install -={
@@ -341,26 +341,26 @@ function :xplm:install() {
 
                     #. rbenv.git
                     local xplenv="git://github.com/sstephenson/rbenv.git"
-                    if [ ! -e ${SITE_USER_SCM?}/${virtenv}.git ]; then
-                        git clone -q ${xplenv} ${SITE_USER_SCM?}/${virtenv}.git
+                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}.git ]; then
+                        git clone -q ${xplenv} ${SIMBOL_USER_SCM?}/${virtenv}.git
                     fi
-                    ln -sf ${SITE_USER_SCM?}/${virtenv}.git/bin/${virtenv}\
-                        ${SITE_USER_LIBEXEC?}/${virtenv}
+                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}.git/bin/${virtenv}\
+                        ${SIMBOL_USER_LIBEXEC?}/${virtenv}
 
                     #. rbenv->build
                     mkdir -p ${RBENV_ROOT?}/plugins
                     local build="git://github.com/sstephenson/ruby-build.git"
-                    if [ ! -e ${SITE_USER_SCM?}/${virtenv}-build.git ]; then
-                        git clone -q ${build} ${SITE_USER_SCM?}/${virtenv}-build.git
+                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}-build.git ]; then
+                        git clone -q ${build} ${SIMBOL_USER_SCM?}/${virtenv}-build.git
                     fi
-                    ln -sf ${SITE_USER_SCM?}/${virtenv}-build.git\
+                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}-build.git\
                         ${RBENV_ROOT?}/plugins/${virtenv}-build
 
                     local bundler="git://github.com/carsomyr/rbenv-bundler.git"
-                    if [ ! -e ${SITE_USER_SCM?}/${virtenv}-bundler.git ]; then
-                        git clone -q ${build} ${SITE_USER_SCM?}/${virtenv}-bundler.git
+                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}-bundler.git ]; then
+                        git clone -q ${build} ${SIMBOL_USER_SCM?}/${virtenv}-bundler.git
                     fi
-                    ln -sf ${SITE_USER_SCM?}/${virtenv}-bundler.git\
+                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}-bundler.git\
                         ${RBENV_ROOT?}/plugins/${virtenv}-bundler
                 ;;
                 py)
@@ -370,23 +370,23 @@ function :xplm:install() {
 
                     #. pyenv.git
                     local xplenv="git://github.com/yyuu/pyenv.git"
-                    if [ ! -e ${SITE_USER_SCM?}/${virtenv}.git ]; then
-                        git clone -q ${xplenv} ${SITE_USER_SCM?}/${virtenv}.git
+                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}.git ]; then
+                        git clone -q ${xplenv} ${SIMBOL_USER_SCM?}/${virtenv}.git
                     fi
-                    ln -sf ${SITE_USER_SCM?}/${virtenv}.git/bin/${virtenv}\
-                        ${SITE_USER_LIBEXEC?}/${virtenv}
+                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}.git/bin/${virtenv}\
+                        ${SIMBOL_USER_LIBEXEC?}/${virtenv}
 
                     #. pyenv->build
                     mkdir -p ${PYENV_ROOT?}/plugins
-                    ln -sf ${SITE_USER_SCM?}/${virtenv}.git/plugins/python-build\
+                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}.git/plugins/python-build\
                         ${PYENV_ROOT?}/plugins/${virtenv}-build
 
                     #. pyenv->virtualenv
                     local virtualenv="git://github.com/yyuu/pyenv-virtualenv.git"
-                    if [ ! -e ${SITE_USER_SCM?}/${virtenv}-virtualenv.git ]; then
-                        git clone -q ${virtualenv} ${SITE_USER_SCM?}/${virtenv}-virtualenv.git
+                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}-virtualenv.git ]; then
+                        git clone -q ${virtualenv} ${SIMBOL_USER_SCM?}/${virtenv}-virtualenv.git
                     fi
-                    ln -sf ${SITE_USER_SCM?}/${virtenv}-virtualenv.git\
+                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}-virtualenv.git\
                         ${PYENV_ROOT?}/plugins/${virtenv}-virtualenv
                 ;;
                 pl)
@@ -396,19 +396,19 @@ function :xplm:install() {
 
                     #. plenv.git
                     local xplenv="git://github.com/tokuhirom/plenv.git"
-                    if [ ! -e ${SITE_USER_SCM?}/${virtenv}.git ]; then
-                        git clone -q ${xplenv} ${SITE_USER_SCM?}/${virtenv}.git
+                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}.git ]; then
+                        git clone -q ${xplenv} ${SIMBOL_USER_SCM?}/${virtenv}.git
                     fi
-                    ln -sf ${SITE_USER_SCM?}/${virtenv}.git/bin/${virtenv}\
-                        ${SITE_USER_LIBEXEC?}/${virtenv}
+                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}.git/bin/${virtenv}\
+                        ${SIMBOL_USER_LIBEXEC?}/${virtenv}
 
                     #. plenv->build
                     mkdir -p ${PLENV_ROOT?}/plugins
                     local build="git://github.com/tokuhirom/Perl-Build.git"
-                    if [ ! -e ${SITE_USER_SCM?}/${virtenv}-build.git ]; then
-                        git clone -q ${build} ${SITE_USER_SCM?}/${virtenv}-build.git
+                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}-build.git ]; then
+                        git clone -q ${build} ${SIMBOL_USER_SCM?}/${virtenv}-build.git
                     fi
-                    ln -sf ${SITE_USER_SCM?}/${virtenv}-build.git\
+                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}-build.git\
                         ${PLENV_ROOT?}/plugins/${virtenv}-build
                 ;;
             esac
@@ -418,13 +418,13 @@ function :xplm:install() {
                 rb)
                     curl -fsSL https://gist.github.com/mislav/a18b9d7f0dc5b9efc162.txt |
                         ${virtenv} install --patch ${g_PROLANG_VERSION[${plid}]}\
-                            >${SITE_USER}/var/log/${virtenv}.log 2>&1
+                            >${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
                     e=$?
                     ${virtenv} rehash
                 ;;
                 py|pl)
                     ${virtenv} install ${g_PROLANG_VERSION[${plid}]}\
-                        >${SITE_USER}/var/log/${virtenv}.log 2>&1
+                        >${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
                     e=$?
 
                     ${virtenv} rehash
@@ -437,13 +437,13 @@ function :xplm:install() {
                 eval "$(${virtenv} init -)"
                 case ${plid} in
                     pl)
-                        plenv install-cpanm >${SITE_USER}/var/log/${virtenv}.log 2>&1
-                        cpanm Devel::REPL >>${SITE_USER}/var/log/${virtenv}.log 2>&1
-                        cpanm Lexical::Persistence >>${SITE_USER}/var/log/${virtenv}.log 2>&1
-                        cpanm Data::Dump::Streamer >>${SITE_USER}/var/log/${virtenv}.log 2>&1
-                        cpanm PPI >>${SITE_USER}/var/log/${virtenv}.log 2>&1
-                        cpanm Term::ReadLine >>${SITE_USER}/var/log/${virtenv}.log 2>&1
-                        cpanm Term::ReadKey >>${SITE_USER}/var/log/${virtenv}.log 2>&1
+                        plenv install-cpanm >${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
+                        cpanm Devel::REPL >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
+                        cpanm Lexical::Persistence >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
+                        cpanm Data::Dump::Streamer >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
+                        cpanm PPI >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
+                        cpanm Term::ReadLine >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
+                        cpanm Term::ReadKey >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
                         e=$?
                     ;;
                 esac
@@ -486,7 +486,7 @@ function xplm:install() {
                 theme HAS_AUTOED $e
                 if [ $e -ne ${CODE_SUCCESS?} ]; then
                     local virtenv="${plid}env"
-                    theme INFO "See ${SITE_USER}/var/log/${virtenv}.log"
+                    theme INFO "See ${SIMBOL_USER}/var/log/${virtenv}.log"
                 fi
             ;;
         esac
@@ -503,11 +503,11 @@ function :xplm:purge() {
         case ${plid} in
             rb|py|pl)
                 local virtenv="${plid}env"
-                rm -f ${SITE_USER_LIBEXEC?}/${virtenv}
-                rm -rf ${SITE_USER_VAR}/${virtenv}
+                rm -f ${SIMBOL_USER_LIBEXEC?}/${virtenv}
+                rm -rf ${SIMBOL_USER_VAR}/${virtenv}
 
                 #. Unnecessary VCS purge...
-                rm -rf ${SITE_USER_SCM}/${virtenv}*
+                rm -rf ${SIMBOL_USER_SCM}/${virtenv}*
 
                 e=${CODE_SUCCESS?}
             ;;
@@ -549,7 +549,7 @@ function :xplm:selfupdate() {
     if [ $# -eq 1 ]; then
         local plid="${1}"
         local virtenv="${plid}env"
-        local xplmscm=${SITE_USER_VAR}/scm
+        local xplmscm=${SIMBOL_USER_VAR}/scm
         local vcs
         e=${CODE_SUCCESS?}
         case ${plid} in
@@ -559,7 +559,7 @@ function :xplm:selfupdate() {
                 for vcs in ${vcses}; do
                     cd ${xplmscm}/${vcs} >/dev/null 2>&1
                     if [ $? -eq 0 ]; then
-                        if ! git pull >> ${SITE_USER}/var/log/${virtenv}.log 2>&1; then
+                        if ! git pull >> ${SIMBOL_USER}/var/log/${virtenv}.log 2>&1; then
                             e=${CODE_FAILURE?}
                         fi
                     fi
@@ -623,7 +623,7 @@ function :xplm:shell() {
                         cat <<!VIRTENV
                         unset PROMPT_COMMAND
                         export HISTFILE=~/.bash_history_${plid}
-                        export PS1="site:${plid}-${version}> "
+                        export PS1="simbol:${plid}-${version}> "
 !VIRTENV
                     ) -i
                     e=$?

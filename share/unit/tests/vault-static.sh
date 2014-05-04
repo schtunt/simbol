@@ -15,7 +15,7 @@ function vaultSetUp() {
             : noop
         ;;
         execute)
-            export SITE_PROFILE=UNITTEST
+            export SIMBOL_PROFILE=UNITTEST
             g_GPGKID=$(:gpg:create)
         ;;
         *)

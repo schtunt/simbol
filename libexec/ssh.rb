@@ -90,7 +90,7 @@ class EssEssHache
         #@@dns.getaddress host
         @sessions[host][:session] = Net::SSH.start(host, @username,
           :config => [
-            "#{ENV['HOME']}/.site/etc/ssh.conf",
+            "#{ENV['HOME']}/.simbol/etc/ssh.conf",
             "#{ENV['HOME']}/.ssh/config",
             "/etc/ssh_config"
           ],
@@ -273,7 +273,7 @@ def secret(sid)
   require 'gpgme'
 
   encrypted_data = GPGME::Data.new(
-    File.open("#{ENV['HOME']}/.site/etc/site.vault")
+    File.open("#{ENV['HOME']}/.simbol/etc/simbol.vault")
   )
   ctx = GPGME::Ctx.new
   decrypted = ctx.decrypt encrypted_data

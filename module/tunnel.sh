@@ -12,18 +12,18 @@ core:import util
 core:requires ssh
 core:requires netstat
 
-: ${SITE_USER_SSH_CONTROLPATH:=${SITE_USER_RUN?}/site-ssh-mux.sock}
+: ${SIMBOL_USER_SSH_CONTROLPATH:=${SIMBOL_USER_RUN?}/simbol-ssh-mux.sock}
 
 #. tunnel:status -={
 function :tunnel:pid() {
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 0 ]; then
-        if [ -e "${SITE_USER_SSH_CONTROLPATH}" ]; then
+        if [ -e "${SIMBOL_USER_SSH_CONTROLPATH}" ]; then
             local raw
             raw=$(
                 ssh ${g_SSH_OPTS} -o 'ControlMaster=no'\
-                    -S "${SITE_USER_SSH_CONTROLPATH}" -O check NULL 2>&1 |
+                    -S "${SIMBOL_USER_SSH_CONTROLPATH}" -O check NULL 2>&1 |
                     tr -d '\r\n'
             )
             e=$?
@@ -77,11 +77,11 @@ function :tunnel:start() {
         local -i pid
         local -r hcs=${1}
         local -ir port=${2}
-        if [ -S "${SITE_USER_SSH_CONTROLPATH}" ]; then
+        if [ -S "${SIMBOL_USER_SSH_CONTROLPATH}" ]; then
             pid=$(:tunnel:pid ${hcs})
             [ $? -ne ${CODE_SUCCESS?} ] || e=${CODE_E01?}
         else
-            if ssh ${g_SSH_OPTS} -n -fNS "${SITE_USER_SSH_CONTROLPATH}" -p ${port} ${USER_USERNAME}@${hcs}; then
+            if ssh ${g_SSH_OPTS} -n -fNS "${SIMBOL_USER_SSH_CONTROLPATH}" -p ${port} ${USER_USERNAME}@${hcs}; then
                 pid=$(:tunnel:pid ${hcs})
                 e=$?
             fi
@@ -102,7 +102,7 @@ function tunnel:start() {
         local -ri port=${2:-22}
         cpf "Starting ssh control master to %{@host:${hcs}}..."
         local -i pid
-        if [ -S "${SITE_USER_SSH_CONTROLPATH}" ]; then
+        if [ -S "${SIMBOL_USER_SSH_CONTROLPATH}" ]; then
             pid=$(:tunnel:pid ${hcs})
             e=${CODE_SUCCESS?}
             theme HAS_WARNED "ALREADY_RUNNING:${pid}"
@@ -125,11 +125,11 @@ function :tunnel:stop() {
     if [ $# -eq 1 ]; then
         local -i pid=0
         local -r hcs="${1}"
-        if [ -e "${SITE_USER_SSH_CONTROLPATH}" ]; then
+        if [ -e "${SIMBOL_USER_SSH_CONTROLPATH}" ]; then
             pid=$(:tunnel:pid ${hcs})
             if [ $? -eq ${CODE_SUCCESS?} ]; then
                 ssh ${g_SSH_OPTS} -no 'ControlMaster=no'\
-                    -fNS "${SITE_USER_SSH_CONTROLPATH}" ${hcs} -O stop >/dev/null 2>&1
+                    -fNS "${SIMBOL_USER_SSH_CONTROLPATH}" ${hcs} -O stop >/dev/null 2>&1
                 e=$?
             fi
         else
@@ -151,7 +151,7 @@ function tunnel:stop() {
         local -r hcs="${1}"
         cpf "Stopping ssh control master to %{@host:${hcs}}..."
 
-        if [ -e "${SITE_USER_SSH_CONTROLPATH}" ]; then
+        if [ -e "${SIMBOL_USER_SSH_CONTROLPATH}" ]; then
             local -i pid
             pid=$(:tunnel:stop "${hcs}")
             e=$?
@@ -175,7 +175,7 @@ function :tunnel:create() {
         local lport="${3}"
         local raddr="${4}"
         local rport="${5}"
-        if [ -S ${SITE_USER_SSH_CONTROLPATH} ]; then
+        if [ -S ${SIMBOL_USER_SSH_CONTROLPATH} ]; then
             if ! :net:localportping ${lport}; then
                 ssh ${g_SSH_OPTS} -fNL "${laddr}:${lport}:${raddr}:${rport}" ${hcs}
                 e=$?

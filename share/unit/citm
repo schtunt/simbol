@@ -79,7 +79,7 @@ if [ $# -eq 1 ]; then
                     run make install                               ;((EXIT|=$?)) #. Test reinstall
                 ;;
                 execute:*)
-                    run site unit test ${MODULE}                   ;((EXIT|=$?))
+                    run simbol unit test ${MODULE}                   ;((EXIT|=$?))
                 ;;
                 *:*)
                     EXIT=1
@@ -93,7 +93,7 @@ if [ $# -eq 1 ]; then
 
         after_failure)
             EXIT=0
-            run cat ~/.site/var/log/site.log
+            run cat ~/.simbol/var/log/simbol.log
         ;;
 
         after_script)

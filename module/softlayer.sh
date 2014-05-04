@@ -27,7 +27,7 @@ function :softlayer:ipmicreds() {
             )
             local ipmiaddr=$(echo -ne "${data}" | :util:json -a 'networkManagementIpAddress')
 
-            echo "${username}${SITE_DELIM?}${password}${SITE_DELIM?}${ipmiaddr}"
+            echo "${username}${SIMBOL_DELIM?}${password}${SIMBOL_DELIM?}${ipmiaddr}"
             e=${CODE_SUCCESS?}
         fi
     fi
@@ -46,7 +46,7 @@ function softlayer:ipmi() {
         local creds
         creds="$(:softlayer:ipmicreds ${fqdn})"
         if [ $? -eq ${CODE_SUCCESS?} ]; then
-            IFS=${SITE_DELIM?} read username password ipmiaddr <<< "${creds}"
+            IFS=${SIMBOL_DELIM?} read username password ipmiaddr <<< "${creds}"
 
             case ${cmd} in
                 sol)
@@ -398,14 +398,14 @@ function softlayer:query:usage() { echo "<query>"; }
 function softlayer:query() {
     local -i e=${CODE_USAGE?}
 
-    #site nexpose test getHardware '$.privateIpAddress'
-    #site nexpose test getHardware '$.*[152]'
+    #simbol nexpose test getHardware '$.privateIpAddress'
+    #simbol nexpose test getHardware '$.*[152]'
 
     #. https://control.softlayer.com/network/vlans
-    #site softlayer query Network_Vlan::getObject
+    #simbol softlayer query Network_Vlan::getObject
 
     #. https://control.softlayer.com/network/vlans/114973
-    #site softlayer query Network_Vlan::getSubnets id=114973 path='$..networkIdentifier'
+    #simbol softlayer query Network_Vlan::getSubnets id=114973 path='$..networkIdentifier'
 
     if [ $# -gt 1 ]; then
         {

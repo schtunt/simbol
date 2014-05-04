@@ -25,12 +25,12 @@ function testCoreDnsSubdomainsInternal() {
     sdns=( $(:dns:subdomains _ full) )
     assertTrue 1.1 $?
     results=(
-        unit-tests.mgmt.site
-        networks.mgmt.site
-        systems.mgmt.site
-        api.site.org
-        products.site.org
-        support.site.org
+        unit-tests.mgmt.simbol
+        networks.mgmt.simbol
+        systems.mgmt.simbol
+        api.simbol.org
+        products.simbol.org
+        support.simbol.org
     )
     assertEquals 1.2 "$(:util:join , results)" "$(:util:join , sdns)"
 
@@ -45,9 +45,9 @@ function testCoreDnsSubdomainsInternal() {
     sdns=( $(:dns:subdomains m full) )
     assertTrue 2.3 $?
     results=(
-        unit-tests.mgmt.site
-        networks.mgmt.site
-        systems.mgmt.site
+        unit-tests.mgmt.simbol
+        networks.mgmt.simbol
+        systems.mgmt.simbol
     )
     assertEquals 2.4 "$(:util:join , results)" "$(:util:join , sdns)"
 
@@ -62,9 +62,9 @@ function testCoreDnsSubdomainsInternal() {
     sdns=( $(:dns:subdomains p full) )
     assertTrue 3.3 $?
     results=(
-        api.site.org
-        products.site.org
-        support.site.org
+        api.simbol.org
+        products.simbol.org
+        support.simbol.org
     )
     assertEquals 3.4 "$(:util:join , results)" "$(:util:join , sdns)"
 
@@ -98,29 +98,29 @@ function testCoreDnsSubdomainsPublic() {
 function testCoreDnsInspectInternal() {
     core:import dns
 
-    #:dns:inspect.csv 'trailer0dot.unit-tests.mgmt.site' >${stdoutF?} 2>${stderrF?}
+    #:dns:inspect.csv 'trailer0dot.unit-tests.mgmt.simbol' >${stdoutF?} 2>${stderrF?}
     #assertTrue   1.1 $?
-    #:dns:inspect.csv 'trailer1dot.unit-tests.mgmt.site.' >${stdoutF?} 2>${stderrF?}
+    #:dns:inspect.csv 'trailer1dot.unit-tests.mgmt.simbol.' >${stdoutF?} 2>${stderrF?}
     #assertFalse  1.2 $? #. TODO This is technically a valid DNS name, so ...
-    #:dns:inspect.csv 'trailer2dot.unit-tests.mgmt.site..' >${stdoutF?} 2>${stderrF?}
+    #:dns:inspect.csv 'trailer2dot.unit-tests.mgmt.simbol..' >${stdoutF?} 2>${stderrF?}
     #assertFalse  1.3 $?
 
     local -a data
 
-    data=( $(:dns:inspect.csv 'host-8f.api.site.org' a) )
+    data=( $(:dns:inspect.csv 'host-8f.api.simbol.org' a) )
     assertTrue   1.1.1 $?
     assertEquals 1.1.2 1 ${#data[@]}
-    assertEquals 1.1.3 "a,host-8f.api.site.org,fqdn,p,api,site.org,host-8f.api.site.org,127.2.8.15,1" "${data[0]}"
+    assertEquals 1.1.3 "a,host-8f.api.simbol.org,fqdn,p,api,simbol.org,host-8f.api.simbol.org,127.2.8.15,1" "${data[0]}"
 
-    data=( $(:dns:inspect.csv 'host-ca.products.site.org' a) )
+    data=( $(:dns:inspect.csv 'host-ca.products.simbol.org' a) )
     assertTrue   1.2.1 $?
     assertEquals 1.2.2 1 ${#data[@]}
-    assertEquals 1.2.3 "a,host-ca.products.site.org,fqdn,p,products,site.org,host-ca.products.site.org,127.2.12.10,1" "${data[0]}"
+    assertEquals 1.2.3 "a,host-ca.products.simbol.org,fqdn,p,products,simbol.org,host-ca.products.simbol.org,127.2.12.10,1" "${data[0]}"
 
-    data=( $(:dns:inspect.csv 'host-d.mgmt.site' a) )
+    data=( $(:dns:inspect.csv 'host-d.mgmt.simbol' a) )
     assertTrue   2.1 $?
     assertEquals 2.2 1 ${#data[@]}
-    assertEquals 2.3 "a,host-d.mgmt.site,fqdn,m,,mgmt.site,host-d.mgmt.site,127.1.13.99,2" "${data[0]}"
+    assertEquals 2.3 "a,host-d.mgmt.simbol,fqdn,m,,mgmt.simbol,host-d.mgmt.simbol,127.1.13.99,2" "${data[0]}"
 
     data=( $(:dns:inspect.csv 'google-public-dns-a.google.com' a) )
     assertTrue   3.1 $?
@@ -130,13 +130,13 @@ function testCoreDnsInspectInternal() {
     data=( $(:dns:inspect.csv 'host-ca.networks' a) )
     assertTrue   4.1 $?
     assertEquals 4.2 1 ${#data[@]}
-    assertEquals 4.3 "a,host-ca.networks,qdn,m,networks,mgmt.site,host-ca.networks.mgmt.site,127.1.12.10,6" "${data[0]}"
+    assertEquals 4.3 "a,host-ca.networks,qdn,m,networks,mgmt.simbol,host-ca.networks.mgmt.simbol,127.1.12.10,6" "${data[0]}"
 
     data=( $(:dns:inspect.csv 'host-ca' a) )
     assertTrue   5.1 $?
     assertEquals 5.2 2 ${#data[@]}
-    assertEquals 5.3 "a,host-ca,shn,m,networks,mgmt.site,host-ca.networks.mgmt.site,127.1.12.10,7" "${data[0]}"
-    assertEquals 5.4 "a,host-ca,shn,p,products,site.org,host-ca.products.site.org,127.2.12.10,7" "${data[1]}"
+    assertEquals 5.3 "a,host-ca,shn,m,networks,mgmt.simbol,host-ca.networks.mgmt.simbol,127.1.12.10,7" "${data[0]}"
+    assertEquals 5.4 "a,host-ca,shn,p,products,simbol.org,host-ca.products.simbol.org,127.2.12.10,7" "${data[1]}"
 }
 #. }=-
 #. testCoreDnsLookupInternalCsv -={
@@ -148,24 +148,24 @@ function testCoreDnsLookupInternal() {
     data=( $(:dns:lookup.csv p a 'host-8f') )
     assertTrue   1.1 $?
     assertEquals 1.2 1 ${#data[@]}
-    assertEquals 1.3 "a,host-8f,shn,p,api,site.org,host-8f.api.site.org,127.2.8.15,7" "${data[0]}"
+    assertEquals 1.3 "a,host-8f,shn,p,api,simbol.org,host-8f.api.simbol.org,127.2.8.15,7" "${data[0]}"
 
     data=( $(:dns:lookup.csv m a 'host-8f') )
     assertTrue   2.1 $?
     assertEquals 2.2 1 ${#data[@]}
-    assertEquals 2.3 "a,host-8f,shn,m,unit-tests,mgmt.site,host-8f.unit-tests.mgmt.site,127.1.8.15,7" "${data[0]}"
+    assertEquals 2.3 "a,host-8f,shn,m,unit-tests,mgmt.simbol,host-8f.unit-tests.mgmt.simbol,127.1.8.15,7" "${data[0]}"
 
     data=( $(:dns:lookup.csv pm ca 'host-8f') )
     assertTrue   3.1 $?
     assertEquals 3.2 2 ${#data[@]}
-    assertEquals 3.3 "a,host-8f,shn,m,unit-tests,mgmt.site,host-8f.unit-tests.mgmt.site,127.1.8.15,7" "${data[0]}"
-    assertEquals 3.4 "a,host-8f,shn,p,api,site.org,host-8f.api.site.org,127.2.8.15,7" "${data[1]}"
+    assertEquals 3.3 "a,host-8f,shn,m,unit-tests,mgmt.simbol,host-8f.unit-tests.mgmt.simbol,127.1.8.15,7" "${data[0]}"
+    assertEquals 3.4 "a,host-8f,shn,p,api,simbol.org,host-8f.api.simbol.org,127.2.8.15,7" "${data[1]}"
 
     data=( $(:dns:lookup.csv mp ac 'host-8f') )
     assertTrue   4.1 $?
     assertEquals 4.2 2 ${#data[@]}
-    assertEquals 4.3 "a,host-8f,shn,m,unit-tests,mgmt.site,host-8f.unit-tests.mgmt.site,127.1.8.15,7" "${data[0]}"
-    assertEquals 4.3 "a,host-8f,shn,p,api,site.org,host-8f.api.site.org,127.2.8.15,7" "${data[1]}"
+    assertEquals 4.3 "a,host-8f,shn,m,unit-tests,mgmt.simbol,host-8f.unit-tests.mgmt.simbol,127.1.8.15,7" "${data[0]}"
+    assertEquals 4.3 "a,host-8f,shn,p,api,simbol.org,host-8f.api.simbol.org,127.2.8.15,7" "${data[1]}"
 }
 #. }=-
 #. testCoreDnsLookupPublic -={
@@ -174,11 +174,11 @@ function testCoreDnsLookupPublic() {
 
     local hostname
 
-    hostname=host-f9.unit-tests.mgmt.site
+    hostname=host-f9.unit-tests.mgmt.simbol
     core:wrapper dns lookup ${hostname} >${stdoutF?} 2>${stderrF?}
     assertTrue   1.1 $?
 
-    hostname=nohost.api.site.org
+    hostname=nohost.api.simbol.org
     core:wrapper dns lookup ${hostname} >${stdoutF?} 2>${stderrF?}
     assertFalse  1.2 $?
 }
@@ -189,10 +189,10 @@ function testCoreDnsResolveInternal() {
 
     local data
 
-    data=$(:dns:resolve host-88.support.site.org a)
+    data=$(:dns:resolve host-88.support.simbol.org a)
     assertTrue  1.1 $?
 
-    data=$(:dns:resolve nosuchhost.support.site.org a)
+    data=$(:dns:resolve nosuchhost.support.simbol.org a)
     assertFalse 1.2 $?
 
     data=$(:dns:resolve www.google.com a)

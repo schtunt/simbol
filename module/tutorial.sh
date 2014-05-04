@@ -2,8 +2,8 @@
 
 #. Docstring for this module; keep this to a single line
 :<<[core:docstring]
-The site module aims to serve as a tutorial for new site users.  Once you are
-comfortable with site, you can simply disable this module.
+The simbol module aims to serve as a tutorial for new simbol users.  Once you are
+comfortable with simbol, you can simply disable this module.
 [core:docstring]
 
 #. Tutorial -={
@@ -12,7 +12,7 @@ function tutorial:p01() {
     cat <<!
 # Part 1 - Simple Start
 
-Let's get started with absolute simplest possible function.  In site, you
+Let's get started with absolute simplest possible function.  In simbol, you
 break define all your custom code into functions, and you group those
 functions into modules.
 
@@ -26,14 +26,14 @@ function declaration is thus:
     }
 \`\`\`
 
-Peek inside ${SITE_CORE?}/module/tutorial to see the implementation of this
+Peek inside ${SIMBOL_CORE?}/module/tutorial to see the implementation of this
 function before continuing.
 
 Let's get to that in the next tutorial, where we will demonstrate how to use
 one module from another.  In particular we're going to replace our \`cat\`
 function with a call to \`:util:markdown()\`.
 
-    % site tutorial p02
+    % simbol tutorial p02
 !
 }
 #. }=-
@@ -54,9 +54,9 @@ they're not exposed publically via the CLI user interface.  This is dicussed in
 detail in p04 of this tutorial.
 
 Look inside once more time to see the implementation of this function, and then
-move onto p03 where we discuss the three types of functions in site:
+move onto p03 where we discuss the three types of functions in simbol:
 
-    % site tutorial p03
+    % simbol tutorial p03
 !
 }
 #. }=-
@@ -64,10 +64,10 @@ move onto p03 where we discuss the three types of functions in site:
 function tutorial:p03() {
     :util:markdown h1 "Part 3.0 - The Three Function Types" <<!
 Earlier we mentioned that the function \`:util:markdown\` was an internal
-function, but there are a few more things that should be said about site
+function, but there are a few more things that should be said about simbol
 functions.
 
-There are 3 types of functions in site, all three will be covered in details
+There are 3 types of functions in simbol, all three will be covered in details
 right here because this information is key when writing your own modules:
 
 All function names consist of two tokens, separated by a colon character, and
@@ -77,7 +77,7 @@ of the module (same as the file in which the function has been defined.
 Let's move onto the next section where we take a deeper look at public
 functions:
 
-    % site tutorial p03s1
+    % simbol tutorial p03s1
 !
 }
 
@@ -92,7 +92,7 @@ These functions don't do the hard work, they look after the the UI side of
 things only, and when they need anything calculated, they will call internal or
 private functions.
 
-Public functions are automatically sought out by the site engine and presented
+Public functions are automatically sought out by the simbol engine and presented
 to the user at the CLI.  They also allow you to define various other functions
 that decorate and enhance the function further.  What follows is an exhaustive
 list of all such functions in line with the previous example:
@@ -110,7 +110,7 @@ should only be defined when required.
 We won't go into explaining them all here, that will come in p07.  Let's move
 onto the next section where we look at internal functions:
 
-    % site tutorial p03s2
+    % simbol tutorial p03s2
 !
 }
 
@@ -180,15 +180,15 @@ float   snooze  0.01    sleep    s
 }
 
 #    Seeing as this is the hello (world) example, let's start with
-#    the very basics of site first, and then get to the particulars
+#    the very basics of simbol first, and then get to the particulars
 #    of this particular function.
 #
-#    Depending on how many arguments you supply site, and what those
+#    Depending on how many arguments you supply simbol, and what those
 #    arguments are, you will get a contextual help menu, for example
 #    try the following:
 #
-#    site
-#    site tutorial
+#    simbol
+#    simbol tutorial
 #
 #    You will note from the last command that you
 
@@ -197,7 +197,7 @@ function tutorial:hello:help() {
     cat <<!
     This function greets the world in high spirit.
 
-    It also demonstrates the following features of site:
+    It also demonstrates the following features of simbol:
 
     * processing commandline arguments
     * processing short/long options via shflags
@@ -205,14 +205,14 @@ function tutorial:hello:help() {
 
     Here are a few examples to illustrate the above:
 
-    site tutorial hello --help
+    simbol tutorial hello --help
 
-    site tutorial hello world
-    site tutorial hello Jack
-    site tutorial hello -g world
-    site tutorial hello -c 3 world
-    site tutorial hello -c 3 -s 0.2 world
-    site tutorial hello Nucky Lucky Chucky
+    simbol tutorial hello world
+    simbol tutorial hello Jack
+    simbol tutorial hello -g world
+    simbol tutorial hello -c 3 world
+    simbol tutorial hello -c 3 -s 0.2 world
+    simbol tutorial hello Nucky Lucky Chucky
 !
 }
 
@@ -233,9 +233,9 @@ function tutorial:hello:usage() {
 #. Mandatory - the function itself
 function tutorial:hello() {
     local -i e=${CODE_DEFAULT?}
-    : e= ${CODE_DEFAULT?} #. signals to site that user is in need of help
-    : e=${CODE_FAILURE?}  #. signals to site that there is an error condition
-    : e=${CODE_SUCCESS?}  #. signals to site that all went well
+    : e= ${CODE_DEFAULT?} #. signals to simbol that user is in need of help
+    : e=${CODE_FAILURE?}  #. signals to simbol that there is an error condition
+    : e=${CODE_SUCCESS?}  #. signals to simbol that all went well
 
     if [ $# -gt 0 ]; then
         #. For shflags, we have a little work to do; here's a string:

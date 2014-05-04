@@ -200,7 +200,7 @@ function testCoverage() {
         cd ${cwd}
         local context
         local -i blacklisted=0
-        local dynamic="${SITE_UNIT_TESTS?}/${module}-dynamic.csv"
+        local dynamic="${SIMBOL_UNIT_TESTS?}/${module}-dynamic.csv"
         if [ -e ${dynamic} ]; then
             blacklisted=$(
                 awk -F\| "BEGIN{b=0};NF==2&&\$1~/^#${profile}$/&&\$2~/^${module}$/{b=1};END{print(b)}" ${dynamic}
@@ -256,14 +256,14 @@ function testCoverage() {
                                     ffn+=${prefix}${module}:${fn}
                                     if [ "${context}" == "public" ]; then
                                         cat <<!SCRIPT >> ${script}
-#. Dynamic function ${i} for ${utf} {no-args} [ site:${profile}:${module}.${fn}() ] -={
+#. Dynamic function ${i} for ${utf} {no-args} [ simbol:${profile}:${module}.${fn}() ] -={
 
 function ${utf}Dyn${i}NoArgs() {
     #. Check if the function called without any arguments returns CODE_DEFAULT, or otherwise CODE_SUCCESS
     #. TODO: At the moment, no way to tell automatically if its CODE_DEFAULT or CODE_SUCCESS we expect
     #. TODO: so this either/or approach will have to do.
     core:softimport ${module}
-    cpf " %{@comment ___site} %{!function:${module}:${fn}} {no-args} "
+    cpf " %{@comment ___simbol} %{!function:${module}:${fn}} {no-args} "
     if assertEquals "import ${module}" ${CODE_SUCCESS?} \$?; then
         ${ffn} >/dev/null 2>&1
         ((e=\$? % ${CODE_DEFAULT?})) #. See why above
@@ -287,23 +287,23 @@ function ${utf}Dyn${i}NoArgs() {
                                         auto_stdout    \
                                         auto_stderr    \
                                         auto_exitcode  \
-                                        auto_site      \
+                                        auto_simbol      \
                                     <<< "${line}"
                                     cat <<!SCRIPT >> ${script}
-#. Dynamic function ${i} for ${utf} [ site:${auto_profile}:${auto_module}.${auto_fn}() ] -={
+#. Dynamic function ${i} for ${utf} [ simbol:${auto_profile}:${auto_module}.${auto_fn}() ] -={
 
 function ${utf}Dyn${i}() {
     local regex_stdin="${auto_stdin?}";
     local regex_stdout='${auto_stdout?}';
     local regex_stderr='${auto_stderr?}';
 
-    cpf " %{@comment ___site} %{!function:${auto_module}:${auto_fn}} ${auto_arguments//%/%%} %{r:-=[} "
+    cpf " %{@comment ___simbol} %{!function:${auto_module}:${auto_fn}} ${auto_arguments//%/%%} %{r:-=[} "
         cpf "%{g:out(}"; echo -ne "\${regex_stdout:--}"; cpf "%{g:)}"; cpf " %{y:/} "
         cpf "%{r:err(}"; echo -ne "\${regex_stderr:--}"; cpf "%{r:)}"; cpf " %{y:/} ";
         [ ${auto_exitcode} -eq 0 ] && cpf "%{g:0}" || cpf "%{r:${auto_exitcode}}"
     cpf " %{r:]=-}"
 
-    if [ -z "${auto_site}" -o "${auto_site}" == "${SITE_PROFILE?}" ]; then
+    if [ -z "${auto_simbol}" -o "${auto_simbol}" == "${SIMBOL_PROFILE?}" ]; then
         cpf
         core:softimport ${auto_module}
         if assertEquals "import ${auto_module}" ${CODE_SUCCESS?} \$?; then
@@ -380,7 +380,7 @@ function ${utf}Dyn${i}() {
             echo "Exiting early."
         fi
     else
-        theme HAS_WARNED "Skipped (${auto_site})"
+        theme HAS_WARNED "Skipped (${auto_simbol})"
     fi
 }
 #. }=-
@@ -415,15 +415,15 @@ function ${utf}Dyn${i}() {
     assertEquals "of the $t unit-tests, $p passed, $s skipped, and $e missing; i.e.," $((t-s)) $p
 }
 #. }=-
-#. Unit-test `site' module function -={
+#. Unit-test `simbol' module function -={
 function ::unit:test() {
     declare -g g_MODE
 
     local -i e=0
 
     local -A profiles=(
-        [core]=${SITE_CORE_MOD?}
-        [${SITE_PROFILE?}]=${SITE_USER_MOD?}
+        [core]=${SIMBOL_CORE_MOD?}
+        [${SIMBOL_PROFILE?}]=${SIMBOL_USER_MOD?}
     )
     for profile in ${!profiles[@]}; do
         if [ -d ${profiles[${profile}]} ]; then
@@ -438,7 +438,7 @@ function ::unit:test() {
                         export g_RUNTIME_CWD=${profiles[${profile}]}
                         export g_RUNTIME_PROFILE=${profile}
                         export g_RUNTIME_MODULE=${module}
-                        export g_RUNTIME_SCRIPT=${SITE_USER_CACHE?}/unittest-${module}.sh
+                        export g_RUNTIME_SCRIPT=${SIMBOL_USER_CACHE?}/unittest-${module}.sh
 
                         cat <<!SCRIPT > ${g_RUNTIME_SCRIPT?}
 #!/bin/bash
@@ -447,12 +447,12 @@ function ::unit:test() {
 #. Module    : ${module}
 #. Generated : $(date)
 !SCRIPT
-                        script=${SITE_UNIT_TESTS?}/${module}-static.sh
+                        script=${SIMBOL_UNIT_TESTS?}/${module}-static.sh
                         if [ -r "${script}" ]; then
                             cat "${script}" > ${g_RUNTIME_SCRIPT?}
                         fi
                         source ${g_RUNTIME_SCRIPT?}
-                        SHUNIT_PARENT="${SITE_CORE_MOD?}/unit.sh" source ${SHUNIT2?}
+                        SHUNIT_PARENT="${SIMBOL_CORE_MOD?}/unit.sh" source ${SHUNIT2?}
                     )
                     local -i ep=$?
 
@@ -467,7 +467,7 @@ function ::unit:test() {
 
                     g_MODE="execute"
                     cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?} -=[}\n";
-                    script=${SITE_USER_CACHE?}/unittest-${module}.sh
+                    script=${SIMBOL_USER_CACHE?}/unittest-${module}.sh
                     local -i ee=-1
                     if [ -r "${script}" ]; then
                         (

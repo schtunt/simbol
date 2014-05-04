@@ -13,7 +13,7 @@ core:import util
 core:softimport ng
 core:softimport mongo
 
-declare -g g_HGD_CACHE=${SITE_USER_CACHE?}/hgd.conf
+declare -g g_HGD_CACHE=${SIMBOL_USER_CACHE?}/hgd.conf
 [ -e ${g_HGD_CACHE?} ] || touch ${g_HGD_CACHE?}
 
 #. HGD Resolvers -={
@@ -70,7 +70,7 @@ function ::hgd:explode() {
                     local -a filters
                     IFS=% read -a filters <<< "${hgdn}"
                     local -a hosts
-                    :mongo:query ${SITE_PROFILE//@*} qdn ${filters[@]}
+                    :mongo:query ${SIMBOL_PROFILE//@*} qdn ${filters[@]}
                     [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
                 else
                     e=${CODE_FAILURE?}

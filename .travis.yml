@@ -13,22 +13,22 @@ branches:
 env:
   global:
     - CITM_HOST="d41d8cd98f00b204e9800998ecf8427e"
-    - SITE_PROFILE="TRAVIS"
+    - SIMBOL_PROFILE="TRAVIS"
     - USER_USERNAME="travis"
     - PATH="${PATH}:${HOME}/bin"
   matrix:
-    # CONTEXT=execute MODULE=tutorial #. nima/site#15  util
-    - CONTEXT=execute MODULE=util     #. nima/site#4
-    - CONTEXT=execute MODULE=dns      #. nima/site#10  util
-    - CONTEXT=execute MODULE=net      #. nima/site#7   dns
-    - CONTEXT=execute MODULE=git      #. nima/site#9   net
-    - CONTEXT=execute MODULE=hgd      #. nima/site#3   util net
-    - CONTEXT=execute MODULE=tunnel   #. nima/site#18  util net dns
-    - CONTEXT=execute MODULE=remote   #. nima/site#13  util hgd dns
-    - CONTEXT=execute MODULE=gpg      #. nima/site#5
-    - CONTEXT=execute MODULE=vault    #. nima/site#17  gpg
-    - CONTEXT=execute MODULE=help     #. nima/site#19
-    - CONTEXT=execute MODULE=xplm     #. nima/site#29
+    # CONTEXT=execute MODULE=tutorial #. nima/simbol#15  util
+    - CONTEXT=execute MODULE=util     #. nima/simbol#4
+    - CONTEXT=execute MODULE=dns      #. nima/simbol#10  util
+    - CONTEXT=execute MODULE=net      #. nima/simbol#7   dns
+    - CONTEXT=execute MODULE=git      #. nima/simbol#9   net
+    - CONTEXT=execute MODULE=hgd      #. nima/simbol#3   util net
+    - CONTEXT=execute MODULE=tunnel   #. nima/simbol#18  util net dns
+    - CONTEXT=execute MODULE=remote   #. nima/simbol#13  util hgd dns
+    - CONTEXT=execute MODULE=gpg      #. nima/simbol#5
+    - CONTEXT=execute MODULE=vault    #. nima/simbol#17  gpg
+    - CONTEXT=execute MODULE=help     #. nima/simbol#19
+    - CONTEXT=execute MODULE=xplm     #. nima/simbol#29
     - CONTEXT=installer MODULE=-
 
 matrix:

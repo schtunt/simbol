@@ -1,0 +1,40 @@
+#!/bin/bash
+# vim: tw=0:ts=4:sw=4:et:ft=bash
+
+e=0
+[ ! -f ${HOME}/.simbolrc ] || source ${HOME}/.simbolrc
+if [ ${#SIMBOL_SHELL} -gt 0 ]; then
+    if [ -x "${SIMBOL_SHELL}" ]; then
+        if [ "${SIMBOL_SHELL}" != "${BASH}" ]; then
+            exec ${SIMBOL_SHELL} $0 $@
+        fi
+    else
+        echo "The request SIMBOL_SHELL is invalid:" ${SIMBOL_SHELL}
+        e=2
+    fi
+fi
+
+if [ $e -eq 0 ]; then
+    maj=${BASH_VERSINFO[0]}
+    min=${BASH_VERSINFO[1]}
+
+    if [ ${maj} -ge 4 -a ${min} -ge 0 ]; then
+        SIMBOL_PROFILE=$(${HOME}/.simbol/bin/activate)
+        e=$?
+        if [ $e -eq 0 ]; then
+            export SIMBOL_PROFILE
+            source ~/.simbol/.scm/lib/libsh/libsimbol/libsimbol.sh
+            rm -f ${SIMBOL_DEADMAN?}
+
+            core:wrapper "$@"
+            e=$?
+        else
+            echo "No simbol profiles active, either create a new one, or activate an existing one."
+        fi
+    else
+        e=1
+        echo "Your version of BASH is too old; export SIMBOL_SHELL to override system bash."
+    fi
+fi
+
+exit ${e}

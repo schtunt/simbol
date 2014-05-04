@@ -28,8 +28,8 @@ USER_TLDIDS_REQUIRED=( m p )
 USER_TLDID_DEFAULT=_
 #. Now we declare the TLD for these subnets:
 USER_TLDS=(
-    [m]='mgmt.site'          #. Management network
-    [p]='site.org'           #. Public network, add more as you please
+    [m]='mgmt.simbol'          #. Management network
+    [p]='simbol.org'           #. Public network, add more as you please
 )
 #. Finally, for each TLD, we define the list of possible subdomain for any
 #. given host:
@@ -71,8 +71,8 @@ USER_MON_CMDGRPREMOTE=(
     [cpu]="lscpu | awk -F ' *: *' '\$1~/^CPU\\(s\\)$/{cpus=\$2};\$1~/^Core\\(s\\) per socket$/{cps=\$2};\$1~/^CPU MHz$/{mhz=\$2};END{printf(\"%dx%dx%d\n\",cps,cpus/cps,mhz)}'"
     [os]="cat /etc/redhat-release"
     [sock]="/usr/sbin/lsof +c 0 -i TCP -s TCP:LISTEN"
-    [scsi_rescan_disks]="/software/site/bin/scsi rescan_disks"
-    [scsi_rescan_host]="/software/site/bin/scsi rescan_host"
+    [scsi_rescan_disks]="/software/simbol/bin/scsi rescan_disks"
+    [scsi_rescan_host]="/software/simbol/bin/scsi rescan_host"
     [ip]='/sbin/ip a show dev eth0 | awk "\$1~/^inet$/{print\$2}"'
     [uptime]="awk '{printf(\"%6.2f days\n\",\$1/3600/24)}' /proc/uptime"
     [dpkage]="stat --format='%Y'  /var/lib/dpkg/info"

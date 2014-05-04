@@ -7,7 +7,7 @@ Core GNUPG module
 #. GNUPG -={
 core:requires gpg2
 
-core:requires ENV SITE_PROFILE
+core:requires ENV SIMBOL_PROFILE
 core:requires ENV USER_USERNAME
 core:requires ENV USER_FULLNAME
 core:requires ENV USER_EMAIL
@@ -26,7 +26,7 @@ function ::gpg:keypath() {
     if [ $# -eq 1 ]; then
         local -a data
         local gpgkid="${1}"
-        local -r gpgkp="${HOME?}/.gnupg/${USER_USERNAME?}.${SITE_PROFILE%%@*}"
+        local -r gpgkp="${HOME?}/.gnupg/${USER_USERNAME?}.${SIMBOL_PROFILE%%@*}"
         case ${gpgkid}:${#gpgkid} in
             '.':1)
                 data=( ${gpgkp} )
@@ -34,11 +34,11 @@ function ::gpg:keypath() {
             ;;
             '*':1)
                 local -a files=( ${gpgkp}.* )
-                if ! [[ ${files[0]} =~ ${SITE_PROFILE%%@*}\.\*$ ]]; then
+                if ! [[ ${files[0]} =~ ${SIMBOL_PROFILE%%@*}\.\*$ ]]; then
                     for file in ${files[@]}; do
                         gpgkid=$(
                             basename ${file} |
-                                sed -n -e "s/${USER_USERNAME?}.${SITE_PROFILE%%@*}.\(.*\).sec/\1/p"
+                                sed -n -e "s/${USER_USERNAME?}.${SIMBOL_PROFILE%%@*}.\(.*\).sec/\1/p"
                         )
                         if [ ${#gpgkid} -eq 10 ]; then
                             data=( $(::gpg:keypath ${gpgkid}) )
@@ -162,7 +162,7 @@ Key-Length: ${keysize}
 Subkey-Type: ELG-E
 Subkey-Length: ${keysize}
 Name-Real: ${USER_FULLNAME?}
-Name-Comment: ${USER_USERNAME?} profile key generated via site
+Name-Comment: ${USER_USERNAME?} profile key generated via simbol
 Name-Email: ${USER_EMAIL?}
 Expire-Date: 0
 %no-ask-passphrase
@@ -215,7 +215,7 @@ function gpg:create() {
         gpgkp=( $(::gpg:keypath '*') )
         e=$?
         if [ ${#gpgkp[@]} -eq 0 ]; then
-            cpf "Generating an RSA/ELG-E GPG key for %{@user:%s}@%{@profile:%s}..." "${USER_USERNAME?}" "${SITE_PROFILE%%@*}"
+            cpf "Generating an RSA/ELG-E GPG key for %{@user:%s}@%{@profile:%s}..." "${USER_USERNAME?}" "${SIMBOL_PROFILE%%@*}"
             local gpgkid
             gpgkid=$(:gpg:create)
             e=$?

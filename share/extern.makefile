@@ -65,7 +65,7 @@ shflags.uninstall:
 	@-rm -r ${SRC_SHFLAGS}
 shflags.install: ${LIBSH}/shflags
 ${LIBSH}/shflags: ${SRC_SHFLAGS}
-	@ln -sf ${HOME}/.site/var/$</src/shflags $@
+	@ln -sf ${HOME}/.simbol/var/$</src/shflags $@
 ${SRC_SHFLAGS}: ${TGZ_SHFLAGS}
 	@printf "Untarring $< into $(@D)..."
 	@tar -C $(@D) -xzf $<
@@ -86,7 +86,7 @@ shunit2.uninstall:
 	@-rm -r ${SRC_SHUNIT2}
 shunit2.install: libexec/shunit2
 libexec/shunit2: ${SRC_SHUNIT2}
-	@ln -sf ${HOME}/.site/var/$</src/shunit2 $@
+	@ln -sf ${HOME}/.simbol/var/$</src/shunit2 $@
 ${SRC_SHUNIT2}: ${TGZ_SHUNIT2}
 	@printf "Untarring $< into $(@D)..."
 	@tar -C $(@D) -xzf $<
