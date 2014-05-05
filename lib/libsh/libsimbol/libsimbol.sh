@@ -113,8 +113,10 @@ declare g_TLDID=${USER_TLDID_DEFAULT:-_}
 
 declare -g g_SSH_OPT
 g_SSH_OPTS="-q"
-[ ! -e "${SIMBOL_USER_ETC?}/ssh.conf" ] ||
-    g_SSH_OPTS+=" -F ${SIMBOL_USER_ETC?}/ssh.conf"
+g_SSH_CONF=${SIMBOL_USER_ETC?}/${SIMBOL_USER_SSH_CONF:-ssh.conf}
+if [ -e "${g_SSH_CONF}" ]; then
+    g_SSH_OPTS+=" -F ${g_SSH_CONF}"
+fi
 #. }=-
 #. 1.4  Core Configuration -={
 unset  CDPATH
