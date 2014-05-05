@@ -753,13 +753,13 @@ function ::core:flags.eval() {
     if [ ${#module} -gt 0 ]; then
         core:softimport ${module}
         if [ $? -eq ${CODE_IMPORT_GOOOD?} ]; then
-            fn="$(:core:complete ${module} ${fn})"
-            if [ "$(type -t "${module}:${fn}:shflags")" == "function" ]; then
+            local _fn="$(:core:complete ${module} ${fn})"
+            if [ "$(type -t "${module}:${_fn}:shflags")" == "function" ]; then
                 #. shflags function defined, so let's use it...
                 while read f_type f_long f_default f_desc f_short; do
                     DEFINE_${f_type} "${f_long}" "${f_default}" "${f_desc}" "${f_short}"
                     extra+=( FLAGS_${f_long} )
-                done < <( ${module}:${fn}:shflags )
+                done < <( ${module}:${_fn}:shflags )
             fi
         fi
         cat <<!
@@ -1072,14 +1072,22 @@ function :core:usage() {
 function :core:complete() {
     local module=$1
     local fn=$2
-    for afn in $(declare -F|awk -F'[ :]' '$3~/^'${module}'$/{print$4}'|sort -n); do
-        local AC_${module}_${afn//./_}=1
-    done
-    local -a completed=( $(eval echo \${!AC_${module}_${fn//./_}*}) )
-    if echo ${completed[@]} | grep -qE "\<AC_${module}_${fn//./_}\>"; then
-        echo ${fn}
-    else
-        echo ${completed[@]//AC_${module}_/}
+    if [ "${fn}" != '-' ]; then
+        local hit
+        hit=$(declare -F ${module}:${fn})
+        if [ $? -eq 0 ]; then
+            echo ${fn}
+        else
+            for afn in $(declare -F|awk -F'[ :]' '$3~/^'${module}'$/{print$4}'|sort -n); do
+                local AC_${module}_${afn//./_}=1
+            done
+            local -a completed=( $(eval echo "\${!AC_${module}_${fn//./_}*}") )
+            if echo ${completed[@]} | grep -qE "\<AC_${module}_${fn//./_}\>"; then
+                echo ${fn}
+            else
+                echo ${completed[@]//AC_${module}_/}
+            fi
+        fi
     fi
 }
 
