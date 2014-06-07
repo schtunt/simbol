@@ -609,12 +609,15 @@ function :ldap:search() {
             #cpf "%{@cmd:%s}\n" "${querystr}"
 
             #. TITLE: echo ${display[@]^^}
+            #. FIXME: awk BEGIN section has weird RS assignments, which at this time do not
+            #. FIXME: make sense to anybody
             eval ${querystr} |
                 grep -vE '^#' |
-                gawk -v fields=${#display[@]} -v displaystr=${displaystr} '
+                gawk -v fields=${#display[@]} -v displaystr=${displaystr} \
+                    -v delom="${SIMBOL_DELOM?}" -v delim=${SIMBOL_DELIM?} '
 BEGIN{
     FS="\n";
-    RS="_";
+    RS="\n\n";
     if(fields>1) RS="\n\n";
     split(displaystr,display,",")
 }
@@ -624,7 +627,7 @@ BEGIN{
             match($i, /^([^:]+): +(.*)$/, kv);
             key=tolower(kv[1]);
             value=kv[2];
-            if(length(data[key])>0) data[key]=data[key] "'${SIMBOL_DELOM?}'" value;
+            if(length(data[key])>0) data[key]=data[key] delom value;
             else data[key]=value;
         }
     }
@@ -638,7 +641,7 @@ BEGIN{
 
     if(hits==total) {
         for(i=1;i<=total;i++) {
-            if(i>1) printf("'${SIMBOL_DELIM?}'");
+            if(i>1) printf(delim);
             key = display[i];
             printf("%s", data[key]);
         }
