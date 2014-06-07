@@ -434,6 +434,7 @@ function :ng:host() {
     #.
     #. That includes the ${hni} variable used for indentation.
     local -i e=${CODE_FAILURE?}
+    local tldid=${g_TLDID?}
 
     if [ $# -eq 1 -o $# -eq 2 ]; then
         local -i hni=${2:-0}
@@ -450,8 +451,6 @@ function :ng:host() {
         local shn=$1
 
         if [ ${hni} -eq 1 ]; then
-            local tldid
-            tldid=$(:dns:get _ tldid "${shn}")
             if [ $? -eq ${CODE_SUCCESS?} ]; then
                 fqdn="$(:dns:get ${tldid} fqdn ${shn})"
                 if [ $? -eq 0 ]; then
@@ -499,6 +498,7 @@ function :ng:host() {
 function ng:host:usage() { echo "<hnh>"; }
 function ng:host() {
     local -i e=${CODE_DEFAULT?}
+    local tldid=${g_TLDID?}
 
     if [ $# -eq 1 -o $# -eq 2 ]; then
         local -i hni=${2:-0}
@@ -513,8 +513,6 @@ function ng:host() {
 
             local -a hosts
 
-            local tldid
-            tldid=$(:dns:get _ tldid "${shn}")
             if [ $? -eq ${CODE_SUCCESS?} ]; then
                 fqdn="$(:dns:get ${tldid} fqdn ${shn})"
                 if [ $? -eq 0 ]; then
@@ -562,7 +560,7 @@ function ng:host() {
                 ${FUNCNAME?} "$ng" ${hni}
             done
         else
-            local -a didumean=( $(:ldap:search -2 netgroup "nisNetgroupTriple~=${fqdn}" nisNetgroupTriple) )
+            local -a didumean=( $(:ldap:search -2 netgroup nisNetgroupTriple~="\(${fqdn},,\)" nisNetgroupTriple) )
             if [ ${#didumean[@]} -gt 0 ]; then
                 printf "? %s\n" ${didumean[@]}
             fi
