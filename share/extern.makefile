@@ -137,7 +137,7 @@ libexec/jsontool: src/jsontool
 	@echo "DONE"
 src/jsontool:
 	@printf "Downloading jsontool..."
-	@${DLA} https://github.com/trentm/json/raw/master/lib/jsontool.js > $@
+	@${DLA} https://github.com/trentm/json/raw/master/lib/json.js > $@
 	@echo "DONE"
 #. }=-
 
