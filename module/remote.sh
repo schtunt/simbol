@@ -155,14 +155,15 @@ function remote:connect:shflags() {
 boolean resolve   false  "resolve-first"  r
 !
 }
-function remote:connect:usage() { echo "<hnh> [<cmd> [<args> [...]]]"; }
+function remote:connect:usage() { echo "[<username>@]<hnh> [<cmd> [<args> [...]]]"; }
 function remote:connect() {
     local -i e=${CODE_DEFAULT?}
 
     if [ $# -ge 1 ]; then
         local tldid=${g_TLDID?}
 
-        local hnh=$1
+        local username=${1//@*}
+        local hnh=${1##*@}
         local -i resolve=${FLAGS_resolve:-0}; ((resolve=~resolve+2)); unset FLAGS_resolve
         [ "${hnh: -1}" != '.' ] || resolve=0
 
@@ -201,6 +202,7 @@ function remote:connect() {
 #               local hcs=${fqdn}
 #           fi
 
+            [ ${#username} -eq 0 ] || hcs=${username}@${hcs}
             if [ $# -eq 1 ]; then
                 :remote:connect ${tldid} ${hcs}
                 e=$?
