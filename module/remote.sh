@@ -162,7 +162,9 @@ function remote:connect() {
     if [ $# -ge 1 ]; then
         local tldid=${g_TLDID?}
 
-        local username=${1//@*}
+        local username=
+        [ "${1//[^@]/}" != '@' ] || username="${1//@*}"
+
         local hnh=${1##*@}
         local -i resolve=${FLAGS_resolve:-0}; ((resolve=~resolve+2)); unset FLAGS_resolve
         [ "${hnh: -1}" != '.' ] || resolve=0
