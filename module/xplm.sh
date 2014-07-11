@@ -227,10 +227,10 @@ function xplm:list() {
 
         if [ $e -ne ${CODE_FAILURE?} ]; then
             for plid in ${!prolangs[@]}; do
+                if [[ $# -eq 0 || ${prolangs[${plid}]} -eq 1 ]]; then
                 cpf "Package listing for %{y:%s}->%{r:%s-%s}...\n"\
                     "${plid}"\
                     "${g_PROLANG[${plid}]}" "${g_PROLANG_VERSION[${plid}]}"
-                if [[ $# -eq 0 || ${prolangs[${plid}]} -eq 1 ]]; then
                     :xplm:list ${plid}
                     e=$?
                 fi
