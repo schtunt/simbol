@@ -18,7 +18,8 @@ core:requires netstat
 function :tunnel:pid() {
     local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 0 ]; then
+    if [ $# -eq 1 ]; then
+        #. XXX - Not using $1?
         if [ -e "${SIMBOL_USER_SSH_CONTROLPATH}" ]; then
             local raw
             raw=$(
@@ -97,7 +98,7 @@ function tunnel:start:usage() { echo "<hcs> [<port:22>]"; }
 function tunnel:start() {
     local -i e=${CODE_DEFAULT?}
 
-    if [ $# -eq 1 ]; then
+    if [ $# -eq 2 ]; then
         local -r hcs=${1}
         local -ri port=${2:-22}
         cpf "Starting ssh control master to %{@host:${hcs}}..."
