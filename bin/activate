@@ -99,6 +99,7 @@ function main() {
 e=99
 
 if [ -d ~/.simbol/.scm/ ]; then
+    cd ~/.simbol/.scm/
     if [ $# -le 1 ]; then
         main "$@"
         e=$?
