@@ -2,8 +2,9 @@
 
 USER_LOG_LEVEL=DEBUG
 
+#. Change key values to 1 to enable the module
 USER_MODULES=(
-    [mymod]=1
+    [mymod]=0
 )
 
 #. Disable some special-case modules by default, users should enable them if
