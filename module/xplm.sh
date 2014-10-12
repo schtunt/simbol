@@ -129,7 +129,11 @@ function :xplm:versions() {
         e=${CODE_SUCCESS?}
         case ${plid} in
             rb|py|pl)
-                ${virtenv} versions | sed "s/^/${plid} /"
+                if which ${virtenv} &>/dev/null; then
+                    ${virtenv} versions 2>/dev/null | sed "s/^/${plid} /"
+                else
+                    echo "${plid}   0.0.0"
+                fi
             ;;
             *)
                 e=${CODE_FAILURE?}
@@ -669,7 +673,7 @@ function :xplm:run() {
         case ${plid} in
             rb|py|pl)
                 if ::xplm:loadvirtenv "${plid}" "${version}"; then
-                    eval '${script}'
+                    eval '${g_PROLANG[${plid}]} ${script}'
                     e=$?
                 fi
             ;;

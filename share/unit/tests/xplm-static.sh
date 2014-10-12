@@ -15,6 +15,13 @@ function xplmStartUp() {
     : noop
 }
 
+#. testCoreXplmVersionsInternal() -={
+testCoreXplmVersionsInternal() {
+    core:import xplm
+
+    : noop
+}
+#. }=-
 #. testCoreXplmLoadvirtenvPrivate() -={
 testCoreXplmLoadvirtenvPrivate() {
     : noop
@@ -38,27 +45,6 @@ function testCoreXplmPurgeInternal() {
 #. testCoreXplmInstallInternal() -={
 function testCoreXplmInstallInternal() {
     : noop
-}
-function testCoreXplmInstallInternalRb() {
-    core:import xplm
-
-    cmd=":xplm:install rb"
-    eval "${cmd}"
-    assertTrue "[${cmd}]" $?
-}
-function testCoreXplmInstallInternalPy() {
-    core:import xplm
-
-    cmd=":xplm:install py"
-    eval "${cmd}"
-    assertTrue "[${cmd}]" $?
-}
-function testCoreXplmInstallInternalPl() {
-    core:import xplm
-
-    cmd=":xplm:install pl"
-    eval "${cmd}"
-    assertTrue "[${cmd}]" $?
 }
 #. }=-
 #. testCoreXplmShellInternal() -={

@@ -1,0 +1,13 @@
+#. format: profile|module|function|context|stdin|arguments|stdout|stderr|exitcode
+#. XPLM (External Programming Languages Module -={
+core|xplm|versions|public||||0
+core|xplm|versions|internal||||0
+core|xplm|selfupdate|internal||||0
+core|xplm|selfupdate|public||||0
+core|xplm|install|internal|rb|||0
+core|xplm|install|internal|py|||0
+core|xplm|install|internal|pl|||0
+#core|xplm|run|internal
+#core|xplm|run|public
+#. }=-
+
