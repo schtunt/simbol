@@ -53,7 +53,7 @@ install: require sanity .install
 	@ln -s ${HOME}/.simbol/profiles.d/ACTIVE/libexec ${HOME}/.simbol/libexec
 	@echo "DONE"
 	@printf "Setting up initial profile..."
-	@ln -sf $(PWD) $(HOME)/.simbol/.scm
+	@ln -sf $(CURDIR) $(HOME)/.simbol/.scm
 	@if ! bin/activate; then bin/activate DEFAULT; bin/activate; fi
 	@
 	@printf "Preparing ${EXTERN_D}..."
@@ -63,18 +63,18 @@ install: require sanity .install
 	@mkdir -p ${EXTERN_D}/log
 	@mkdir -p ${EXTERN_D}/tmp
 	@mkdir -p ${EXTERN_D}/lib
-	@ln -sf $(PWD)/share/extern.makefile ${EXTERN_D}/Makefile
+	@ln -sf $(CURDIR)/share/extern.makefile ${EXTERN_D}/Makefile
 	@echo "DONE"
 	@
 	@printf "Populating ${EXTERN_D}...\n"
-	@$(MAKE) -f $(PWD)/share/extern.makefile -C ${EXTERN_D} install
+	@$(MAKE) -f $(CURDIR)/share/extern.makefile -C ${EXTERN_D} install
 	@
 	@printf "Installing symbolic links in $(HOME)/bin/..."
 	@mkdir -p $(HOME)/.simbol/bin
-	@ln -sf $(PWD)/bin/simbol $(HOME)/.simbol/bin/simbol
-	@ln -sf $(PWD)/bin/ssh $(HOME)/.simbol/bin/ssm
-	@ln -sf $(PWD)/bin/ssh $(HOME)/.simbol/bin/ssp
-	@ln -sf $(PWD)/bin/activate $(HOME)/.simbol/bin/activate
+	@ln -sf $(CURDIR)/bin/simbol $(HOME)/.simbol/bin/simbol
+	@ln -sf $(CURDIR)/bin/ssh $(HOME)/.simbol/bin/ssm
+	@ln -sf $(CURDIR)/bin/ssh $(HOME)/.simbol/bin/ssp
+	@ln -sf $(CURDIR)/bin/activate $(HOME)/.simbol/bin/activate
 	@mkdir -p $(HOME)/bin
 	@ln -sf $(HOME)/.simbol/bin/simbol $(HOME)/bin/simbol
 	@ln -sf $(HOME)/.simbol/bin/activate $(HOME)/bin/activate
@@ -92,7 +92,7 @@ install: require sanity .install
 .PHONY: unsanity unsanity
 unsanity:; @test -f .install
 uninstall: unsanity
-	@$(MAKE) -f $(PWD)/share/extern.makefile -C ${EXTERN_D} uninstall
+	@$(MAKE) -f $(CURDIR)/share/extern.makefile -C ${EXTERN_D} uninstall
 	@
 	find lib/libpy -name '*.pyc' -exec rm -f {} \;
 	find lib/libpy -name '*.pyo' -exec rm -f {} \;
@@ -115,7 +115,7 @@ uninstall: unsanity
 	@
 	@echo "Uninstallation complete!"
 purge:
-	@test ! -d ${EXTERN_D} || $(MAKE) -f $(PWD)/share/extern.makefile -C ${EXTERN_D} purge
+	@test ! -d ${EXTERN_D} || $(MAKE) -f $(CURDIR)/share/extern.makefile -C ${EXTERN_D} purge
 	@test ! -d ~/.simbol || find ~/.simbol -type l -exec rm -f {} \;
 	@#test ! -d ~/.simbol || find ~/.simbol -depth -type d -empty -exec rmdir {} \;
 	rm -rf $(HOME)/.simbol/var
