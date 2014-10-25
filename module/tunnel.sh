@@ -12,7 +12,7 @@ core:import util
 core:requires ssh
 core:requires netstat
 
-: ${SIMBOL_USER_SSH_CONTROLPATH:=${SIMBOL_USER_RUN?}/simbol-ssh-mux.sock}
+: ${SIMBOL_USER_SSH_CONTROLPATH:=${SIMBOL_USER_RUN?}/simbol-ssh-mux@prd.proxy.sock}
 
 #. tunnel:status -={
 function :tunnel:pid() {
@@ -118,6 +118,9 @@ function tunnel:start() {
 
     return $e
 }
+
+
+
 #. }=-
 #. tunnel:stop -={
 function :tunnel:stop() {
@@ -170,15 +173,37 @@ function tunnel:stop() {
 function :tunnel:create() {
     local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 5 ]; then
-        local hcs="${1}"
-        local laddr="${2}"
-        local lport="${3}"
-        local raddr="${4}"
-        local rport="${5}"
+    if [ $# -ge 5 ]; then
+        local laddr="${1}"
+        local lport="${2}"
+        local raddr="${3}"
+        local rport="${4}"
+        local -a hcss=( "${@:5}" )
+        #. TODO/FIXME
+        #. first hcs gets -f, but all may as well have it
+        #. last hcs gets -N only
+        #. all get -L
         if [ -S ${SIMBOL_USER_SSH_CONTROLPATH} ]; then
             if ! :net:localportping ${lport}; then
-                ssh ${g_SSH_OPTS} -fNL "${laddr}:${lport}:${raddr}:${rport}" ${hcs}
+                local -i first=0
+                local -i last=${#hcss[@]}
+                local -a cmd
+                local hcsn
+                for ((i=0; i<${#hcss[@]}; i++)); do
+                    hcsn="${hcss[i]}"
+                    if [ 0 -eq $((${#hcss[@]}-1)) ]; then
+                        cmd+=( "ssh ${g_SSH_OPTS} -fNL" )
+                    elif [ $i -eq 0 ]; then
+                        cmd+=( "ssh ${g_SSH_OPTS} -fL" )
+                    elif [ $i -eq $((${#hcss[@]}-1)) ]; then
+                        cmd+=( "ssh -NL" )
+                    else
+                        cmd+=( "ssh -fL" )
+                    fi
+                    cmd+=( "${laddr}:${lport}:${raddr}:${rport} ${hcsn}" )
+                done
+                echo "${cmd[@]}"
+                eval '${cmd[@]}'
                 e=$?
             else
                 e=${CODE_E01?}
@@ -200,7 +225,7 @@ string remote localhost "remote-addr" r
 !
 }
 function tunnel:create:usage() {
-    echo "<hcs> [-l|--local-addr <local-addr>] <local-port> [-r|--remote-addr <remote-addr>] <remote-port> [<port>]";
+    echo "[-l|--local-addr <local-addr>] <local-port> [-r|--remote-addr <remote-addr>] <remote-port> <hcs> [<hcs> [...]]";
 }
 function tunnel:create() {
     local -i e=${CODE_DEFAULT?}
@@ -208,20 +233,19 @@ function tunnel:create() {
     local raddr=${FLAGS_remote:-localhost}; unset FLAGS_remote
     local laddr=${FLAGS_local:-localhost};  unset FLAGS_local
 
-    if [ $# -eq 3 -o $# -eq 4 ]; then
-        local -r hcs=${1}
-        local -i lport=${2}
-        local -i rport=${3}
-        local -i port=${4:-22}
+    if [ $# -ge 3 ]; then
+        local -i lport=${1}
+        local -i rport=${2}
+        local -a hcss=( "${@:3}" )
         local pid
-        pid=$(:tunnel:pid ${hcs})
+        pid=$(:tunnel:pid)
         e=$?
-        if [ $e -eq ${CODE_SUCCESS?} -a ${#pid} -eq 0 ]; then
-            if :tunnel:start ${hcs} ${port}; then
-                pid=$(:tunnel:pid ${hcs} ${port})
-                e=$?
-            fi
-        fi
+        #if [ ${e} -eq ${CODE_SUCCESS?} -a ${#pid} -gt 0 ]; then
+        #    if :tunnel:start ${hcs} ${port}; then
+        #        pid=$(:tunnel:pid ${hcs} ${port})
+        #        e=$?
+        #    fi
+        #fi
 
         cpf "Creating ssh tunnel %{@host:${hcs}} ["
         if [ ${e} -eq ${CODE_SUCCESS?} -a ${#pid} -gt 0 ]; then
@@ -229,7 +253,7 @@ function tunnel:create() {
             cpf "%{r:<--->}"
             cpf "%{@ip:${raddr?}}:%{@int:${rport}}"
             cpf "] ..."
-            :tunnel:create ${hcs} ${laddr} ${lport} ${raddr} ${rport}
+            :tunnel:create ${laddr} ${lport} ${raddr} ${rport} ${hcss[@]}
             e=$?
             if [ $e -ne ${CODE_E01?} ]; then
                 theme HAS_AUTOED $e
@@ -237,6 +261,7 @@ function tunnel:create() {
                 theme HAS_FAILED "${lport}:PORT_USED"
             fi
         else
+            cpf "!!!] ..."
             theme HAS_FAILED
         fi
     fi
