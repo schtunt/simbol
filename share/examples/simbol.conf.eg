@@ -55,7 +55,6 @@ declare -g -r -a USER_SUBDOMAIN_p=(
 #USER_HDN="ou=hosts,dc=comp,dc=org,dc=au"
 #USER_SDN="ou=subnets,dc=comp,dc=org,dc=au"
 #USER_REGEX="uid=.*"
-#USER_USERNAME="nima.talebi"
 #. }=-
 #. remote:mon -={
 #. These get executed remotely first...
