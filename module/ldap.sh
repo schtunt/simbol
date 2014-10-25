@@ -553,6 +553,7 @@ function :ldap:search.eval() {
 }
 
 function :ldap:search() {
+    : ${SIMBOL_DELOM?}
     #. This function seaches for multiple objects
     #.
     #. Usage:
