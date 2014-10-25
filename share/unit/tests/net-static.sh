@@ -52,3 +52,11 @@ function testCoreNetFreelocalportInternal() {
         assertTrue 0x3 $?
     done
 }
+
+function testCoreNetMyipInternal() {
+    core:import net
+
+    local myip
+    myip=$(:net:myip)
+    assertEquals 0 $?
+}
