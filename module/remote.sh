@@ -525,7 +525,7 @@ function ::remote:tmux() {
                     [ ${lpid} -eq 0 ] || tmux split-window -h
                     cpf "Connection %{g:${tab}}:%{@int:${pid}} to %{@host:${hosts[${pid}]}}..."
                     #if [[ ${hosts[${pid}]} =~ /
-                    tmux send-keys -t "${lpid}" "simbol remote connect '${hosts[${pid}]}'" C-m
+                    tmux send-keys -t "${lpid}" "SIMBOL_USER_SSH_CONF=${SIMBOL_USER_SSH_CONF} SIRCA_ENV=${SIRCA_ENV} simbol remote connect '${hosts[${pid}]}'" C-m
                     #tmux send-keys -t "${lpid}" "${SIMBOL_CORE_BIN?}/ssh ${hosts[${pid}]}" C-m
                     #XXX tmux send-keys -t "${lpid}" "ss${tldid} ${hosts[${pid}]}" C-m
                     tmux select-layout -t "${session}:${tab}" tiled >/dev/null
@@ -654,6 +654,7 @@ function remote:mon() {
     #core:requires PYTHON paramiko
 
     core:requires RUBY gpgme
+    core:requires RUBY parallel
     core:requires RUBY net-ssh
     core:requires RUBY net-ssh-multi
     core:requires RUBY net-ssh-gateway
