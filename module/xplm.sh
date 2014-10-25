@@ -669,12 +669,18 @@ function :xplm:run() {
     if [ $# -gt 2 ]; then
         local plid="${1}"
         local version="${2}"
-        local script="${@:3}"
+        local cmd="${3}"
+        local cmdfull="${@:3}"
         case ${plid} in
             rb|py|pl)
                 if ::xplm:loadvirtenv "${plid}" "${version}"; then
-                    eval '${g_PROLANG[${plid}]} ${script}'
-                    e=$?
+                    if [ -f "${cmd}" ]; then
+                        eval '${g_PROLANG[${plid}]} ${cmdfull}'
+                        e=$?
+                    else
+                        eval '${cmdfull}'
+                        e=$?
+                    fi
                 fi
             ;;
         esac
