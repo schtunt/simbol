@@ -11,4 +11,5 @@ core|git|usage|public||${SIMBOL_SCM?}/module|||0
 #core|git|mkci|private
 #core|git|rebasesearchstr|public
 #core|git|remail|public
+#core|git|reauthor|public
 #. }=-
