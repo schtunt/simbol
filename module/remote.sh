@@ -155,14 +155,17 @@ function remote:connect:shflags() {
 boolean resolve   false  "resolve-first"  r
 !
 }
-function remote:connect:usage() { echo "<hnh> [<cmd> [<args> [...]]]"; }
+function remote:connect:usage() { echo "[<username>@]<hnh> [<cmd> [<args> [...]]]"; }
 function remote:connect() {
     local -i e=${CODE_DEFAULT?}
 
     if [ $# -ge 1 ]; then
         local tldid=${g_TLDID?}
 
-        local hnh=$1
+        local username=
+        [ "${1//[^@]/}" != '@' ] || username="${1//@*}"
+
+        local hnh=${1##*@}
         local -i resolve=${FLAGS_resolve:-0}; ((resolve=~resolve+2)); unset FLAGS_resolve
         [ "${hnh: -1}" != '.' ] || resolve=0
 
@@ -201,6 +204,7 @@ function remote:connect() {
 #               local hcs=${fqdn}
 #           fi
 
+            [ ${#username} -eq 0 ] || hcs=${username}@${hcs}
             if [ $# -eq 1 ]; then
                 :remote:connect ${tldid} ${hcs}
                 e=$?
@@ -521,7 +525,7 @@ function ::remote:tmux() {
                     [ ${lpid} -eq 0 ] || tmux split-window -h
                     cpf "Connection %{g:${tab}}:%{@int:${pid}} to %{@host:${hosts[${pid}]}}..."
                     #if [[ ${hosts[${pid}]} =~ /
-                    tmux send-keys -t "${lpid}" "simbol remote connect '${hosts[${pid}]}'" C-m
+                    tmux send-keys -t "${lpid}" "SIMBOL_USER_SSH_CONF=${SIMBOL_USER_SSH_CONF} SIRCA_ENV=${SIRCA_ENV} simbol remote connect '${hosts[${pid}]}'" C-m
                     #tmux send-keys -t "${lpid}" "${SIMBOL_CORE_BIN?}/ssh ${hosts[${pid}]}" C-m
                     #XXX tmux send-keys -t "${lpid}" "ss${tldid} ${hosts[${pid}]}" C-m
                     tmux select-layout -t "${session}:${tab}" tiled >/dev/null
@@ -650,6 +654,7 @@ function remote:mon() {
     #core:requires PYTHON paramiko
 
     core:requires RUBY gpgme
+    core:requires RUBY parallel
     core:requires RUBY net-ssh
     core:requires RUBY net-ssh-multi
     core:requires RUBY net-ssh-gateway

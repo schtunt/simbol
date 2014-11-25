@@ -21,7 +21,7 @@ function gitTearDown() {
 
 function test_1_1_CoreGitRmPublic() {
     core:import git
-    cd ${SITE_SCM?}
+    cd ${SIMBOL_SCM?}
 
     dd if=/dev/urandom of=BadFile count=1024 bs=1024 >${stdoutF?} 2>${stderrF?}
     assertTrue 0x0 $?
@@ -30,7 +30,7 @@ function test_1_1_CoreGitRmPublic() {
 function test_1_2_CoreGitFilePublic() {
     core:import git
 
-    cd ${SITE_SCM?}
+    cd ${SIMBOL_SCM?}
 
     local -i c
 
@@ -70,7 +70,7 @@ function test_1_2_CoreGitFilePublic() {
 function test_1_4_CoreGitVacuumPublic() {
     core:import git
 
-    core:wrapper git vacuum ${SITE_SCM?} >${stdoutF?} 2>${stderrF?}
+    core:wrapper git vacuum ${SIMBOL_SCM?} >${stdoutF?} 2>${stderrF?}
     assertTrue 0x0 $?
 }
 
@@ -169,14 +169,14 @@ function test_3_1_CoreGitSizePublic() {
     core:import git
 
     cd /
-    core:wrapper git size ${SITE_SCM?} >${stdoutF?} 2>${stderrF?}
+    core:wrapper git size ${SIMBOL_SCM?} >${stdoutF?} 2>${stderrF?}
     assertTrue 0x0 $?
 
-    cd ${SITE_SCM?}
+    cd ${SIMBOL_SCM?}
     core:wrapper git size >${stdoutF?} 2>${stderrF?}
     assertTrue 0x1 $?
 
-    cd ${SITE_SCM?}/module
+    cd ${SIMBOL_SCM?}/module
     core:wrapper git size >${stdoutF?} 2>${stderrF?}
     assertTrue 0x2 $?
 }
@@ -185,14 +185,14 @@ function test_3_1_CoreGitUsagePublic() {
     core:import git
 
     cd /
-    core:wrapper git usage ${SITE_SCM?} >${stdoutF?} 2>${stderrF?}
+    core:wrapper git usage ${SIMBOL_SCM?} >${stdoutF?} 2>${stderrF?}
     assertTrue 0x0 $?
 
-    cd ${SITE_SCM?}
+    cd ${SIMBOL_SCM?}
     core:wrapper git usage >${stdoutF?} 2>${stderrF?}
     assertTrue 0x1 $?
 
-    cd ${SITE_SCM?}/module
+    cd ${SIMBOL_SCM?}/module
     core:wrapper git usage >${stdoutF?} 2>${stderrF?}
     assertTrue 0x2 $?
 }

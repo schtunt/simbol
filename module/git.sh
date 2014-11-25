@@ -202,6 +202,27 @@ function git:rebasesearchstr() {
     return $e
 }
 #. }=-
+#. git:reauthor -={
+function git:reauthor:usage() { echo "<git-commit-sha1> \"Full Name <email@address.com>\""; }
+function git:reauthor() {
+    local -i e=${CODE_DEFAULT?}
+
+    if [ $# -eq 2 ]; then
+        local sha1=$1
+        local new="$2"
+        git rebase -i ${sha1}^
+        e=${CODE_SUCCESS?}
+        while [ $e -eq 0 ]; do
+            git commit --amend --author="$new" --reuse-message=HEAD
+            git rebase --continue
+            e=$?
+        done
+        e=${CODE_SUCCESS?}
+    fi
+
+    return $e
+}
+#. }=-
 #. git:split -={
 function git:split:usage() { echo "<git-commit-sha1>"; }
 function git:split() {
@@ -342,6 +363,8 @@ function git:gource() {
     return $e
 }
 #. }=-
+#. git:remail -={
+function git:remail:usage() { echo "<old-name> <new-name> <new-mail>"; }
 function git:remail() {
     local -i e=${CODE_DEFAULT?}
 
@@ -361,9 +384,12 @@ then
 else
         git commit-tree \"\$@\";
 fi" HEAD
+        e=$?
     fi
-}
 
+    return $e
+}
+#. }=-
 #. Debugging/Academic -={
 function _:git:add:usage() { echo "<git-repo-dir> <file>"; }
 function _:git:add() {

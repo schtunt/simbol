@@ -210,6 +210,7 @@ function ::cpf:theme() {
                     hash)                fmt="%{b:${fmt}}";;
                     fqdn)                fmt="%{y:${fmt}}";;
                     host)                fmt="%{y:${fmt}}";;
+                    service)             fmt="%{r:${fmt}}";;
                     port)                fmt="%{g:${fmt}}";;
                     host_bad)            fmt="%{r:${fmt}}";;
                     ip)                  fmt="%{b:${fmt}}";;

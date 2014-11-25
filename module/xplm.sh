@@ -129,7 +129,11 @@ function :xplm:versions() {
         e=${CODE_SUCCESS?}
         case ${plid} in
             rb|py|pl)
-                ${virtenv} versions | sed "s/^/${plid} /"
+                if which ${virtenv} &>/dev/null; then
+                    ${virtenv} versions 2>/dev/null | sed "s/^/${plid} /"
+                else
+                    echo "${plid}   0.0.0"
+                fi
             ;;
             *)
                 e=${CODE_FAILURE?}
@@ -227,10 +231,10 @@ function xplm:list() {
 
         if [ $e -ne ${CODE_FAILURE?} ]; then
             for plid in ${!prolangs[@]}; do
+                if [[ $# -eq 0 || ${prolangs[${plid}]} -eq 1 ]]; then
                 cpf "Package listing for %{y:%s}->%{r:%s-%s}...\n"\
                     "${plid}"\
                     "${g_PROLANG[${plid}]}" "${g_PROLANG_VERSION[${plid}]}"
-                if [[ $# -eq 0 || ${prolangs[${plid}]} -eq 1 ]]; then
                     :xplm:list ${plid}
                     e=$?
                 fi
@@ -665,12 +669,18 @@ function :xplm:run() {
     if [ $# -gt 2 ]; then
         local plid="${1}"
         local version="${2}"
-        local script="${@:3}"
+        local cmd="${3}"
+        local cmdfull="${@:3}"
         case ${plid} in
             rb|py|pl)
                 if ::xplm:loadvirtenv "${plid}" "${version}"; then
-                    eval '${script}'
-                    e=$?
+                    if [ -f "${cmd}" ]; then
+                        eval '${g_PROLANG[${plid}]} ${cmdfull}'
+                        e=$?
+                    else
+                        eval '${cmdfull}'
+                        e=$?
+                    fi
                 fi
             ;;
         esac

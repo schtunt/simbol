@@ -2,8 +2,9 @@
 
 USER_LOG_LEVEL=DEBUG
 
+#. Change key values to 1 to enable the module
 USER_MODULES=(
-    [mymod]=1
+    [mymod]=0
 )
 
 #. Disable some special-case modules by default, users should enable them if
@@ -54,7 +55,6 @@ declare -g -r -a USER_SUBDOMAIN_p=(
 #USER_HDN="ou=hosts,dc=comp,dc=org,dc=au"
 #USER_SDN="ou=subnets,dc=comp,dc=org,dc=au"
 #USER_REGEX="uid=.*"
-#USER_USERNAME="nima.talebi"
 #. }=-
 #. remote:mon -={
 #. These get executed remotely first...

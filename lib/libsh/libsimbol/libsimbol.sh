@@ -1,5 +1,7 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
+
 #. Site Engine -={
+export SIMBOL_VERSION=v0.30
 #. 1.1  Date/Time and Basics -={
 export NOW=$(date --utc +%s)
 #. FIXME: Mac OS X needs this instead:
@@ -44,14 +46,14 @@ PATH+=:${SIMBOL_CORE_LIBEXEC}
 PATH+=:${SIMBOL_USER_LIBEXEC}
 export PATH
 
-export RBENV_VERSION=2.1.1
+export RBENV_VERSION=${RBENV_VERSION:-2.1.1}
 #. Ruby -={
 #. rbenv
 RBENV_ROOT=${SIMBOL_USER_VAR}/rbenv
 export RBENV_ROOT RBENV_VERSION
 #. }=-
 
-export PYENV_VERSION=3.4.0
+export PYENV_VERSION=${PYENV_VERSION:-3.4.0}
 #. Python -={
 PYTHONPATH+=:${SIMBOL_CORE_LIBPY}
 PYTHONPATH+=:${SIMBOL_USER_LIBPY}
@@ -62,7 +64,7 @@ PYENV_ROOT=${SIMBOL_USER_VAR}/pyenv
 export PYENV_ROOT PYENV_VERSION
 #. }=-
 
-export PLENV_VERSION=5.18.2
+export PLENV_VERSION=${PLENV_VERSION:-5.18.2}
 #. Perl -={
 #. plenv
 PLENV_ROOT=${SIMBOL_USER_VAR}/plenv
@@ -944,7 +946,6 @@ function :core:functions() {
 
     return $e
 }
-
 function :core:usage() {
     local module=$1
     local fn=$2
@@ -952,7 +953,7 @@ function :core:usage() {
     [ $# -eq 2 ] && mode=${3---long}
 
     if [ ${#FUNCNAME[@]} -lt 4 ]; then
-        cpf "%{+bo}%{bl:simbol}%{-bo} %{@version:%s}, %{wh:the system-administration bash scripting suite}\n" $(:core:git describe "--always")
+        cpf "%{+bo}%{bl:simbol}%{-bo} %{@version:%s}, %{wh:bash framework}\n" ${SIMBOL_VERSION?}
         cpf "Using %{@path:%s} %{@version:%s}" "${BASH}" "${BASH_VERSION}"
         if [ ${#SIMBOL_SHELL} -eq 0 ]; then
             cpf " %{@comment:(export SIMBOL_SHELL to override)}"

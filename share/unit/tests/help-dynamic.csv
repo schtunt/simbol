@@ -1,5 +1,4 @@
 #. format: profile|module|function|context|stdin|arguments|stdout|stderr|exitcode
 #. Help -={
-core|help|all|public|||||0
-core|help|module|public||help|||0
+#core|help
 #. }=-

@@ -1,13 +1,13 @@
-[![views](https://sourcegraph.com/api/repos/github.com/nima/simbol/counters/views.png)](https://sourcegraph.com/github.com/nima/simbol)
-[![authors](https://sourcegraph.com/api/repos/github.com/nima/simbol/badges/authors.png)](https://sourcegraph.com/github.com/nima/simbol)
-[![status](https://sourcegraph.com/api/repos/github.com/nima/simbol/badges/status.png)](https://sourcegraph.com/github.com/nima/simbol)
+[![views](https://sourcegraph.com/api/repos/github.com/schtunt/simbol/counters/views.png)](https://sourcegraph.com/github.com/schtunt/simbol)
+[![authors](https://sourcegraph.com/api/repos/github.com/schtunt/simbol/badges/authors.png)](https://sourcegraph.com/github.com/schtunt/simbol)
+[![status](https://sourcegraph.com/api/repos/github.com/schtunt/simbol/badges/status.png)](https://sourcegraph.com/github.com/schtunt/simbol)
 
 # `gh-pages` README
-You are probably looking for this [README](https://github.com/nima/simbol/blob/gh-pages/README.md), or the corresponding [homepage](http://nima.github.io/simbol/).
+You are probably looking for this [README](https://github.com/schtunt/simbol/blob/gh-pages/README.md), or the corresponding [homepage](http://schtunt.github.io/simbol/).
 
 ---
 # README
-Please note that this README doesn't cover what `simbol` is (that is covered in the [homepage](http://nima.github.io/simbol/)), but focuses instead on the current status of simbol development.
+Please note that this README doesn't cover what `simbol` is (that is covered in the [homepage](http://schtunt.github.io/simbol/)), but focuses instead on the current status of simbol development.
 
 ## Development Status
 <!--
@@ -65,5 +65,5 @@ Here are the current build statuses of the various GitHub branches of simbol:
 
 | Branch     | Status |
 |------------|--------|
-| `master`   | [![Build Status](https://travis-ci.org/nima/simbol.png?branch=master)](https://travis-ci.org/nima/simbol/branches) |
-| `develop`  | [![Build Status](https://travis-ci.org/nima/simbol.png?branch=develop)](https://travis-ci.org/nima/simbol/branches) |
+| `master`   | [![Build Status](https://travis-ci.org/schtunt/simbol.png?branch=master)](https://travis-ci.org/schtunt/simbol/branches) |
+| `develop`  | [![Build Status](https://travis-ci.org/schtunt/simbol.png?branch=develop)](https://travis-ci.org/schtunt/simbol/branches) |

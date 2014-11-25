@@ -31,14 +31,38 @@ function profile_create() {
 
     local profile="${1}"
     local simbol_profile_d="${HOME}/.simbol/profiles.d/${profile}"
-    local simbolconf="${simbol_profile_d}/etc/simbol.conf"
-
     mkdir -p "${simbol_profile_d}/etc"
+
+    local simbolconf="${simbol_profile_d}/etc/simbol.conf"
     cp share/examples/simbol.conf.eg "${simbolconf}"
 
     mkdir -p "${simbol_profile_d}/lib"
     mkdir -p "${simbol_profile_d}/libexec"
     mkdir -p "${simbol_profile_d}/module"
+
+    return $e
+}
+
+function profile_deactivate() {
+    local -i e=5
+
+    local profile="${1}"
+
+    if profile_exists "${profile}"; then
+        local simbol_profile_d="${HOME}/.simbol/profiles.d/${profile}"
+        if [ -d ${simbol_profile_d}/bin ]; then
+            cd ${simbol_profile_d}/bin
+            for i in *; do
+                if [ -h ~/bin/$i ]; then
+                    rm -f ~/bin/$i;
+                fi
+            done
+        fi
+
+        rm -f "${SIMBOL_PROFILE_L}"
+
+        e=0
+    fi
 
     return $e
 }
@@ -50,9 +74,17 @@ function profile_activate() {
 
     if profile_exists "${profile}"; then
         local simbol_profile_d="${HOME}/.simbol/profiles.d/${profile}"
-        local simbolconf="${simbol_profile_d}/etc/simbol.conf"
-        rm -f "${SIMBOL_PROFILE_L}"
         ln -sf "${simbol_profile_d}" "${SIMBOL_PROFILE_L}"
+
+        if [ -d ${simbol_profile_d}/bin ]; then
+            cd ${simbol_profile_d}/bin
+            for i in *; do
+                if [ -x ${simbol_profile_d}/bin/$i ]; then
+                    ln -s ${simbol_profile_d}/bin/$i ~/bin/$i
+                fi
+            done
+        fi
+
         e=0
     fi
 
@@ -75,6 +107,7 @@ function main() {
             active=$(profile_active)
             if [ $? -eq 0 ]; then
                 if [ "${profile}" != "${active}" ]; then
+                    profile_deactivate "${active}"
                     profile_activate "${profile}"
                     e=$?
                     #echo "#. Active profile changed from ${active} to ${profile}: $e"
@@ -99,6 +132,7 @@ function main() {
 e=99
 
 if [ -d ~/.simbol/.scm/ ]; then
+    cd ~/.simbol/.scm/
     if [ $# -le 1 ]; then
         main "$@"
         e=$?

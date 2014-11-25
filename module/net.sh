@@ -338,4 +338,25 @@ function net:portping() {
     return $e
 }
 #. }=-
+#. net:myip -={
+function :net:myip:cached() { echo 3; }
+function :net:myip() {
+  ${CACHE_OUT?}; {
+    local -i e=${CODE_FAILURE?}
+
+    if [ $# -eq 0 ]; then
+        local myip
+        #! SLOW: myip=$(wget -q --timeout=1 -O- http://ifconfig.me/)
+        myip=$(wget -q --timeout=1 -O- https://secure.internode.on.net/webtools/showmyip?textonly=1)
+        e=$?
+        if [ $e -eq 0 -a ${#myip} -gt 0 -a ${#myip} -lt 16 ]; then
+            echo "${myip}"
+            e=${CODE_SUCCESS?}
+        fi
+    fi
+
+    return $e
+  } | ${CACHE_IN?}; ${CACHE_EXIT?}
+}
+#. }=-
 #. }=-
