@@ -121,20 +121,6 @@ function :util:stat:mode() {
 }
 #. }=-
 #. Misc -={
-function :util:json() {
-    local -i e=${CODE_FAILURE?}
-
-    if [ -t 1 ]; then
-        jsontool -o inspect $@
-        e=$?
-    else
-        jsontool $@
-        e=$?
-    fi
-
-    return $?
-}
-
 function :util:listify() {
     local -i e=${CODE_FAILURE?}
 

@@ -14,7 +14,7 @@ flycatcher:
 	@echo "Do not run make here unless you know what you're doing."
 
 EXTERN := shflags shunit2
-EXTERN += vimpager jsontool
+EXTERN += vimpager
 
 LIBSH  := lib/libsh
 LIBRB  := lib/librb
@@ -125,20 +125,6 @@ pyobjpath.install: scm/pyobjpath.git
 scm/pyobjpath.git:
 	@echo "Cloning $@..."
 	@git clone -q https://github.com/adriank/ObjectPath.git $@
-#. }=-
-#. jsontool -={
-.PHONY: jsontool.install jsontool.uninstall jsontool.purge
-jsontool.purgel: jsontool.uninstall; @-rm -rf libexec/jsontool
-jsontool.uninstall:; @-rm libexec/jsontool
-jsontool.install: libexec/jsontool
-libexec/jsontool: src/jsontool
-	@printf "Installing jsontool..."
-	@install -m 755 $< $@
-	@echo "DONE"
-src/jsontool:
-	@printf "Downloading jsontool..."
-	@${DLA} https://github.com/trentm/json/raw/master/lib/json.js > $@
-	@echo "DONE"
 #. }=-
 
 #. -={
