@@ -86,3 +86,6 @@ USER_MON_CMDGRPLOCAL+=(
 # a custom resolver; in this case it simply lower-cases the subjects passed in.
 #USER_HGD_RESOLVERS[lower]="echo '%s' | tr 'A-Z' 'a-z'"
 #. }=-
+#. pd -={
+declare -g -r USER_PAGERDUTY_HOST=simbol.pagerduty.com
+#. }=-
