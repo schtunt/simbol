@@ -240,8 +240,6 @@ function :remote:copy() {
         local dst=$4
 
         local ssh_options="${g_SSH_OPTS?}"
-#       #. DEPRECATED
-#       ssh_options+=" $(:remote:sshproxyopts ${tldid})"
         eval "scp ${ssh_options} ${hcs}:${src} ${dst}"
         e=$?
     else
@@ -252,31 +250,72 @@ function :remote:copy() {
   } | ${CACHE_IN?}; ${CACHE_EXIT?}
 }
 
-function remote:copy:usage() { echo "-T<tldid> <hnh> <src-path> <dst-path>"; }
+function remote:copy:usage() { echo "-T<tldid> [<dst-hnh>:]<src-path> [<dst-hnh>:]<dst-path>"; }
 function remote:copy() {
     local -i e=${CODE_DEFAULT?}
 
     local tldid=${g_TLDID?}
-    if [ $# -eq 3 ]; then
-        local -r hnh="$1"
-        local -r src="$2"
-        local -r dst="$3"
+    local -A data
+    if [ $# -eq 2 ]; then
+        local hs=src
+        for hstr in "$@"; do
+            if [ -n "${hstr//[^:]/}" ]; then
+                data[hnh_${hs}]="${hstr%%:*}"
+                data[pth_${hs}]="${hstr##*:}"
 
-        local -a data
-        [ ! -t 1 ] || cpf "Resolving %{@host:%s} in %{@tldid:%s}..." "${hnh}" "${tldid}"
-        data=( $(:dns:lookup.csv ${tldid} a ${hnh}) )
+                local hnh="${data[hnh_${hs}]}"
+                [ ! -t 1 ] || cpf "Resolving %{@host:%s} in %{@tldid:%s}..." "${hnh}" "${tldid}"
 
-        local qt hnh_ qual tldid_ usdn dn fqdn resolved qid
-        if [ ${#data[@]} -eq 1 ]; then
-            IFS=, read qt hnh_ qual tldid_ usdn dn fqdn resolved qid <<< "${data[0]}"
+                local -a hdata=( $(:dns:lookup.csv ${tldid} a ${hnh}) )
+                if [ ${#hdata[@]} -eq 1 ]; then
+                    local qt hnh_ qual tldid_ usdn dn fqdn resolved qid
+                    IFS=, read qt hnh_ qual tldid_ usdn dn fqdn resolved qid <<< "${hdata[0]}"
 
-            local qdn=${fqdn%.${dn}}
-            [ ! -t 1 ] || theme INFO "Copying from ${qdn}..."
-            :remote:copy "${tldid}" "${qdn}" "${src}" "${dst}"
-            e=$?
-        else
-            e=${CODE_FAILURE?}
-        fi
+                    data[qdn_${hs}]=${fqdn%.${dn}}
+                    data[fqdn_${hs}]=${fqdn}
+                    [ ! -t 1 ] || theme HAS_PASSED "${data[qdn_${hs}]}"
+                else
+                    [ ! -t 1 ] || theme HAS_FAILED
+                    e=${CODE_FAILURE?}
+                fi
+            else
+                data[pth_${hs}]="${hstr}"
+            fi
+
+            hs=dst
+        done
+
+        local ssh_options="${g_SSH_OPTS?}"
+        case ${#data[hnh_src]}:${#data[hnh_dst]} in
+            0:0)
+                [ ! -t 1 ] || cpf "Copying from %{@path:%s} to %{@path:%s}..."\
+                    "${data[pth_src]}" "${data[pth_dst]}"
+
+                cp -a "${data[pth_src]}" "${data[pth_dst]}"
+                e=$?
+            ;;
+            0:*)
+                [ ! -t 1 ] || cpf "Copying from %{@path:%s} to %{@host:%s}:%{@path:%s}..."\
+                    "${data[pth_src]}" "${data[hnh_dst]}" "${data[pth_dst]}"
+                eval "scp ${ssh_options} ${data[pth_src]} ${data[fqdn_dst]}:${data[pth_dst]}"
+                e=$?
+            ;;
+            *:0)
+                [ ! -t 1 ] || cpf "Copying from %{@host:%s}:%{@path:%s} to %{@path:%s}..."\
+                    "${data[hnh_src]}" "${data[pth_src]}" "${data[pth_dst]}"
+                eval "scp ${ssh_options} ${data[fqdn_src]}:${data[pth_src]} ${data[pth_dst]}"
+                e=$?
+            ;;
+            *:*)
+                [ ! -t 1 ] || cpf "Copying from %{@host:%s}:%{@path:%s} to %{@host:%s}:%{@path:%s}..."\
+                    "${data[hnh_src]}" "${data[pth_src]}" "${data[hnh_dst]}" "${data[pth_dst]}"
+                eval "scp ${ssh_options} ${data[fqdn_src]}:${data[pth_src]} ${data[fqdn_dst]}:${data[pth_dst]}"
+                e=$?
+            ;;
+        esac
+        theme HAS_AUTOED $e
+
+        e=$?
     fi
 
     return $e
