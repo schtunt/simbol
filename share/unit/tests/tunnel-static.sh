@@ -55,13 +55,13 @@ function test_1_3_CoreTunnelCreateInternal() {
     :net:localportping 8000
     assertFalse "0x1" $?
 
-    :tunnel:create host-8c.unit-tests.mgmt.simbol localhost 8000 localhost 22
+    :tunnel:create - host-8c.unit-tests.mgmt.simbol localhost 8000 localhost 22
     assertTrue "0x2" $?
 
     :net:localportping 8000
     assertTrue "0x3" $?
 
-    :tunnel:create host-8c.unit-tests.mgmt.simbol localhost 8000 localhost 22
+    :tunnel:create - host-8c.unit-tests.mgmt.simbol localhost 8000 localhost 22
     assertEquals "0x4" ${CODE_E01?} $?
 }
 
