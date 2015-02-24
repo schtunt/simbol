@@ -966,15 +966,12 @@ function :core:usage() {
     if [ $# -eq 0 ]; then
         #. Usage for simbol
         cpf "%{wh:usage}%{bl:4}%{@user:${USER_USERNAME}}%{bl:@}%{g:${SIMBOL_PROFILE}}\n"
-        #. FIXME
-        for profile in USER_MODULES USER_MODULES CORE_MODULES; do
+        for profile in USER_MODULES CORE_MODULES; do
             eval $(::core:dereference.eval profile) #. Will create ${profile} array
             for module in ${!profile[@]}; do (
-                local docstring="{no-docstr}"
-                docstring=$(core:docstring ${module})
+                local docstring=$(core:docstring ${module})
                 core:softimport ${module}
                 local -i ie=$?
-                local -i ie=${CODE_IMPORT_GOOOD?}
                 if [ $ie -eq ${CODE_IMPORT_ADMIN?} ]; then
                     continue
                 elif [ $ie -eq ${CODE_IMPORT_GOOOD?} ]; then
