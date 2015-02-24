@@ -232,10 +232,11 @@ function core:softimport() {
 
     if [ $# -eq 1 ]; then
         local module=$1
+        local modulepath=${1//./\/}
         if [ -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
             if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
-                if [ -f ${SIMBOL_USER_MOD}/${module}.sh ]; then
-                    if source ${SIMBOL_USER_MOD}/${module}.sh >/tmp/simbol.${module}.ouch 2>&1; then
+                if [ -f ${SIMBOL_USER_MOD}/${modulepath}.sh ]; then
+                    if source ${SIMBOL_USER_MOD}/${modulepath}.sh >/tmp/simbol.${module}.ouch 2>&1; then
                         e=${CODE_IMPORT_GOOOD?}
                     else
                         e=${CODE_IMPORT_ERROR?}
@@ -245,8 +246,8 @@ function core:softimport() {
                     e=${CODE_IMPORT_UNDEF?}
                 fi
             elif [ ${CORE_MODULES[${module}]-9} -eq 1 ]; then
-                if [ -f ${SIMBOL_CORE_MOD}/${module}.sh ]; then
-                    if source ${SIMBOL_CORE_MOD}/${module}.sh >/tmp/simbol.${module}.ouch 2>&1; then
+                if [ -f ${SIMBOL_CORE_MOD}/${modulepath}.sh ]; then
+                    if source ${SIMBOL_CORE_MOD}/${modulepath}.sh >/tmp/simbol.${module}.ouch 2>&1; then
                         e=${CODE_IMPORT_GOOOD?}
                     else
                         e=${CODE_IMPORT_ERROR?}
@@ -288,7 +289,7 @@ function core:imported() {
     local -i e=${CODE_FAILURE}
 
     if [ $# -eq 1 ]; then
-        local module=${1}
+        local module=$1
         e=${g_SIMBOL_IMPORTED_EXIT[${module}]}
         [ ${#e} -gt 0 ] || e=-1
     else
@@ -303,16 +304,17 @@ function core:docstring() {
 
     if [ $# -eq 1 ]; then
         local module=$1
+        local modulepath=${1//./\/}
 
         e=2 #. No such module
         if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
-            if [ -f ${SIMBOL_USER_MOD}/${module}.sh ]; then
-                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_USER_MOD}/${module}.sh
+            if [ -f ${SIMBOL_USER_MOD}/${modulepath}.sh ]; then
+                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_USER_MOD}/${modulepath}.sh
                 e=$?
             fi
         elif [ ${CORE_MODULES[${module}]-9} -eq 1 ]; then
-            if [ -f ${SIMBOL_CORE_MOD}/${module}.sh ]; then
-                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_CORE_MOD}/${module}.sh
+            if [ -f ${SIMBOL_CORE_MOD}/${modulepath}.sh ]; then
+                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_CORE_MOD}/${modulepath}.sh
                 e=$?
             fi
         elif [ ${CORE_MODULES[${module}]-9} -eq 0 -o ${USER_MODULES[${module}]-9} -eq 0 ]; then
