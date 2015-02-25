@@ -1,0 +1,30 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "foo",
+
+  "Resources" : {
+    "MyEc2Instance" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "ImageId" : "ami-baadbeef",
+        "KeyName" : "badbeef"
+      }
+    }
+  },
+
+  "Outputs" : {
+    "InstanceId" : {
+      "Description" : "InstanceId of the newly created EC2 instance",
+      "Value" : { "Ref" : "MyEc2Instance" }
+    },
+    "AZ" : {
+      "Description" : "Availability Zone of the newly created EC2 instance",
+      "Value" : { "Fn::GetAtt" : [ "MyEc2Instance", "AvailabilityZone" ] }
+    },
+    "PublicIP" : {
+      "Description" : "Public IP address of the newly created EC2 instance",
+      "Value" : { "Fn::GetAtt" : [ "MyEc2Instance", "PublicIp" ] }
+    }
+  }
+}

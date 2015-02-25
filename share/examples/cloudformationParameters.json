@@ -1,0 +1,56 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "aws cloudformation create-stack --stack-name tester --template-body file://cloudformation.json --parameters ParameterKey=KeyName,ParameterValue=cytosine ParameterKey=AMI,ParameterValue=ami-55a7ea65",
+
+  "Parameters" : {
+    "KeyName" : {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+      "Type" : "String"
+    },
+    "AMI" : {
+      "Description" : "ID of the AMI to run",
+      "Type" : "String",
+      "Default" : "ami-baadbeef"
+    }
+  },
+
+  "Resources" : {
+    "MyEc2Instance" : {
+      "Type" : "AWS::EC2::Instance",
+      "Properties" : {
+        "ImageId" : { "Ref" : "AMI" },
+        "KeyName" : { "Ref" : "KeyName" },
+        "SecurityGroups" : [ { "Ref" : "InstanceSecurityGroup" } ]
+      }
+    },
+
+    "InstanceSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Enable SSH access via port 22",
+        "SecurityGroupIngress" : [ {
+          "IpProtocol" : "tcp",
+          "FromPort" : "22",
+          "ToPort" : "22",
+          "CidrIp" : "0.0.0.0/0"
+        } ]
+      }
+    }
+  },
+
+  "Outputs" : {
+    "InstanceId" : {
+      "Description" : "InstanceId of the newly created EC2 instance",
+      "Value" : { "Ref" : "MyEc2Instance" }
+    },
+    "AZ" : {
+      "Description" : "Availability Zone of the newly created EC2 instance",
+      "Value" : { "Fn::GetAtt" : [ "MyEc2Instance", "AvailabilityZone" ] }
+    },
+    "PublicIP" : {
+      "Description" : "Public IP address of the newly created EC2 instance",
+      "Value" : { "Fn::GetAtt" : [ "MyEc2Instance", "PublicIp" ] }
+    }
+  }
+}
