@@ -639,10 +639,9 @@ function :core:cached() {
             local modfn=${FUNCNAME[1]}
             if [ "$(type -t ${modfn}:shflags)" != "function" ]; then
                 local -i ttl=0
-                [ "$(type -t ${modfn}:cache)" == "function" ] &&
-                    ttl=$(${modfn}:cache) ||
+                [ "$(type -t ${modfn}:cached)" == "function" ] &&
+                    ttl=$(${modfn}:cached) ||
                         ttl=${g_CACHE_TTL}
-
                 local argv="$1"
                 local cachefile=$(:core:cache:file "${modfn}" "${argv}")
                 local -i age
@@ -742,7 +741,7 @@ function ::core:flags.eval() {
     done
     set -- "${argv[@]}"
 
-    #. GLOBAL_OPTS 2/4: Our generic and global optiones
+    #. GLOBAL_OPTS 2/4: Our generic and global options
     DEFINE_boolean help     false            "<help>"                   H
     DEFINE_boolean verbose  false            "<verbose>"                V
     DEFINE_boolean cached   false            "<use-cache>"              C
