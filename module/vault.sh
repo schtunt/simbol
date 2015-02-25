@@ -182,6 +182,7 @@ function vault:edit() {
         mkdir -p $(dirname ${g_VAULT_TMP?})
 
         cpf "Decrypting secrets..."
+        umask 377
         :gpg:decrypt ${g_VAULT?} ${g_VAULT_TMP?}
         e=$?
         theme HAS_AUTOED $e
