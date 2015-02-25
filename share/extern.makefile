@@ -37,32 +37,33 @@ prepare:
 .PHONY: unprepare uninstall $(EXTERN:%=%.uninstall)
 unprepare:
 	@printf "Unpreparing extern build..."
-	@find ${LIBPY} -name '*.pyc' -exec rm -f {} \;
-	@find ${LIBPY} -name '*.pyo' -exec rm -f {} \;
-	@rmdir ${LIBSH} ${LIBRB} ${LIBPY} ${LIBPL} lib
-	@rmdir libexec
+	@[ ! -d ${LIBPY} ] || find ${LIBPY} -name '*.pyc' -exec rm -f {} \;
+	@[ ! -d ${LIBPY} ] || find ${LIBPY} -name '*.pyo' -exec rm -f {} \;
 	@echo "DONE"
 
 uninstall: $(EXTERN:%=%.uninstall) unprepare
-	@rm -f .install
+	@rm -fr ${LIBSH} ${LIBRB} ${LIBPY} ${LIBPL} lib
+	@rm -fr libexec
+	@rm -f  .install
 	@echo "Uninstallation (extern) complete!"
 
 purge: $(EXTERN:%=%.purge)
-	rm -rf src
-	rm -rf scm
-	rm -rf lib
-	rm -rf libexec
-	rm -f .install
+	rm -fr src
+	rm -fr scm
+	rm -fr lib
+	rm -fr libexec
+	rm -f  .install
 #. }=-
 
 #. shflags -={
+.PHONY: shflags.purge shflags.uninstall shflags.install
 TGZ_SHFLAGS := src/shflags-1.0.3.tgz
 SRC_SHFLAGS := $(TGZ_SHFLAGS:.tgz=)
 shflags.purge: shflags.uninstall
-	@-rm -r ${TGZ_SHFLAGS}
+	@rm -f  ${TGZ_SHFLAGS}
+	@rm -fr ${SRC_SHFLAGS}
+	@rm -fr ${LIBSH}/shflags
 shflags.uninstall:
-	@-rm ${LIBSH}/shflags
-	@-rm -r ${SRC_SHFLAGS}
 shflags.install: ${LIBSH}/shflags
 ${LIBSH}/shflags: ${SRC_SHFLAGS}
 	@ln -sf ${HOME}/.simbol/var/$</src/shflags $@
@@ -77,13 +78,14 @@ ${TGZ_SHFLAGS}:
 	@echo "DONE"
 #. }=-
 #. shunit2 -={
+.PHONY: shunit2.purge shunit2.uninstall shunit2.install
 TGZ_SHUNIT2 := src/shunit2-2.1.6.tgz
 SRC_SHUNIT2 := $(TGZ_SHUNIT2:.tgz=)
 shunit2.purge: shunit2.uninstall
-	@-rm -r ${TGZ_SHUNIT2}
+	@rm -f  ${TGZ_SHUNIT2}
+	@rm -fr ${SRC_SHUNIT2}
+	@rm -fr libexec/shunit2
 shunit2.uninstall:
-	@-rm libexec/shunit2
-	@-rm -r ${SRC_SHUNIT2}
 shunit2.install: libexec/shunit2
 libexec/shunit2: ${SRC_SHUNIT2}
 	@ln -sf ${HOME}/.simbol/var/$</src/shunit2 $@
@@ -100,10 +102,10 @@ ${TGZ_SHUNIT2}:
 #. vimpager -={
 .PHONY: vimpager.install vimpager.uninstall vimpager.purge
 vimpager.purge: vimpager.uninstall
-	-rm -rf scm/vimpager.git
+	@rm -f  libexec/vimpager
+	@rm -f  libexec/vimcat
+	@rm -fr scm/vimpager.git
 vimpager.uninstall:
-	@-rm libexec/vimpager
-	@-rm libexec/vimcat
 vimpager.install: scm/vimpager.git
 	@ln -sf $(CURDIR)/$</vimpager libexec/vimpager
 	@ln -sf $(CURDIR)/$</vimcat libexec/vimcat
@@ -112,14 +114,16 @@ scm/vimpager.git:
 	@git clone -q http://github.com/rkitover/vimpager $@
 #. }=-
 #. pyobjpath -={
+.PHONY: pyobjpath.purge pyobjpath.uninstall pyobjpath.install
+pyobjpath.purge:
+	@rm -f  ${LIBPY}/pyobjpath/core
+	@rm -f  ${LIBPY}/pyobjpath/utils
+	@rm -f  ${LIBPY}/pyobjpath/__init__.py
+	@rm -fr ${LIBPY}/pyobjpath/
 pyobjpath.uninstall:
-	@-rm ${LIBPY}/pyobjpath/core
-	@-rm ${LIBPY}/pyobjpath/utils
-	@-rm ${LIBPY}/pyobjpath/__init__.py
-	@-rmdir ${LIBPY}/pyobjpath/
 pyobjpath.install: scm/pyobjpath.git
-	@mkdir ${LIBPY}/pyobjpath
-	@touch ${LIBPY}/pyobjpath/__init__.py
+	@mkdir  ${LIBPY}/pyobjpath
+	@touch  ${LIBPY}/pyobjpath/__init__.py
 	@ln -sf $(CURDIR)/$</ObjectPathPy/core ${LIBPY}/pyobjpath/core
 	@ln -sf $(CURDIR)/$</ObjectPathPy/utils ${LIBPY}/pyobjpath/utils
 scm/pyobjpath.git:
