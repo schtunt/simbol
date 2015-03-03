@@ -224,32 +224,6 @@ function remote:connect() {
 }
 #. }=-
 #.   remote:copy() -={
-# TODO - if fqdn is sent, work out tldid backwards?
-function :remote:copy:cached() { echo 3600; }
-function :remote:copy:cachefile() { echo $4; }
-function :remote:copy() {
-  ${CACHE_OUT?}; {
-    #. Usage: :remote:copy m <fqdn> /etc/security/access.conf ${SIMBOL_USER_CACHE?}/${fqdn}-access.conf
-
-    local -i e=${CODE_FAILURE?}
-
-    if [ $# -eq 4 ]; then
-        local tldid=$1
-        local hcs=$2
-        local src=$3
-        local dst=$4
-
-        local ssh_options="${g_SSH_OPTS?}"
-        eval "scp ${ssh_options} ${hcs}:${src} ${dst}"
-        e=$?
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
-
-    return $e
-  } | ${CACHE_IN?}; ${CACHE_EXIT?}
-}
-
 function remote:copy:usage() { echo "-T<tldid> [[<user>@]<dst-hnh>:]<src-path> [[<user>@]<dst-hnh>:]<dst-path>"; }
 function remote:copy() {
     local -i e=${CODE_DEFAULT?}
@@ -311,14 +285,14 @@ function remote:copy() {
                 cp -a "${data[pth_src]}" "${data[pth_dst]}"
                 e=$?
             ;;
-            3:1|1:3)
+            [23]:1|1:[23])
                 eval "rsync -ae 'ssh ${ssh_options}' ${data[cmd_src]} ${data[cmd_dst]}"
                 e=$?
             ;;
             *:*)
-                local tmp="${SIMBOL_USER_TMP?}/remote-copy.$$.tmp/"
+                local tmp="${SIMBOL_USER_TMP?}/remote-copy.$$.tmp/${data[pth_src]}"
                 rm -rf ${tmp}
-                mkdir -p ${tmp}
+                mkdir -p $(dirname ${tmp})
                 eval "rsync -ae 'ssh ${ssh_options}' ${data[cmd_src]} ${tmp}"
                 [ $? -ne 0 ] || eval "rsync -ae 'ssh ${ssh_options}' ${tmp} ${data[cmd_dst]}"
                 e=$?

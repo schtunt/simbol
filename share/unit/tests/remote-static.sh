@@ -54,47 +54,16 @@ function testCoreRemoteConnectPublic() {
     assertEquals 1.2 "${hn1}" "${hn2}"
 }
 #. }=-
-#. testCoreRemoteCopyInternal -={
-function testCoreRemoteCopyInternal() {
-    core:import remote
-
-    rm -f ${SIMBOL_USER_CACHE}/hosts
-
-    :remote:copy _ host-8c.unit-tests.mgmt.simbol\
-        /etc/hosts\
-        ${SIMBOL_USER_CACHE}/hosts
-    assertTrue 1.1 $?
-
-    [ -f ${SIMBOL_USER_CACHE}/hosts ]
-    assertTrue 1.2 $?
-
-    if [ -f ${SIMBOL_USER_CACHE}/hosts ]; then
-        local same
-        same=$(
-            md5sum /etc/hosts ${SIMBOL_USER_CACHE}/hosts |
-            awk '{print$1}' |
-            sort -u |
-            wc -l
-        )
-        assertEquals 1.3 1 ${same}
-    fi
-
-    rm -f ${SIMBOL_USER_CACHE}/hosts
-}
-#. }=-
 #. testCoreRemoteCopyPublic -={
 function testCoreRemoteCopyPublic() {
     core:import remote
 
+    #. Remote File to Directory
     rm -f ${SIMBOL_USER_CACHE}/hosts
-
-    core:wrapper remote copy -T _ host-8c.unit-tests.mgmt.simbol\
-        /etc/hosts ${SIMBOL_USER_CACHE}/hosts >${stdoutF?} 2>${stderrF?}
+    core:wrapper remote copy -T _ host-8c.unit-tests.mgmt.simbol:/etc/hosts ${SIMBOL_USER_CACHE}/ >${stdoutF?} 2>${stderrF?}
     assertTrue 1.1 $?
-
     [ -f ${SIMBOL_USER_CACHE}/hosts ]
     assertTrue 1.2 $?
-
     local same
     same=$(
         md5sum /etc/hosts ${SIMBOL_USER_CACHE}/hosts |
@@ -104,7 +73,29 @@ function testCoreRemoteCopyPublic() {
     )
     assertEquals 1.3 1 ${same}
 
-    rm -f ${SIMBOL_USER_CACHE}/hosts
+    #. Remote File to File
+    rm -f ${SIMBOL_USER_CACHE}/hosts.explicit
+    core:wrapper remote copy -T _ host-8c.unit-tests.mgmt.simbol:/etc/hosts ${SIMBOL_USER_CACHE}/hosts.explicit >${stdoutF?} 2>${stderrF?}
+    assertTrue 2.1 $?
+    [ -f ${SIMBOL_USER_CACHE}/hosts.explicit ]
+    assertTrue 2.2 $?
+
+    #. Remote File to Remote File
+    core:wrapper remote copy -T _ host-8a.unit-tests.mgmt.simbol:/etc/hosts host-8f.unit-tests.mgmt.simbol:/tmp/8a-hosts >${stdoutF?} 2>${stderrF?}
+    assertTrue 3.1 $?
+
+    #. Remote Directory to Remote Directory
+    core:wrapper remote copy -T _ host-8a.unit-tests.mgmt.simbol:/etc/rc.d/ host-8f.unit-tests.mgmt.simbol:/tmp/8a-rc.d/ >${stdoutF?} 2>${stderrF?}
+    assertTrue 4.1 $?
+
+    #. Remote Directory to Directory
+    rm -rf /tmp/8a-rc.d/
+    core:wrapper remote copy -T _ host-8a.unit-tests.mgmt.simbol:/etc/rc.d/ /tmp/8a-rc.d/ >${stdoutF?} 2>${stderrF?}
+    assertTrue 5.1 $?
+
+    #. Directory to Remote Directory
+    core:wrapper remote copy -T _ /etc/rc.d/ host-8f.unit-tests.mgmt.simbol:/tmp/test-rc.d/ >${stdoutF?} 2>${stderrF?}
+    assertTrue 6.1 $?
 }
 #. }=-
 #. testCoreRemoteSudoInternal -={
