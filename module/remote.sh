@@ -312,13 +312,15 @@ function remote:copy() {
                 e=$?
             ;;
             3:1|1:3)
-                eval "scp ${ssh_options}r ${data[cmd_src]} ${data[cmd_dst]}"
+                eval "rsync -ae 'ssh ${ssh_options}' ${data[cmd_src]} ${data[cmd_dst]}"
                 e=$?
             ;;
             *:*)
                 local tmp="${SIMBOL_USER_TMP?}/remote-copy.$$.tmp/"
                 rm -rf ${tmp}
-                eval "scp ${ssh_options}r ${data[cmd_src]} ${tmp} && scp ${ssh_options}r ${tmp} ${data[cmd_dst]}"
+                mkdir -p ${tmp}
+                eval "rsync -ae 'ssh ${ssh_options}' ${data[cmd_src]} ${tmp}"
+                [ $? -ne 0 ] || eval "rsync -ae 'ssh ${ssh_options}' ${tmp} ${data[cmd_dst]}"
                 e=$?
                 rm -rf ${tmp}
             ;;
