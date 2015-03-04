@@ -220,7 +220,7 @@ function tutorial:hello:help() {
 #. the output is not important.  It also specifies the generated file's path.
 #. This should be used to cache functions that generate files instead of
 #. output.
-#function :remote:copy:cachefile() { echo $1; }
+#function :tutorial:hello:cachefile() { echo $1; }
 
 #. Optional cachetime change, if cache is enabled at all for this function.
 function tutorial:hello:cached() { echo 10; } #. Let's go with 10s on this one.
