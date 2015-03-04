@@ -9,11 +9,10 @@ USER_MODULES=(
 
 #. Disable some special-case modules by default, users should enable them if
 #. they have use for them:
-CORE_MODULES[softlayer]=0
-CORE_MODULES[pagerduty]=0
 CORE_MODULES[ng]=0
 CORE_MODULES[ldap]=0
 CORE_MODULES[mongo]=0
+CORE_MODULES[softlayer]=0
 
 #. Let's say our hosts have 2 interfaces in general:
 #. Public, which we will call `p', and management which we will call `m':
