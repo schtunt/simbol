@@ -69,7 +69,7 @@ function :pd:query() {
     case $#:$1 in
         1:oncall)
             ::pd:http get 'users/on_call'
-            e=$?
+            e=${PIPESTATUS[0]}
         ;;
         1:services)
             ::pd:http get 'services'
@@ -128,8 +128,8 @@ function pd:query() {
             :pd:query $1 | jq -c '.users[]
                 | {id:.id,name:.name,on_call:.on_call[]}
                 | select(.on_call.level>=1)
-                | select(.on_call.level<=3)
-                | {id:.id,who:.name,level:.on_call.level,from:.on_call.start,to:.on_call.end,epid:.on_call.escalation_policy.id,epn:.on_call.escalation_policy.name}
+                | select(.on_call.level<=1)
+                | {id:.id,level:.on_call.level,from:.on_call.start,to:.on_call.end,epid:.on_call.escalation_policy.id,who:.name,epn:.on_call.escalation_policy.name}
             '
             e=$?
         ;;
