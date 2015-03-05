@@ -241,6 +241,8 @@ function ::cpf:theme() {
 #. }=-
 #. cpf -={
 function cpf() {
+    [ ${g_DEBUG} -eq 0 ] || set +x
+
     #. cpf "%{ul:%s}, %{r}%{bo:%s}, and %{st:%s}%{no}\n" underlined bold standard
     LC_ALL=C
 
@@ -353,6 +355,7 @@ function cpf() {
     fi
 
     #echo "XXX FUNC RETN" > /dev/stderr
+    [ ${g_DEBUG} -eq 0 ] || set -x
 }
 #. }=-
 #. theme -={

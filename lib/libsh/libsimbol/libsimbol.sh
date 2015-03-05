@@ -7,7 +7,7 @@ export NOW=$(date --utc +%s)
 #. FIXME: Mac OS X needs this instead:
 #. FIXME: export NOW=$(date -u +%s)
 
-export PS4=":\${BASH_SOURCE//\${SIMBOL_USER}/}:\${LINENO} -> "
+export PS4="\${BASH_SOURCE//\${SIMBOL_USER}/}::\${LINENO} -> "
 #. }=-
 #. 1.2  Paths -={
 : ${SIMBOL_PROFILE?}
@@ -107,6 +107,7 @@ test ! -f ~/.simbolrc || source ~/.simbolrc
 #. GLOBAL_OPTS 1/4:
 declare -i g_HELP=0
 declare -i g_VERBOSE=0
+declare -i g_DEBUG=0
 declare -i g_LDAPHOST=-1
 declare -i g_CACHED=0
 declare g_FORMAT=ansi
@@ -747,6 +748,7 @@ function ::core:flags.eval() {
     #. GLOBAL_OPTS 2/4: Our generic and global options
     DEFINE_boolean help     false            "<help>"                   H
     DEFINE_boolean verbose  false            "<verbose>"                V
+    DEFINE_boolean debug    false            "<debug>"                  D
     DEFINE_boolean cached   false            "<use-cache>"              C
     DEFINE_string  format   "${g_FORMAT}"    "ansi|text|csv|html|email" F
     DEFINE_integer ldaphost "${g_LDAPHOST}"  "<ldap-host-index>"        L
@@ -780,6 +782,7 @@ declare -g fn=${fn:-}
         #. Booleans get inverted:
         let g_HELP=~${FLAGS_help?}+2; unset FLAGS_help
         let g_VERBOSE=~${FLAGS_verbose?}+2; unset FLAGS_verbose
+        let g_DEBUG=~${FLAGS_debug?}+2; unset FLAGS_debug
         let g_CACHED=~${FLAGS_cached?}+2; unset FLAGS_cached
         #. Everything else is straight-forward:
         g_FORMAT=${FLAGS_format?}; unset FLAGS_format
@@ -795,6 +798,7 @@ declare -g fn=${fn:-}
 #. GLOBAL_OPTS 4/4:
 declare g_HELP=${g_HELP?}
 declare g_VERBOSE=${g_VERBOSE?}
+declare g_DEBUG=${g_DEBUG?}
 declare g_FORMAT=${g_FORMAT?}
 declare g_LDAPHOST=${g_LDAPHOST?}
 declare g_TLDID=${g_TLDID?}
@@ -1145,7 +1149,9 @@ function core:wrapper() {
                         theme ERR_USAGE "That is not a supported format."
                         e=${CORE_FAILURE}
                     elif [ ${supported_formats[${g_FORMAT}]} -gt 0 ]; then
+                        [ ${g_DEBUG} -eq 0 ] || set -x
                         :core:execute ${module} ${completed} "${@}"
+                        [ ${g_DEBUG} -eq 0 ] || set +x
                         e=$?
                     else
                         theme ERR_USAGE "This function does not support that format."
