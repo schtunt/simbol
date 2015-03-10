@@ -343,7 +343,7 @@ function hgd:list() {
                 read -a data <<< "$line"
                 cpf '%{y:%-24s} %{@tldid:%s} %{@int:%3s} %{bl:%s} %{@hgd:%s}\n'\
                     ${data[0]} ${data[1]} $((${#data[@]}-4))\
-                    $(:util:date:i2s ${data[2]}) ${data[3]}
+                    $(:util:date_i2s ${data[2]}) ${data[3]}
             done <<< "${data}"
         ;;
         0:2)

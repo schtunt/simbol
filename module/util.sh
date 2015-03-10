@@ -80,7 +80,7 @@ function util:timeout() {
 }
 #. }=-
 #. Date -={
-function :util:date:i2s() {
+function :util:date_i2s() {
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 1 ]; then
@@ -96,7 +96,7 @@ function :util:date:i2s() {
     return $e
 }
 
-function :util:date:s2i() {
+function :util:date_s2i() {
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 1 ]; then
@@ -120,7 +120,7 @@ function :util:date:s2i() {
     return $e
 }
 
-function :util:time:i2s() {
+function :util:time_i2s() {
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 1 ]; then

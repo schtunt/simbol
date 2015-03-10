@@ -80,7 +80,7 @@ USER_MON_CMDGRPREMOTE=(
 #. These get executed locally using the output from the remote in place of %s...
 USER_MON_CMDGRPLOCAL=(
     [dc]="subnetdb gw=%s dc env"
-    [cfran]=':util:date:i2s %s'
+    [cfran]=':util:date_i2s %s'
     [dpkage]="expr ( ${NOW} - %s ) / 3600 / 24"
 )
 #. }=-
