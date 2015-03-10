@@ -1,5 +1,9 @@
 #. format: profile|module|function|context|stdin|arguments|stdout|stderr|exitcode
 #. Utility Module -={
+core|util|time:i2s|internal||86399|23:59:59||0
+core|util|time:i2s|internal||86400|1 days, 00:00:00||0
+core|util|time:i2s|internal||3600|01:00:00||0
+core|util|time:i2s|internal||45296|12:34:56||0
 core|util|date:i2s|internal||1369369079|20130524041759||0
 core|util|date:s2i|internal||20131230235959|1388447999||0
 core|util|listify|internal||b,a,d,b,e,e,f|b a d b e e f||0

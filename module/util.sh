@@ -81,17 +81,24 @@ function util:timeout() {
 #. }=-
 #. Date -={
 function :util:date:i2s() {
+    local -i e=${CODE_FAILURE?}
+
     if [ $# -eq 1 ]; then
         #. Convert seconds to datestamp
         date --utc --date "1970-01-01 $1 sec" "+%Y%m%d%H%M%S"
+        e=$?
         #. FIXME: Mac OS X needs this line instead:
         #. FIXME: date -u -j "010112001970.$1" "+%Y%m%d%H%M%S"
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
+
+    return $e
 }
 
 function :util:date:s2i() {
+    local -i e=${CODE_FAILURE?}
+
     if [ $# -eq 1 ]; then
         local YYYY=${1:0:4}
         local mm=${1:4:2}
@@ -102,10 +109,46 @@ function :util:date:s2i() {
 
         #. Convert datestamp to seconds
         date --utc --date "${YYYY?}-${mm}-${dd} ${HH?}:${MM?}:${SS?}" "+%s"
+        e=$?
+    elif [ $# -eq 2 ]; then
+        date --utc --date "${1} ${2}" "+%s"
+        e=$?
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
+
+    return $e
 }
+
+function :util:time:i2s() {
+    local -i e=${CODE_FAILURE?}
+
+    if [ $# -eq 1 ]; then
+        e=${CODE_SUCCESS?}
+
+        local -i secs=$1
+
+        local -i days
+        (( days = secs / 86400 ))
+        (( secs %= 86400 ))
+
+        local -i hours
+        (( hours = secs / 3600 ))
+        (( secs %= 3600 ))
+
+        local -i mins
+        (( mins = secs / 60 ))
+        (( secs %= 60 ))
+
+        [ ${days} -eq 0 ] || printf "%s" "${days} days, "
+        printf "%02d:%02d:%02d\n" ${hours} ${mins} ${secs}
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+
+    return $e
+}
+
 #. }=-
 #. Stat -={
 function :util:stat:mode() {
