@@ -400,7 +400,10 @@ function core:requires() {
                 for required in ${@:2}; do
                     if ! :xplm:requires ${plid} ${required}; then
                         core:log NOTICE "${caller} missing required perl module ${required}"
-                        e=${CODE_FAILURE?}
+                        if ! :xplm:install ${plid} ${required}; then
+                            core:log ERR "${caller} installation of perl module ${required} FAILED"
+                            e=${CODE_FAILURE?}
+                        fi
                     fi
                 done
             else
@@ -416,8 +419,8 @@ function core:requires() {
                         core:log NOTICE "${caller} installing required python module ${required}"
                         if ! :xplm:install ${plid} ${required}; then
                             core:log ERR "${caller} installation of python module ${required} FAILED"
+                            e=${CODE_FAILURE?}
                         fi
-                        e=${CODE_FAILURE?}
                     fi
                 done
             else
@@ -433,8 +436,8 @@ function core:requires() {
                         core:log NOTICE "${caller} installing required ruby module ${required}"
                         if ! :xplm:install ${plid} ${required}; then
                             core:log ERR "${caller} installation of ruby module ${required} FAILED"
+                            e=${CODE_FAILURE?}
                         fi
-                        e=${CODE_FAILURE?}
                     fi
                 done
             else
