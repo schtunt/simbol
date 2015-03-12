@@ -1,16 +1,20 @@
 #!/bin/bash
-source ~/.simbol/etc/simbol.conf
-
 _simbol() {
     COMPREPLY=()
 
     local cur="${COMP_WORDS[COMP_CWORD]}"
-    local prev="${COMP_WORDS[COMP_CWORD-1]}"
+    let i=1
+    local local prev="${COMP_WORDS[COMP_CWORD-${i}]}"
+    while [ ${prev:0:1} == '-' ]; do
+        ((++i))
+        eval "local prev=\"\${COMP_WORDS[COMP_CWORD-${i}]}\""
+    done
+
     case ${prev} in
         simbol)
             local opts
             for profile in USER_MODULES CORE_MODULES; do
-                eval $(core:dereference.eval profile) #. Will create ${profile}
+                eval $(::core:dereference.eval profile) #. Will create ${profile}
                 for module in ${!profile[@]}; do
                     if [ ${profile[${module}]} -eq 1 ]; then
                         opts="${opts} ${module}"
@@ -26,4 +30,11 @@ _simbol() {
         ;;
     esac
 }
-complete -F _simbol simbol
+
+SIMBOL_PROFILE=$(${HOME}/.simbol/bin/activate)
+e=$?
+if [ $e -eq 0 ]; then
+    export SIMBOL_PROFILE
+    source ~/.simbol/.scm/lib/libsh/libsimbol/libsimbol.sh
+    complete -F _simbol simbol
+fi
