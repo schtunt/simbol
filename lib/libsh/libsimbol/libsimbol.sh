@@ -1086,13 +1086,13 @@ function :core:complete() {
             echo ${fn}
         else
             for afn in $(declare -F|awk -F'[ :]' '$3~/^'${module}'$/{print$4}'|sort -n); do
-                local AC_${module}_${afn//./_}=1
+                local AC_${module//./_}_${afn}=1
             done
-            local -a completed=( $(eval echo "\${!AC_${module}_${fn//./_}*}") )
-            if echo ${completed[@]} | grep -qE "\<AC_${module}_${fn//./_}\>"; then
+            local -a completed=( $(eval echo "\${!AC_${module//./_}_${fn}*}") )
+            if echo ${completed[@]} | grep -qE "\<AC_${module//./_}_${fn}\>"; then
                 echo ${fn}
             else
-                echo ${completed[@]//AC_${module}_/}
+                echo ${completed[@]//AC_${module//./_}_/}
             fi
         fi
     fi
