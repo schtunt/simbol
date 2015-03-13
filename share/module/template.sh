@@ -6,7 +6,9 @@ core:import util
 The module does X, Y and Z
 [core:docstring]
 
+function :template:funk:cached() { echo 3; }
 function :template:funk() {
+  ${CACHE_OUT?}; {
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 2 ]; then
@@ -17,6 +19,7 @@ function :template:funk() {
     fi
 
     return $e
+  } | ${CACHE_IN?}; ${CACHE_EXIT?}
 }
 
 function template:funk:usage() { echo "<mandatory> [<optional:default>]"; }
