@@ -1,13 +1,11 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
 #. Site Engine -={
-export SIMBOL_VERSION=v0.30
+export SIMBOL_VERSION=v0.30.1
 #. 1.1  Date/Time and Basics -={
 export NOW=$(date --utc +%s)
 #. FIXME: Mac OS X needs this instead:
 #. FIXME: export NOW=$(date -u +%s)
-
-export PS4="\${BASH_SOURCE//\${SIMBOL_USER}/}::\${LINENO} -> "
 #. }=-
 #. 1.2  Paths -={
 : ${SIMBOL_PROFILE?}
@@ -76,8 +74,18 @@ export SHUNIT2=${SIMBOL_USER_LIBEXEC}/shunit2
 export SHFLAGS=${SIMBOL_USER_LIBSH}/shflags
 source ${SHFLAGS?}
 #. }=-
-#. 1.3  User/Profile Configuration -={
-
+#. 1.3  Core Configuration -={
+unset  CDPATH
+export SIMBOL_DEADMAN=${SIMBOL_USER_CACHE}/deadman
+export SIMBOL_IN_COLOR=1
+export SIMBOL_DATE_FORMAT="%x-%X"
+source ${SIMBOL_CORE_MOD?}/cpf.sh
+PS4="+${COLORS[r]}\${BASH_SOURCE}${COLORS[N]}"
+PS4+=":${COLORS[g]}\${LINENO}${COLORS[N]}"
+PS4+="[${COLORS[m]}\${FUNCNAME}()${COLORS[N]}]"
+PS4+="${COLORS[y]} >>> ${COLORS[N]}"
+#. }=-
+#. 1.4  User/Profile Configuration -={
 declare -g -A CORE_MODULES=(
     [tutorial]=0   [help]=1
     [unit]=1       [util]=1      [hgd]=1       [git]=1
@@ -121,13 +129,6 @@ g_SSH_CONF=${SIMBOL_USER_ETC?}/${SIMBOL_USER_SSH_CONF:-ssh.conf}
 if [ -e "${g_SSH_CONF}" ]; then
     g_SSH_OPTS+=" -F ${g_SSH_CONF}"
 fi
-#. }=-
-#. 1.4  Core Configuration -={
-unset  CDPATH
-export SIMBOL_DEADMAN=${SIMBOL_USER_CACHE}/deadman
-export SIMBOL_IN_COLOR=1
-export SIMBOL_DATE_FORMAT="%x-%X"
-source ${SIMBOL_CORE_MOD?}/cpf.sh
 #. }=-
 #. 1.7  Error Code Constants -={
 true
@@ -1161,8 +1162,8 @@ function core:wrapper() {
                     elif [ ${supported_formats[${g_FORMAT}]} -gt 0 ]; then
                         [ ${g_DEBUG} -eq 0 ] || set -x
                         :core:execute ${module} ${completed} "${@}"
-                        [ ${g_DEBUG} -eq 0 ] || set +x
                         e=$?
+                        [ ${g_DEBUG} -eq 0 ] || set +x
                     else
                         theme ERR_USAGE "This function does not support that format."
                         e=${CORE_FAILURE}
