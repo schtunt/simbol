@@ -222,6 +222,8 @@ function ::cpf:theme() {
                     version)             fmt="%{+bo}%{g:${fmt}}%{-bo}";;
                     fn)                  fmt="%{c:${fmt}}";;
                     mod)                 fmt="%{y:${fmt}}";;
+                    pkg)                 fmt="%{p:${fmt}}";;
+                    lang)                fmt="%{c:${fmt}}";;
                     path)                fmt="%{g:${fmt}}";;
                     bad_path)            fmt="%{r:${fmt}}";;
                     user)                fmt="%{y:${fmt}}";;

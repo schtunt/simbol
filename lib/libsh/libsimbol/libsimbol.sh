@@ -398,6 +398,7 @@ function core:requires() {
             local plid=pl
             core:softimport xplm
             if [ $? -eq ${CODE_IMPORT_GOOOD?} ]; then
+                #cpf "Installing missing required %{@lang:perl} module %{@pkg:${required}}..."
                 for required in ${@:2}; do
                     if ! :xplm:requires ${plid} ${required}; then
                         core:log NOTICE "${caller} missing required perl module ${required}"
@@ -415,6 +416,7 @@ function core:requires() {
             local plid=py
             core:softimport xplm
             if [ $? -eq ${CODE_IMPORT_GOOOD?} ]; then
+                #cpf "Installing missing required %{@lang:python} module %{@pkg:${required}}..."
                 for required in ${@:2}; do
                     if ! :xplm:requires ${plid} ${required}; then
                         core:log NOTICE "${caller} installing required python module ${required}"
@@ -432,6 +434,7 @@ function core:requires() {
             local plid=rb
             core:softimport xplm
             if [ $? -eq ${CODE_IMPORT_GOOOD?} ]; then
+                #cpf "Installing missing required %{@lang:ruby} module %{@pkg:${required}}..."
                 for required in ${@:2}; do
                     if ! :xplm:requires ${plid} ${required}; then
                         core:log NOTICE "${caller} installing required ruby module ${required}"
