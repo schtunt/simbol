@@ -134,3 +134,22 @@ fff
         assertEquals "aaa bbb eee fff ccc ddd" "$(cat ${stdoutF})"
     fi
 }
+
+function testPySetsDIFF() {
+    cat <<! | sets '!(nucky,rothstein)' >${stdoutF?} 2>${stderrF?}
+nucky
+aaa
+bbb
+ccc
+ddd
+
+rothstein
+ccc
+ddd
+eee
+fff
+!
+    if assertEquals 0 $?; then
+        assertEquals "aaa bbb" "$(cat ${stdoutF})"
+    fi
+}

@@ -175,7 +175,7 @@ function :hgd:resolve() {
         local tldid=$1
 
         #. &(...|...) or |(...|...) patterns
-        if [[ ${2:0:2} =~ ^[\|\&]\($ ]]; then
+        if [[ ${2:0:2} =~ ^[\|\&\!]\($ ]]; then
             local eq="${2}"
 
             local buffer
@@ -219,13 +219,14 @@ function hgd:resolve:help() {
     .<subdomain>         //. hosts in ~/.known_hosts matching given subdomain
     /<regex>/            //. regex matching hosts in ~/.known_hosts
 
-    These patterns can then be grouped into unions or intersections using
-    the &(...) and |(...) set operators, separated with commas.  For example,
-    the following are all valid <hgd>
+    These patterns can then be grouped into unions, intersections, or
+    differences using the |(...), &(...), or !(...) set operators, separated
+    with commas.  For example, the following are all valid <hgd>
 
     @host1
-    @host1,@host1
-    |(@host1,@host1)
+    @host1,@host2
+    |(@host3,@host4)
+    &(+netgroup1,+netgroup2,+netgroup3)
 
     Finally, the set operators can be nested, but depending on the what
     combination of <hgd> classes are used, it may or may not make sense.
