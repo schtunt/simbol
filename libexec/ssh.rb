@@ -64,41 +64,50 @@ class EssEssHache
     }
 
     begin
-      if @gateway
-        #@sessions[host][:session] = Net::SSH::Gateway.new(
-        #  'night.sirca.org.au',
-        #  @username,
-        #  :port => 222,
-        #  :compression => "none",
-        #  :auth_methods => [ 'publickey' ],
-        #  :verbose => :fatal,
-        #).ssh(host, @username,
-        #  :timeout => @timeout,
-        #  :compression => "none",
-        #  :auth_methods => [ 'publickey' ],
-        #  :verbose => :fatal,
-        #)
-        @sessions[host][:status] = "Connecting to #{host} via the gateway #{@gateway}..."
-        @sessions[host][:session] = @gateway.ssh(host, @username,
-          :timeout => @timeout,
-          :compression => "none",
-          :auth_methods => [ 'publickey' ],
-          :verbose => :fatal,
-        )
-      else
-        @sessions[host][:status] = 'Connecting...'
-        #@@dns.getaddress host
-        @sessions[host][:session] = Net::SSH.start(host, @username,
-          :config => [
-            "#{ENV['HOME']}/.simbol/etc/ssh.conf",
-            "#{ENV['HOME']}/.ssh/config",
-            "/etc/ssh_config"
-          ],
-          :timeout => @timeout,
-          :compression => "none",
-          :auth_methods => [ 'publickey' ],
-          :verbose => :fatal,
-        )
+      #. NOTE on Timeouts -={
+      #. the timeout option to net/ssh is not a good measure, at least by
+      #. itself.  For instance if the host in questions does respond to port 22,
+      #. and say with a valid OpenSSH banner, then this setting does nothing, a
+      #. 120s timeout is imposed.  By using Ruby's own timeout, we garantee the
+      #. timeout defined by the user to be honored.
+      #. }=-
+      timeout @timeout do
+        if @gateway
+          #@sessions[host][:session] = Net::SSH::Gateway.new(
+          #  'night.sirca.org.au',
+          #  @username,
+          #  :port => 222,
+          #  :compression => "none",
+          #  :auth_methods => [ 'publickey' ],
+          #  :verbose => :fatal,
+          #).ssh(host, @username,
+          #  :timeout => @timeout,
+          #  :compression => "none",
+          #  :auth_methods => [ 'publickey' ],
+          #  :verbose => :fatal,
+          #)
+          @sessions[host][:status] = "Connecting to #{host} via the gateway #{@gateway}..."
+          @sessions[host][:session] = @gateway.ssh(host, @username,
+            :timeout => @timeout,
+            :compression => "none",
+            :auth_methods => [ 'publickey' ],
+            :verbose => :fatal,
+          )
+        else
+          @sessions[host][:status] = 'Connecting...'
+          #@@dns.getaddress host
+          @sessions[host][:session] = Net::SSH.start(host, @username,
+            :config => [
+              "#{ENV['HOME']}/.simbol/etc/ssh.conf",
+              "#{ENV['HOME']}/.ssh/config",
+              "/etc/ssh_config"
+            ],
+            :timeout => @timeout,
+            :compression => "none",
+            :auth_methods => [ 'publickey' ],
+            :verbose => :fatal,
+          )
+        end
       end
 
       rescue Resolv::ResolvError => ouch
@@ -205,13 +214,11 @@ class EssEssHache
     condition = Proc.new { |ssh| ssh.busy? }
     wait = true
     while wait
-      wait = false
-      #printf "#. Waiting on %d connections...\n", @sessions.length
-      #@sessions.each do |host,hostdata|
-      #  printf "#{host} #{hostdata[:status]} #{@gateway.zits.forward.active_locals}\n"
-      #  #pp @sessions[host].reject { |k,v| k == :session }
-      #end
+     wait = false
+     printf "#. Waiting on %d connections...\n", @sessions.length
       @sessions.each do |host,hostdata|
+        printf "#. - #{host} #{hostdata[:status]}\n"
+        #pp @sessions[host].reject { |k,v| k == :session }
         if hostdata[:session] and hostdata[:session].process(1, &condition)
           wait = true
           break

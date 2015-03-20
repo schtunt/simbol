@@ -118,11 +118,28 @@ function testCoreRemoteSudoPublic() {
     assertEquals 1.2 "root" "${who}"
 }
 #. }=-
+#. testCoreRemoteMonPublic -={
+function testCoreRemoteMonPublic() {
+    cat ~/.ssh/authorized_keys
+    ssh host-8.simbol.org hostname
+
+    simbol rb install
+    assertTrue 1.1 $?
+
+    simbol hgd save myhgd /host-8./
+    assertTrue 1.2 $?
+
+    eval $(ssh-add)
+
+    core:import remote
+    core:wrapper remote mon myhgd -- hostname
+    assertTrue 1.3 $?
+}
+#. }=-
 
 #testCoreRemoteClusterPublic
 #testCoreRemoteTmuxPrivate
 #testCoreRemoteTmuxPublic
-#testCoreRemoteMonPublic
 #testCoreRemotePipewrapPrivate
 #testCoreRemotePipewrapPrivate
 #testCoreRemoteSerialmonPrivate
