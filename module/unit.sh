@@ -10,13 +10,22 @@ moduleScaffold() {
     local -i e=0
 
     local cl=${1^}
+
+    #. aws.ec2
     local module=$2
-    cpf "%{@comment:${module}${cl}...}"
+
+    #. AwsEc2
+    local modulecaps=$(IFS='.' read -a __ <<< "${module}"; printf "%s" ${__[@]^})
+
+    #. awsEc2SetUp/awsEc2TearDown
+    modulefn=${modulecaps,}${cl}
+
+    cpf "%{@comment:${modulefn}...}"
 
     if [ -f ${g_RUNTIME_SCRIPT?} ]; then
         if [ $? -eq 0 ]; then
-            if [ "$(type -t ${module}${cl} 2>/dev/null)" == "function" ]; then
-                ${module}${cl}
+            if [ "$(type -t ${modulefn} 2>/dev/null)" == "function" ]; then
+                ${modulefn}
                 e=$?
                 if [ $e -eq 0 ]; then
                     theme HAS_PASSED
@@ -24,7 +33,7 @@ moduleScaffold() {
                     theme HAS_FAILED
                 fi
             else
-                theme HAS_WARNED "UNDEFINED:${module}${cl}"
+                theme HAS_WARNED "UNDEFINED:${modulefn}"
             fi
         else
             theme HAS_FAILED
@@ -182,7 +191,16 @@ tearDown() {
 declare -g -A g_MODULES
 function testCoverage() {
     local profile=${g_RUNTIME_PROFILE?}
+
+    #. aws.ec2
     local module=${g_RUNTIME_MODULE?}
+
+    #. AwsEc2
+    local modulecaps=$(IFS='.' read -a __ <<< "${module}"; printf "%s" ${__[@]^})
+
+    #. aws/ec2.sh
+    local modulepath=${g_RUNTIME_MODULEPATH?}
+
     local script=${g_RUNTIME_SCRIPT?}
     local cwd=${g_RUNTIME_CWD?}
     local -i e=0
@@ -211,19 +229,19 @@ function testCoverage() {
             cpf "%{@profile:${profile}}: %{!module:${module}} %{r:-=[}\n"
             for context in private internal public; do
                 local regex=$(printf "${fnregexes[${context}]}" ${module})
-                local -i count=$(grep -cE "${regex}" ${module}.sh)
+                local -i count=$(grep -cE "${regex}" ${modulepath})
                 cpf "     %{m:${context}}:%{!module:${module}}:%{@int:${count} functions}\n"
                 if [ $count -gt 0 ]; then
                     local -a fns=(
-                        $(grep -oE "${regex}" ${module}.sh |
+                        $(grep -oE "${regex}" ${modulepath} |
                             sed -e "s/^function :\{0,2\}${module}:\([^.()]\+\)\(\.[a-z]\+\)\?()/\1/")
                     )
                     for fn in ${fns[@]}; do
-                        local utf="test${profile^}${module^}${fn^}${context^}"
+                        local utf="test${profile^}${modulecaps}${fn^}${context^}"
                         utf=${utf/[:]/} #. Remove the colon for shunit2
                         utf=${utf/[.]/} #. Remove the dot if it exists
 
-                        local utf_regex="^test((_[0-9])+_)?${profile^}${module^}${fn^}${context^}$"
+                        local utf_regex="^test((_[0-9])+_)?${profile^}${modulecaps}${fn^}${context^}$"
                         utf_regex=${utf_regex/:/} #. Remove the colon for shunit2
 
                         local -i static_tests=$(declare -F|awk '$3~/'${utf_regex}'/{print$3}'|wc -l)
@@ -428,15 +446,17 @@ function ::unit:test() {
     for profile in ${!profiles[@]}; do
         if [ -d ${profiles[${profile}]} ]; then
             cd ${profiles[${profile}]}
-            local modulesh module script
-            for modulesh in *; do
-                module=${modulesh/.sh/}
+            local module script
+            while read modulepath; do
+                module=${modulepath//\//.}
+                module=${module%.sh}
                 if [ ${#g_MODULES[@]} -eq 0 -o ${g_MODULES[${module}]--1} -eq 1 ]; then
                     g_MODE="prime"
                     cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?} -=[}\n";
                     (
                         export g_RUNTIME_CWD=${profiles[${profile}]}
                         export g_RUNTIME_PROFILE=${profile}
+                        export g_RUNTIME_MODULEPATH=${modulepath}
                         export g_RUNTIME_MODULE=${module}
                         export g_RUNTIME_SCRIPT=${SIMBOL_USER_CACHE?}/unittest-${module}.sh
 
@@ -488,7 +508,7 @@ function ::unit:test() {
                     fi
                     cpf "%{@comment:#############################################################################}\n"
                 fi
-            done
+            done < <(find . -name '*.sh'|cut -b3-)
         fi
     done
 
@@ -520,9 +540,9 @@ function unit:test() {
                 #. Only regenerate the script if it doesn't exist, or if it is
                 #. older than the input unittest csv file.
                 ::unit:test
-                local -i e=$?
+                e=$?
 
-                cpf "Unit-testing overal result..."
+                cpf "Unit-test overall result..."
                 [ $e -eq 0 ] && theme HAS_PASSED || theme HAS_FAILED
             else
                 theme ERR_USAGE "${SHUNIT2?} is missing"

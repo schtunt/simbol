@@ -106,22 +106,22 @@ function ::cpf:function() {
     local -i alerts=0
     local -i amended=0
     local fmt
-    if [ -e ${SIMBOL_CORE_MOD?}/${module} ]; then
+    if [ -e ${SIMBOL_CORE_MOD?}/${module//\./\/}.sh ]; then
         if ::cpf:function_has_alerts core ${module} ${fn}; then
             alerts=1
             fmt="%{y}"
         else
-            fmt="%{c}"
+            fmt="%{g}"
             ::cpf:module_is_modified core ${module}
             amended=$?
         fi
         enabled=${CORE_MODULES[${module}]}
-    elif [ -e ${SIMBOL_USER_MOD?}/${module} ]; then
+    elif [ -e ${SIMBOL_USER_MOD?}/${module//\./\/}.sh ]; then
         if ::cpf:function_has_alerts ${SIMBOL_PROFILE?} ${module} ${fn}; then
             alerts=1
             fmt="%{y}"
         else
-            fmt="%{b}"
+            fmt="%{g}"
             ::cpf:module_is_modified ${SIMBOL_PROFILE?} ${module}
             amended=$?
         fi
@@ -215,6 +215,7 @@ function ::cpf:theme() {
                     host_bad)            fmt="%{r:${fmt}}";;
                     ip)                  fmt="%{b:${fmt}}";;
                     cmd)                 fmt="%{c:${fmt}}";;
+                    subnet)              fmt="%{c:${fmt}}";;
                     hgd)                 fmt="%{+bo}%{m:${fmt}}%{-bo}";;
                     user)                fmt="%{m:${fmt}}";;
                     group)               fmt="%{m:${fmt}}";;
