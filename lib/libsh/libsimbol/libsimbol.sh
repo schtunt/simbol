@@ -86,11 +86,11 @@ PS4+="/\${FUNCNAME}/ "
 #. }=-
 #. 1.4  User/Profile Configuration -={
 declare -g -A CORE_MODULES=(
-    [tutorial]=0   [help]=1
-    [unit]=1       [util]=1      [hgd]=1       [git]=1
-    [dns]=1        [net]=1       [tunnel]=1    [remote]=1
+    [tutorial]=0   [help]=1      [unit]=1      [util]=1
+    [hgd]=1        [dns]=1       [net]=1       [tunnel]=1    [remote]=1
     [xplm]=1       [rb]=1        [py]=1        [pl]=1
     [gpg]=1        [vault]=1
+    [git.fs]=1     [git.flow]=1  [git.sink]=1
     [ng]=0         [ldap]=0      [mongo]=0     [softlayer]=0
 )
 

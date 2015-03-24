@@ -1,0 +1,8 @@
+#. format: profile|module|function|context|stdin|arguments|stdout|stderr|exitcode
+core|git.fs|size|public|||||0
+core|git.fs|size|public||${SIMBOL_SCM?}|||0
+core|git.fs|size|public||${SIMBOL_SCM?}/module|||0
+core|git.fs|usage|public|||||0
+core|git.fs|usage|public||${SIMBOL_SCM?}|||0
+core|git.fs|usage|public||${SIMBOL_SCM?}/module|||0
+#core|git.fs|branchildren|internal

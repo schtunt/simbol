@@ -1,0 +1,7 @@
+#. format: profile|module|function|context|stdin|arguments|stdout|stderr|exitcode
+#core|git.sink|playground|private
+#core|git.sink|gource|public
+#core|git.sink|serve|public
+#core|git.sink|rebasesearchstr|public
+#core|git.sink|remail|public
+#core|git.sink|reauthor|public

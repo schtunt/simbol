@@ -24,7 +24,9 @@ env:
     - CONTEXT=execute MODULE=util     #. nima/simbol#4
     - CONTEXT=execute MODULE=dns      #. nima/simbol#10  util
     - CONTEXT=execute MODULE=net      #. nima/simbol#7   dns
-    - CONTEXT=execute MODULE=git      #. nima/simbol#9   net
+    - CONTEXT=execute MODULE=git.fs
+    - CONTEXT=execute MODULE=git.flow
+    - CONTEXT=execute MODULE=git.sink
     - CONTEXT=execute MODULE=hgd      #. nima/simbol#3   util net
     - CONTEXT=execute MODULE=tunnel   #. nima/simbol#18  util net dns
     - CONTEXT=execute MODULE=gpg      #. nima/simbol#5
