@@ -102,6 +102,7 @@ list of all such functions in line with the previous example:
     function mymod:myfunc:alert()
     function mymod:myfunc:shflags()
     function mymod:myfunc:cached()
+    function mymod:myfunc:cachefile()
     function mymod:myfunc:formats()
 
 Note that these functions are all optional; they do not need to be declared, and

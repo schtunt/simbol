@@ -22,6 +22,26 @@ function :template:funk() {
   } | ${CACHE_IN?}; ${CACHE_EXIT?}
 }
 
+function template:funk:alert() {
+    cat <<!
+TODO This is mynewfn, alas it does nothing interesting
+WARN Well it does demonstrate the various alerts such as this warning
+FIXME Critical issues can also be communicated in the same way
+DEPR Once you deprecated a function, don't delete it, just add an alert
+!
+}
+function template:funk:shflags() {
+    cat <<!
+boolean mybool false "some-bool-setting" b
+!
+}
+function template:funk:help() {
+    cat <<!
+<mandatory> [<optional:default>]
+!
+}
+function template:funk:cachefile() { echo $1; }
+function template:funk:cached() { echo 10; }
 function template:funk:usage() { echo "<mandatory> [<optional:default>]"; }
 function template:funk() {
     local -i e=${CODE_DEFAULT?}
