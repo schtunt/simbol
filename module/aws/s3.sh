@@ -1,12 +1,15 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
+:<<[core:docstring]
+AWS S3 (Simple Storage Service)
+[core:docstring]
+
+#. AWS S3 (Simple Storage Service) -={
+
 core:import util
 core:import vault
 
-:<<[core:docstring]
-The module does X, Y and Z
-[core:docstring]
-
+#. aws.s3:uploda -={
 function :aws.s3:upload() {
     local -i e=${CODE_FAILURE?}
 
@@ -69,3 +72,6 @@ function aws.s3:upload() {
 
     return $e
 }
+#. }=-
+
+#. }=-
