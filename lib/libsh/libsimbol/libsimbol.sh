@@ -92,6 +92,7 @@ declare -g -A CORE_MODULES=(
     [xplm]=1       [rb]=1        [py]=1        [pl]=1
     [gpg]=1        [vault]=1
     [ng]=0         [ldap]=0      [mongo]=0     [softlayer]=0
+    [aws]=1        [aws.s3]=1    [aws.ec2]=1   [aws.cf]=1
 )
 
 declare -gA USER_MODULES
