@@ -151,7 +151,7 @@ function :util:time_i2s() {
 
 #. }=-
 #. Stat -={
-function :util:stat:mode() {
+function :util:statmode() {
     local -i e=${CODE_FAILURE?}
 
     local filepath="${1}"
@@ -275,29 +275,29 @@ function :util:markdown() {
 
     return $e
 }
+#. }=-
 #. Set Operations -={
-#function :util:sets:explode() {
+#function :util:sets_explode() {
 #    for item in $(eval echo \${$1[@]}); do
 #        echo ${item}
 #    done | sort
 #}
 #
-#function :util:sets:set_union() {
+#function :util:sets_set_union() {
 #    sort -um <( explode $1) <(explode $2)
 #}
 #
-#function :util:sets:set_intersect() {
+#function :util:sets_set_intersect() {
 #    comm -12 <(explode $1) <(explode $2)
 #}
 #
-#function :util:sets:set_complement() {
+#function :util:sets_set_complement() {
 #    comm -23 <(explode $1) <(explode $2)
 #}
 #
-#function :util:sets:set_symdiff() {
+#function :util:sets_set_symdiff() {
 #    sd=( $(comm -3 <(explode $1) <(explode $2)) )
 #    explode sd
 #}
-#. }=-
 #. }=-
 #. }=-

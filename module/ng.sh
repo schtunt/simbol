@@ -100,7 +100,7 @@ function ::ng:tree_data() {
   } | ${CACHE_IN?}; ${CACHE_EXIT?}
 }
 
-function ::ng:tree:cpf() {
+function ::ng:treecpf() {
     local -i indent=$1
     ((indent--))
 
@@ -181,13 +181,13 @@ function ::ng:tree_draw() {
         # verified netgroup
         if [ ${child:1:1} == '+' ]; then
             if [ ${child:0:1} == '1' ]; then
-                ::ng:tree:cpf ${indent} netgroup ${child:2} ${parent}
+                ::ng:treecpf ${indent} netgroup ${child:2} ${parent}
             elif [ ${child:0:1} == '?' ]; then
-                ::ng:tree:cpf ${indent} netgroup ${child:2} ${parent}
+                ::ng:treecpf ${indent} netgroup ${child:2} ${parent}
             elif [ ${child:0:1} == '0' ]; then
-                ::ng:tree:cpf ${indent} netgroup_empty ${child:2} ${parent}
+                ::ng:treecpf ${indent} netgroup_empty ${child:2} ${parent}
             elif [ ${child:0:1} == '-' ]; then
-                ::ng:tree:cpf ${indent} netgroup_missing ${child:2} ${parent}
+                ::ng:treecpf ${indent} netgroup_missing ${child:2} ${parent}
             else
                 core:log ERR "${child} is an invalid entry; ${child:0:1} is unknown"
             fi
@@ -195,11 +195,11 @@ function ::ng:tree_draw() {
         # verified host
         elif [ ${child:1:1} == '@' ]; then
             if [ ${child:0:1} == '1' ]; then
-                ::ng:tree:cpf ${indent} host ${child:2} ${parent}
+                ::ng:treecpf ${indent} host ${child:2} ${parent}
             elif [ ${child:0:1} == '-' ]; then
-                ::ng:tree:cpf ${indent} host_bad ${child:2} ${parent}
+                ::ng:treecpf ${indent} host_bad ${child:2} ${parent}
             elif [ ${child:0:1} == '?' ]; then
-                ::ng:tree:cpf ${indent} host ${child:2} ${parent}
+                ::ng:treecpf ${indent} host ${child:2} ${parent}
             else
                 core:log ERR "${child} is an invalid entry; ${child:0:1} is unknown"
             fi

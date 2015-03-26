@@ -17,4 +17,6 @@ core|util|dups|internal|$(printf "uidNumber %d\\\\n" 1 2 3 4 8 5 6 7 8 9)||8||0
 core|util|markdown|internal|$(cat /etc/hosts)|h1 Header|||0
 #core|util|timeout|public
 core|util|json|internal|{a:a,b:b}||||0
+core|util|statmode|internal||/etc/hosts|644||0
+core|util|statmode|internal||/etc/sudoers|440||0
 # }=-
