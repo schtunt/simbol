@@ -312,7 +312,7 @@ function :dns:inspect.csv() {
 #. dns:lookup -={
 function :dns:loockup.csv:cached() { echo 3600; }
 function :dns:lookup.csv() {
-  ${CACHE_OUT?}; {
+  g_CACHE_OUT "$*" || {
     #. Sample example of how to use this function
     #.
     #.   local hnh=$1
@@ -339,11 +339,14 @@ function :dns:lookup.csv() {
                 local csv qt hnh qual tldid usdn dn fqdn resolved qid
                 for csv in ${results[@]}; do
                     IFS=, read qt hnh qual tldid usdn dn fqdn resolved qid <<< "${csv}"
-                    if [ "${tldidstr/[_${tldid}]/}" != "${tldidstr}" ]; then
-                        if [ "${record}" == "${qt}" ]; then
-                            echo ${csv}
-                            e=${CODE_SUCCESS?}
-                        fi
+                    if [ "${record}" == "${qt}" ]; then
+                        IFS=, read -a tldidary <<< "${tldidstr}"
+                        for _tldid in "${tldidary[@]}"; do
+                            if [ ${_tldid} == "${tldid}" -o ${_tldid} == '_' ]; then
+                                echo ${csv}
+                                e=${CODE_SUCCESS?}
+                            fi
+                        done
                     fi
                 done
             fi
@@ -352,8 +355,8 @@ function :dns:lookup.csv() {
         core:raise EXCEPTION_BAD_FN_CALL
     fi
 
-    return $e
-  } | ${CACHE_IN?}; ${CACHE_EXIT?}
+    core:return $e
+  } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
 
 function dns:lookup:usage() { echo "<hnh>"; }
@@ -366,7 +369,7 @@ function dns:lookup() {
         local -r hnh=$1
         local -r tldid=${g_TLDID?}
         local -a tldids=( ${!USER_TLDS[@]} )
-        local tldidstr=$(:util:join '' tldids)
+        local tldidstr=$(:util:join ',' tldids)
         local iface
         local data
         data=( $(:dns:lookup.csv ${tldidstr} ca ${hnh}) )

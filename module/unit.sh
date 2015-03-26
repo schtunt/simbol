@@ -71,9 +71,41 @@ oneTimeSetUp() {
             : noop
         ;;
         execute)
-            #. Set up the network/hosts/etc for unit testing -={
-            #. Prime `/etc/hosts' -={
-            (
+            if [ "${CITM_HOST:-false}" == "d41d8cd98f00b204e9800998ecf8427e" ]; then
+                #. Set up the network/hosts/etc for unit testing -={
+                #. Prime `/etc/hosts' -={
+                (
+                    local -i i=0
+                    local -i j
+                    local -i k
+                    local -i index
+
+                    local -a subdomains
+                    local tldid
+                    local domain subdomain
+                    for tldid in "${!USER_TLDS[@]}"; do
+                        ((i++))
+                        subdomains=( $(eval echo "\${USER_SUBDOMAIN_${tldid}[@]}") )
+                        if [ ${#subdomains[@]} -gt 0 ]; then
+                            for ((j=8; j<16; j++)); do
+                                domain=${USER_TLDS[${tldid}]}
+                                printf "127.%d.%d.%d		host-%x.%s\n"\
+                                    ${i} ${j} 99\
+                                    ${j} ${domain}
+                                for ((k=8; k<16; k++)); do
+                                    ((index=k%${#subdomains[@]}))
+                                    printf "127.%d.%d.%d		host-%x%x.%s.%s host-%x%x.%s\n"\
+                                        ${i} ${j} ${k}\
+                                        ${j} ${k} ${subdomains[${index}]} ${domain}\
+                                        ${j} ${k} ${subdomains[${index}]}
+                                done
+                            done
+                        fi
+                    done
+                ) | sudo tee -a /etc/hosts >/dev/null 2>&1
+                #. }=-
+                #. Prime  `~/.ssh/known_hosts' -={
+                touch ~/.ssh/known_hosts
                 local -i i=0
                 local -i j
                 local -i k
@@ -81,78 +113,50 @@ oneTimeSetUp() {
 
                 local -a subdomains
                 local tldid
+                local ip qdn fqdn
                 local domain subdomain
-                for tldid in "${!USER_TLDS[@]}"; do
-                    ((i++))
-                    subdomains=( $(eval echo "\${USER_SUBDOMAIN_${tldid}[@]}") )
-                    for ((j=8; j<16; j++)); do
-                        domain=${USER_TLDS[${tldid}]}
-                        printf "127.%d.%d.%d		host-%x.%s\n"\
-                            ${i} ${j} 99 ${j}\
-                            ${domain}
-                        for ((k=8; k<16; k++)); do
-                            ((index=k%${#subdomains[@]}))
-                            printf "127.%d.%d.%d		host-%x%x.%s.%s host-%x%x.%s\n"\
-                                ${i} ${j} ${k}\
-                                ${j} ${k} ${subdomains[${index}]} ${domain}\
-                                ${j} ${k} ${subdomains[${index}]}
-                        done
-                    done
-                done
-            ) | sudo tee -a /etc/hosts >/dev/null 2>&1
-            #. }=-
-            #. Prime  `~/.ssh/known_hosts' -={
-            touch ~/.ssh/known_hosts
-            local -i i=0
-            local -i j
-            local -i k
-            local -i index
+                (
+                    for tldid in "${!USER_TLDS[@]}"; do
+                        ((i++))
+                        subdomains=( $(eval echo "\${USER_SUBDOMAIN_${tldid}[@]}") )
+                        for ((j=8; j<16; j++)); do
+                            domain=${USER_TLDS[${tldid}]}
 
-            local -a subdomains
-            local tldid
-            local ip qdn fqdn
-            local domain subdomain
-            (
-                for tldid in "${!USER_TLDS[@]}"; do
-                    ((i++))
-                    subdomains=( $(eval echo "\${USER_SUBDOMAIN_${tldid}[@]}") )
-                    for ((j=8; j<16; j++)); do
-                        domain=${USER_TLDS[${tldid}]}
-
-                        local ip=$(printf "127.%d.%d.%d" ${i} ${j} 99)
-                        ssh-keyscan -t rsa ${ip}
-
-                        local fqdn=$(printf "host-%x.%s" ${j} ${domain})
-                        ssh-keyscan -t rsa ${fqdn}
-
-                        for ((k=8; k<16; k++)); do
-                            ip=$(printf "127.%d.%d.%d" ${i} ${j} ${k})
+                            local ip=$(printf "127.%d.%d.%d" ${i} ${j} 99)
                             ssh-keyscan -t rsa ${ip}
 
-                            ((index=k%${#subdomains[@]}))
-                            qdn=$(
-                                printf "host-%x%x.%s"\
-                                    ${j} ${k} ${subdomains[${index}]}
-                            )
-                            ssh-keyscan -t rsa ${qdn}
-
-                            fqdn=$(
-                                printf "host-%x%x.%s.%s"\
-                                    ${j} ${k} ${subdomains[${index}]} ${domain}
-                            )
+                            local fqdn=$(printf "host-%x.%s" ${j} ${domain})
                             ssh-keyscan -t rsa ${fqdn}
+
+                            for ((k=8; k<16; k++)); do
+                                ip=$(printf "127.%d.%d.%d" ${i} ${j} ${k})
+                                ssh-keyscan -t rsa ${ip}
+
+                                ((index=k%${#subdomains[@]}))
+                                qdn=$(
+                                    printf "host-%x%x.%s"\
+                                        ${j} ${k} ${subdomains[${index}]}
+                                )
+                                ssh-keyscan -t rsa ${qdn}
+
+                                fqdn=$(
+                                    printf "host-%x%x.%s.%s"\
+                                        ${j} ${k} ${subdomains[${index}]} ${domain}
+                                )
+                                ssh-keyscan -t rsa ${fqdn}
+                            done
                         done
                     done
-                done
-            )  2>/dev/null | sudo tee -a ~/.ssh/known_hosts >/dev/null
+                )  2>/dev/null | sudo tee -a ~/.ssh/known_hosts >/dev/null
+                #. }=-
+                #. Generate `~/.ssh/id_rsa*' -={
+                [ -e ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -N "" -f ~/.ssh/id_rsa
+                #. }=-
+                #. Prime `~root/.ssh/authorized_keys -={
+                install -m 400 ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
+                #. }=-
             #. }=-
-            #. Generate `~/.ssh/id_rsa*' -={
-            [ -e ~/.ssh/id_rsa ] || ssh-keygen -q -t rsa -N "" -f ~/.ssh/id_rsa
-            #. }=-
-            #. Prime `~root/.ssh/authorized_keys -={
-            install -m 400 ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys
-            #. }=-
-            #. }=-
+            fi
         ;;
     esac
     theme HAS_PASSED
@@ -573,4 +577,33 @@ The Site Development Team
     return $e
 }
 #. }=-
+
+function unit:core() {
+    local -i e=${CODE_SUCCESS?}
+
+    g_MODE="core"
+
+    cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?} -=[}\n";
+    script=${SIMBOL_UNIT_TESTS?}/core.sh
+    local -i ee=-1
+    if [ -r "${script}" ]; then
+        (
+            export g_RUNTIME_SCRIPT="${script}"
+            source "${script}"
+            SHUNIT_PARENT="${script}" source "${SHUNIT2?}"
+        )
+        ee=$?
+    fi
+    cpf "%{r:]=-} %{@comment:${profile}.${module}}.%{r:${g_MODE?}}...";
+    if [ ${ee} -eq 0 ]; then
+        theme HAS_PASSED
+    elif [ ${ee} -eq -1 ]; then
+        theme HAS_WARNED "SKIPPED"
+    else
+        theme HAS_FAILED
+        let e++
+    fi
+
+    return $e
+}
 #. }=-

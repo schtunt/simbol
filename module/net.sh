@@ -341,7 +341,7 @@ function net:portping() {
 #. net:myip -={
 function :net:myip:cached() { echo 3; }
 function :net:myip() {
-  ${CACHE_OUT?}; {
+  g_CACHE_OUT "$*" || {
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 0 ]; then
@@ -354,9 +354,7 @@ function :net:myip() {
             e=${CODE_SUCCESS?}
         fi
     fi
-
-    return $e
-  } | ${CACHE_IN?}; ${CACHE_EXIT?}
+  } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
 #. }=-
 #. }=-

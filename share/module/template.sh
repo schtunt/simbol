@@ -8,7 +8,9 @@ The module does X, Y and Z
 
 function :template:funk:cached() { echo 3; }
 function :template:funk() {
-  ${CACHE_OUT?}; {
+  #local l_CACHE_SIG="optional-custom-sinature-hash:template:funk/$3";
+  #local -i l_CACHE_TTL=0
+  g_CACHE_OUT "$*" || {
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 2 ]; then
@@ -17,9 +19,7 @@ function :template:funk() {
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
-
-    return $e
-  } | ${CACHE_IN?}; ${CACHE_EXIT?}
+  } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
 
 function template:funk:alert() {

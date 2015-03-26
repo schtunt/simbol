@@ -9,7 +9,7 @@ core:import ldap
 
 #. ng:tree -={
 function ::ng:tree_data() {
-  ${CACHE_OUT?}; {
+  g_CACHE_OUT "$*" || {
     : ${#g_PROCESSED_NETGROUP[@]?}
     local -i e=${CODE_FAILURE?}
 
@@ -95,9 +95,7 @@ function ::ng:tree_data() {
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
-
-    return $e
-  } | ${CACHE_IN?}; ${CACHE_EXIT?}
+  } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
 
 function ::ng:treecpf() {
@@ -368,7 +366,7 @@ function :ng:resolve() {
 #. }=-
 #. ng:hosts -={
 function :ng:hosts() {
-  ${CACHE_OUT?}; {
+  g_CACHE_OUT "$*" || {
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 2 ]; then
@@ -390,8 +388,7 @@ function :ng:hosts() {
         core:raise EXCEPTION_BAD_FN_CALL
     fi
 
-    return $e
-  } | ${CACHE_IN?}; ${CACHE_EXIT?}
+  } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
 
 function ng:hosts:usage() { echo "<netgroup>"; }

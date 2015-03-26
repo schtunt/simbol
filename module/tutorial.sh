@@ -7,6 +7,7 @@ comfortable with simbol, you can simply disable this module.
 [core:docstring]
 
 #. Tutorial -={
+
 #. tutorial:p01 -={
 function tutorial:p01() {
     cat <<!
@@ -234,9 +235,9 @@ function tutorial:hello:usage() {
 #. Mandatory - the function itself
 function tutorial:hello() {
     local -i e=${CODE_DEFAULT?}
-    : e= ${CODE_DEFAULT?} #. signals to simbol that user is in need of help
-    : e=${CODE_FAILURE?}  #. signals to simbol that there is an error condition
-    : e=${CODE_SUCCESS?}  #. signals to simbol that all went well
+    : e=${CODE_DEFAULT?} #. signals to simbol that user is in need of help
+    : e=${CODE_FAILURE?} #. signals to simbol that there is an error condition
+    : e=${CODE_SUCCESS?} #. signals to simbol that all went well
 
     if [ $# -gt 0 ]; then
         #. For shflags, we have a little work to do; here's a string:
@@ -277,10 +278,6 @@ function tutorial:hello() {
 
     return $e
 }
-
-#  #${CACHE_OUT?}; {
-#        cpf "%{B:Time now is} %{y:%s}\n" "$(date)"
-#        cpf "%{B:Signing off at} %{y:%s}\n" "$(date)"
-#  #} | ${CACHE_IN?}; ${CACHE_EXIT?}
 #. }=-
+
 #. }=-

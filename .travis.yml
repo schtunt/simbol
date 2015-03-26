@@ -17,6 +17,7 @@ env:
     - USER_USERNAME="travis"
     - PATH="${PATH}:${HOME}/bin"
   matrix:
+    - CONTEXT=execute MODULE=core
     # CONTEXT=execute MODULE=tutorial #. nima/simbol#15  util
     - CONTEXT=execute MODULE=util     #. nima/simbol#4
     - CONTEXT=execute MODULE=dns      #. nima/simbol#10  util

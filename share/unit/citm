@@ -78,8 +78,11 @@ if [ $# -eq 1 ]; then
                     run make purge                                 ;((EXIT|=$?)) #. Test purge
                     run make install                               ;((EXIT|=$?)) #. Test reinstall
                 ;;
+                execute:core)
+                    run simbol unit core                           ;((EXIT|=$?))
+                ;;
                 execute:*)
-                    run simbol unit test ${MODULE}                   ;((EXIT|=$?))
+                    run simbol unit test ${MODULE}                 ;((EXIT|=$?))
                 ;;
                 *:*)
                     EXIT=1

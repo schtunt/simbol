@@ -532,24 +532,47 @@ mkdir -p ${SIMBOL_USER_CACHE?}
 chmod 3770 ${SIMBOL_USER_CACHE?} 2>/dev/null
 
 #. Keep track if cache was used globally
-declare g_CACHE_USED=${SIMBOL_USER_CACHE}/.cache_used
-rm -f ${g_CACHE_USED}
+declare g_CACHE_USED=${SIMBOL_USER_CACHE?}/.cache_used
+rm -f ${g_CACHE_USED?}
 
-CACHE_OUT='eval :core:cached "${*}" && return ${CODE_SUCCESS}'
-CACHE_IN='eval :core:cache "${*}"'
-CACHE_EXIT='eval return ${PIPESTATUS[0]}'
+function core:return() { return $1; }
+
+function g_CACHE_OUT() {
+    : ${l_CACHE_SIG:="${FUNCNAME[1]}"}
+    g_CACHE_FILE="$(:core:cachefile "${l_CACHE_SIG}" "$*")"
+    :core:cached "${g_CACHE_FILE}"
+    return $?
+}
+
+function g_CACHE_IN() {
+    local -i e=$?
+
+    if [ ${e:-${CODE_SUCCESS?}} -eq ${CODE_SUCCESS?} ]; then
+        cat ${g_CACHE_FILE?}
+    else
+        rm -f ${g_CACHE_FILE?}
+    fi
+    #:core:cache "${g_CACHE_FILE}"
+    return $e
+}
 :<<! USAGE:
 Any function (private or internal only, do not try and cache-enable public
 functions!) can be cache-enabled simply by insertin two lines; one right at
 the start of the function, and one right at the end:
 
 function <module>:<function>() {
+  #. Optional...
+  #local l_CACHE_SIG="optional-custom-sinature-hash:template:funk/$3";
+  #local -i l_CACHE_TTL=0
+
   #. vvv 1. Use cache and return or continue
-  ${CACHE_OUT}; {
+  g_CACHE_OUT "$*" || {
+    local -i e=${CODE_DEFAULT?}
 
     ...
 
-  } | ${CACHE_IN}; ${CACHE_EXIT}
+    e=...
+  } > ${g_CACHE_FILE}; g_CACHE_IN; return $?
   #. ^^^ 2. Update cache if previous did not return
 }
 function :<module>:<function>() { #. Same as above...; }
@@ -591,96 +614,87 @@ function :core:age() {
     return ${e}
 }
 
-function :core:cache:file() {
-    local -i e=${CODE_FAILURE}
+function core:global() {
+    local -i e=${CODE_FAILURE?}
+    local contaxt
+    local key
+    local value
+    local globalstore
+    case $# in
+        1)
+            IFS='.' read context key <<< "${1}"
+            globalstore="$(:core:cachefile "${context}" "${key}")"
+            e=$?
+            if [ $e -eq ${CODE_SUCCESS?} ]; then
+                cat ${globalstore}
+            fi
+        ;;
+        2)
+            IFS='.' read context key <<< "${1}"
+            value="${2}"
+            globalstore="$(:core:cachefile "${context}" "${key}")"
+            echo "${value}" > ${globalstore}
+            e=$?
+        ;;
+        *)
+            core:raise EXCEPTION_BAD_FN_CALL
+        ;;
+    esac
+    return $e
+}
 
-    local modfn="$1"
-    local cachefile
-    if [ "$(type -t ${modfn}:cachefile)" == "function" ]; then
-        #. File-Cached...
-        shift 1
-        cachefile=$(${modfn}:cachefile "${@}")
-    else
-        #. Output-Cached...
+function :core:cachefile() {
+    #. Prints the file path
+    #. Return code encodes if the files exists (0) or not (1)
+
+    local effective_format=${g_FORMAT}
+
+    local cachefile=${SIMBOL_USER_CACHE}
+
+    if [ $# -eq 2 ]; then
+        #. Automaticly named cachefile...
+        local modfn="$1"
         local effective_format=${g_FORMAT}
         if [[ $1 =~ ^: ]] && [ ${g_FORMAT} == "ansi" ]; then
             effective_format=text
         fi
 
-        cachefile=${SIMBOL_USER_CACHE}/${1//:/=}
+        cachefile+=/${1//:/=}
         cachefile+=+${g_TLDID}
         cachefile+=+${g_VERBOSE}
-        cachefile+=+$(echo -ne "${2}"|md5sum|awk '{print$1}')
-        cachefile+=.${effective_format}
+        cachefile+=+$(md5sum <<< "$2"|cut -b -32);
+    elif [ $# -eq 1 ]; then
+        #. Hand-picked signature from caller...
+
+        cachefile+=/
+        cachefile+=+${g_TLDID}
+        cachefile+=+${g_VERBOSE}
+        cachefile+=+${1}
+        effective_format=sig
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
     fi
+
+    cachefile+=.${effective_format}
 
     echo "${cachefile}"
 
-    e=${CODE_SUCCESS}
-    return $e
-}
-
-function :core:cache:age() {
     local -i e=${CODE_FAILURE}
-
-    local cachefile=$(:core:cache:file "${@}")
-
-    :core:age "${cachefile}"
-    e=$?
-
-    return $e
-}
-
-function ::core:cache:cachetype() {
-    local -i e=${CODE_FAILURE}
-
-    if [ $# -eq 1 ]; then
-        local cachefile=$1
-        local cachetype=file
-
-        if [ "${cachefile:0:1}" == '/' ]; then
-            if [ "${cachefile//${SIMBOL_USER_CACHE}/}" != "${cachefile}" ]; then
-                cachetype=output
-            fi
-            e=${CODE_SUCCESS}
-        else
-            core:raise EXCEPTION_SHOULD_NOT_GET_HERE
-        fi
-    fi
-
-    echo "${cachetype}"
+    [ ! -e "${cachefile}" ] || e=${CODE_SUCCESS?}
     return $e
 }
 
 function :core:cache() {
-    local -i e=${CODE_FAILURE}
+    local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 1 ]; then
-        local modfn=${FUNCNAME[1]}
-        local argv="$1"
-        local cachefile=$(:core:cache:file "${modfn}" "${argv}")
+        local cachefile="$1"
 
-        #. If it's a output-cached file..
-        case $(::core:cache:cachetype ${cachefile}) in
-            output)
-                :> ${cachefile}
-                chmod 600 ${cachefile}
-                while IFS= read line; do
-                    echo "${line}" >> ${cachefile}
-                done
+        :> ${cachefile}
+        chmod 600 ${cachefile}
+        tee -a ${cachefile}
 
-                if [ -s ${cachefile} ]; then
-                    cat ${cachefile}
-                else
-                    rm -f ${cachefile}
-                fi
-            ;;
-            file)
-                : PASS
-            ;;
-        esac
-
-        local -i e=${CODE_SUCCESS}
+        e=${CODE_SUCCESS?}
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
@@ -689,43 +703,40 @@ function :core:cache() {
 }
 
 function :core:cached() {
-    #. TTL of 0 means cache forever
-    #. TTL > 0 means to cache for TTL seconds
-    local -i e=${CODE_FAILURE}
-    if [ $# -eq 1 ]; then
-        if [ ${g_CACHED} -eq 1 ]; then
-            local modfn=${FUNCNAME[1]}
-            if [ "$(type -t ${modfn}:shflags)" != "function" ]; then
-                local -i ttl=0
-                [ "$(type -t ${modfn}:cached)" == "function" ] &&
-                    ttl=$(${modfn}:cached) ||
-                        ttl=${g_CACHE_TTL}
-                local argv="$1"
-                local cachefile=$(:core:cache:file "${modfn}" "${argv}")
+    : ${g_CACHED?}
+    : ${g_CACHE_USED?}
+    local -i e=${CODE_FAILURE?}
+
+    if [ ${g_CACHED} -eq 1 ]; then
+        #. TTL < 0 means don't cache
+        #. TTL of 0 means cache forever
+        #. TTL > 0 means to cache for TTL seconds
+
+        if [ $# -eq 1 ]; then
+            local cachefile="$1"
+            local -i ttl=${l_CACHE_TTL:-${g_CACHE_TTL?}}
+            if [ ${ttl} -ge 0 ]; then
                 local -i age
                 age=$(:core:age ${cachefile})
-                if [ $? -eq ${CODE_SUCCESS} ]; then
+                if [ $? -eq ${CODE_SUCCESS?} ]; then
                     if [ ${ttl} -gt 0 -a ${age} -ge ${ttl} ]; then
+                        #. Cache Miss (Expiry)
                         rm -f ${cachefile}
+                        e=${CODE_FAILURE?}
                     else
-                        case $(::core:cache:cachetype ${cachefile}) in
-                            output)
-                                cat ${cachefile}
-                                echo ${cachefile} >> ${g_CACHE_USED}
-                                e=${CODE_SUCCESS}
-                            ;;
-                            file)
-                                e=${CODE_SUCCESS}
-                            ;;
-                        esac
+                        #. Cache Hit
+                        echo ${cachefile} >> ${g_CACHE_USED?}
+                        #cat ${cachefile}
+                        e=${CODE_SUCCESS?}
                     fi
+                else
+                    #. Cache Miss (No Cache)
+                    e=${CODE_FAILURE?}
                 fi
-            else
-                theme ERR "Caching functions that take local shflags not supported." >&2
             fi
+        else
+            core:raise EXCEPTION_BAD_FN_CALL
         fi
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
     fi
 
     return $e
@@ -1014,7 +1025,7 @@ function :core:usage() {
 #. FIXME: shflags before this function is called, and so caching becomes
 #. FIXME: destructive.  Additionally, it breaks the --long help which never
 #. FIXME: displays anymore once this is enabled.
-# ${CACHE_OUT?}; {
+# g_CACHE_OUT "$*" || {
     local module=$1
     local fn=$2
     local mode=${3---short}
@@ -1142,7 +1153,7 @@ function :core:usage() {
             ;;
         esac
     fi
-# } | ${CACHE_IN?}; ${CACHE_EXIT?}
+# } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
 
 function :core:complete() {
