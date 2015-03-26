@@ -671,7 +671,12 @@ integer attempts  3     "attempts"     a
 boolean sudo      false "run-as-root"  s
 !
 }
-function remote:mon:usage() { echo "<hgd:*> @$(echo ${!USER_MON_CMDGRPREMOTE[@]}|sed -e 's+ +|@+g') | <arbitrary-command>"; }
+function remote:mon:usage() {
+    cat <<!
+<hgd:*> @$(echo ${!USER_MON_CMDGRPREMOTE[@]}|sed -e 's+ +|@+g')
+<hgd:*> -- <arbitrary-command>"
+!
+}
 function remote:mon() {
     local -i e=${CODE_DEFAULT?}
 
