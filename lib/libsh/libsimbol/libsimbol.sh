@@ -9,7 +9,7 @@ export NOW=$(date --utc +%s)
 #. }=-
 #. 1.2  Paths -={
 : ${SIMBOL_PROFILE?}
-export SIMBOL_SIMBOL_BASENAME=$(basename $0)
+export SIMBOL_SIMBOL_BASENAME=$(basename -- $0)
 
 export SIMBOL_SCM=$(readlink ~/.simbol/.scm)
 
@@ -92,8 +92,7 @@ declare -g -A CORE_MODULES=(
     [dns]=1        [net]=1       [tunnel]=1    [remote]=1
     [xplm]=1       [rb]=1        [py]=1        [pl]=1
     [gpg]=1        [vault]=1
-    [ng]=0         [ldap]=0      [mongo]=0
-    [softlayer]=0
+    [ng]=0         [ldap]=0      [mongo]=0     [softlayer]=0
 )
 
 declare -gA USER_MODULES=( )
@@ -234,28 +233,29 @@ function core:softimport() {
     local -i e=9
 
     if [ $# -eq 1 ]; then
-        local module=$1
-        local modulepath=${1//./\/}
+        local module="$1"
+        local modulepath="${1//./\/}.sh"
+        local ouch="${SIMBOL_USER_TMP}/softimport.${module}.$$.ouch"
         if [ -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
             if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
-                if [ -f ${SIMBOL_USER_MOD}/${modulepath}.sh ]; then
-                    if source ${SIMBOL_USER_MOD}/${modulepath}.sh >/tmp/simbol.${module}.ouch 2>&1; then
+                if [ -f ${SIMBOL_USER_MOD}/${modulepath} ]; then
+                    if source ${SIMBOL_USER_MOD}/${modulepath} >${ouch} 2>&1; then
                         e=${CODE_IMPORT_GOOOD?}
                     else
                         e=${CODE_IMPORT_ERROR?}
                     fi
-                    rm -f /tmp/simbol.${module}.ouch
+                    rm -f ${ouch}
                 else
                     e=${CODE_IMPORT_UNDEF?}
                 fi
             elif [ ${CORE_MODULES[${module}]-9} -eq 1 ]; then
-                if [ -f ${SIMBOL_CORE_MOD}/${modulepath}.sh ]; then
-                    if source ${SIMBOL_CORE_MOD}/${modulepath}.sh >/tmp/simbol.${module}.ouch 2>&1; then
+                if [ -f ${SIMBOL_CORE_MOD}/${modulepath} ]; then
+                    if source ${SIMBOL_CORE_MOD}/${modulepath} >${ouch} 2>&1; then
                         e=${CODE_IMPORT_GOOOD?}
                     else
                         e=${CODE_IMPORT_ERROR?}
                     fi
-                    rm -f /tmp/simbol.${module}.ouch
+                    rm -f ${ouch}
                 else
                     e=${CODE_IMPORT_UNDEF?}
                 fi
@@ -302,28 +302,76 @@ function core:imported() {
     return ${e}
 }
 
+function core:modules() {
+    local -i e=${CODE_FAILURE}
+
+    if [ $# -eq 1 ]; then
+        local module=$1
+        local -i enabled=0
+        if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
+            enabled=2
+        elif [ ${CORE_MODULES[${module}]-9} -eq 1 ]; then
+            enabled=1
+        fi
+
+        if [ ${enabled} -eq 2 -a -f ${SIMBOL_USER_MOD}/${module//\./\/}.sh ]; then
+            echo ${module}
+            e=${CODE_SUCCESS?}
+        elif [ ${enabled} -eq 1 -a -f ${SIMBOL_CORE_MOD}/${module//\./\/}.sh ]; then
+            echo ${module}
+            e=${CODE_SUCCESS?}
+        fi
+
+        if [ ${module//./} == ${module} ]; then
+            #. It's a module with submodules
+            if [ ${enabled} -eq 2 -a -d ${SIMBOL_USER_MOD}/${module} ]; then
+                for submodule in $(find ${SIMBOL_USER_MOD}/${module} -type f -name '*.sh' -printf "%f\n" | cut -d. -f1); do
+                    submodule=${module}.${submodule}
+                    if [ ${USER_MODULES[${submodule}]-9} -eq 1 ]; then
+                        echo ${submodule}
+                    elif [ ${CORE_MODULES[${submodule}]-9} -eq 1 ]; then
+                        echo ${submodule}
+                    fi
+                done
+                e=${CODE_SUCCESS?}
+            elif [ ${enabled} -eq 1 -a -d ${SIMBOL_CORE_MOD}/${module} ]; then
+                for submodule in $(find ${SIMBOL_CORE_MOD}/${module} -type f -name '*.sh' -printf "%f\n" | cut -d. -f1); do
+                    submodule=${module}.${submodule}
+                    if [ ${USER_MODULES[${submodule}]-9} -eq 1 ]; then
+                        echo ${submodule}
+                    elif [ ${CORE_MODULES[${submodule}]-9} -eq 1 ]; then
+                        echo ${submodule}
+                    fi
+                done
+                e=${CODE_SUCCESS?}
+            fi
+        fi
+    fi
+
+    return $e
+}
+
 function core:docstring() {
     local -i e=${CODE_FAILURE}
 
     if [ $# -eq 1 ]; then
         local module=$1
-        local modulepath=${1//./\/}
+        local modulepath=${1//./\/}.sh
 
         e=2 #. No such module
         if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
-            if [ -f ${SIMBOL_USER_MOD}/${modulepath}.sh ]; then
-                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_USER_MOD}/${modulepath}.sh
+            if [ -f ${SIMBOL_USER_MOD}/${modulepath} ]; then
+                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_USER_MOD}/${modulepath}
                 e=$?
             fi
         elif [ ${CORE_MODULES[${module}]-9} -eq 1 ]; then
-            if [ -f ${SIMBOL_CORE_MOD}/${modulepath}.sh ]; then
-                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_CORE_MOD}/${modulepath}.sh
+            if [ -f ${SIMBOL_CORE_MOD}/${modulepath} ]; then
+                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_CORE_MOD}/${modulepath}
                 e=$?
             fi
         elif [ ${CORE_MODULES[${module}]-9} -eq 0 -o ${USER_MODULES[${module}]-9} -eq 0 ]; then
             e=${CODE_FAILURE} #. Disabled
         fi
-        g_SIMBOL_IMPORTED_EXIT[${module}]=$e
     fi
 
     return $e
@@ -776,8 +824,8 @@ function ::core:flags.eval() {
             fi
         fi
         cat <<!
-declare -g module=${module:-}
-declare -g fn=${fn:-}
+declare -g module_22884db148f0ffb0d830ba431102b0b5=${module:-}
+declare -g fn_4d9d6c17eeae2754c9b49171261b93bd=${fn:-}
 !
     fi
 
@@ -927,7 +975,6 @@ function ::core:dereference.eval() {
 
 function :core:functions() {
     local -i e=${CODE_FAILURE}
-
     if [ $# -eq 2 ]; then
         local fn_type=$1
         local module=$2
@@ -963,7 +1010,11 @@ function :core:functions() {
 }
 function :core:usage:cached() { echo 0; }
 function :core:usage() {
-  ${CACHE_OUT?}; {
+#. FIXME: The caching here is unaware of -O|--options that are eaten up by
+#. FIXME: shflags before this function is called, and so caching becomes
+#. FIXME: destructive.  Additionally, it breaks the --long help which never
+#. FIXME: displays anymore once this is enabled.
+# ${CACHE_OUT?}; {
     local module=$1
     local fn=$2
     local mode=${3---short}
@@ -1012,7 +1063,7 @@ function :core:usage() {
                 if [ $ie -eq ${CODE_IMPORT_GOOOD?} ]; then
                     cpf "%{@comment:%s}\n" "${docstring:+; ${docstring}}"
                 else
-                    cpf "; %{@warn:This module has not been set-up for use}\n"
+                    cpf "; %{@err:Error loading module}\n"
                 fi
             ); done | sort
         done
@@ -1024,16 +1075,22 @@ function :core:usage() {
                 cpf "${usage_prefix} %{!module:${module}}\n"
                 g_ONCE_WHOAMI=1
             fi
-
-            local -a fns=( $(:core:functions public ${module}) )
-            for fn in ${fns[@]}; do
-                local usage_fn="${module}:${fn}:usage"
-                local usagestr="{no-args}"
-                if [ "$(type -t ${usage_fn})" == "function" ]; then
-                    usagestr="$(${usage_fn})"
-                    cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{c:%s}\n" "${usagestr}"
-                else
-                    cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{bl:%s}\n" "${usagestr}"
+            for module in $(core:modules ${module}); do
+                core:softimport ${module}
+                if [ $? -eq ${CODE_SUCCESS?} ]; then
+                    local -a fns=( $(:core:functions public ${module}) )
+                    for fn in ${fns[@]}; do
+                        local usage_fn="${module}:${fn}:usage"
+                        local usagestr
+                        if [ "$(type -t ${usage_fn})" == "function" ]; then
+                            while read usagestr; do
+                                cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{c:%s}\n" "${usagestr}"
+                            done < <(${usage_fn})
+                        else
+                            usagestr="{no-args}"
+                            cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{bl:%s}\n" "${usagestr}"
+                        fi
+                    done
                 fi
             done
 
@@ -1052,13 +1109,14 @@ function :core:usage() {
         fi
     elif [ $# -ge 2 ]; then
         cpf "${usage_prefix} %{!function:${module}:${fn}}\n"
-        cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} "
 
-        local usage_s=${module}:${fn}:usage
-        if [ "$(type -t $usage_s)" == "function" ]; then
-            cpf "%{c:%s}\n" "$(${usage_s})"
+        local usage_fn=${module}:${fn}:usage
+        if [ "$(type -t $usage_fn)" == "function" ]; then
+            while read usagestr; do
+                cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{c:%s}\n" "${usagestr}"
+            done < <(${usage_fn})
         else
-            cpf "%{bl:%s}\n" "{no-args}"
+            cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{bl:%s}\n" "{no-args}"
         fi
 
         case ${mode} in
@@ -1084,26 +1142,27 @@ function :core:usage() {
             ;;
         esac
     fi
-  } | ${CACHE_IN?}; ${CACHE_EXIT?}
+# } | ${CACHE_IN?}; ${CACHE_EXIT?}
 }
 
 function :core:complete() {
-    local module=$1
+    local modulestr=$1
+    local prefix="AC_${modulestr//./_}_"
     local fn=$2
     if [ "${fn}" != '-' ]; then
         local hit
-        hit=$(declare -F ${module}:${fn})
+        hit=$(declare -F ${modulestr}:${fn})
         if [ $? -eq 0 ]; then
             echo ${fn}
         else
-            for afn in $(declare -F|awk -F'[ :]' '$3~/^'${module}'$/{print$4}'|sort -n); do
-                local AC_${module//./_}_${afn}=1
+            for afn in $(declare -F|awk -F'[ :]' '$3~/^'${modulestr}'$/{print$4}'|sort -n); do
+                local ${prefix}${afn//./_}=1
             done
-            local -a completed=( $(eval echo "\${!AC_${module//./_}_${fn}*}") )
-            if echo ${completed[@]} | grep -qE "\<AC_${module//./_}_${fn}\>"; then
+            local -a completed=( $(eval echo "\${!${prefix}${fn//./_}*}") )
+            if echo ${completed[@]} | grep -qE "\<${prefix}${fn//./_}\>"; then
                 echo ${fn}
             else
-                echo ${completed[@]//AC_${module//./_}_/}
+                echo ${completed[@]//${prefix}/}
             fi
         fi
     fi
@@ -1122,9 +1181,15 @@ function core:wrapper() {
     local -i e_flags=$?
     core:log DEBUG "core:flags.eval() returned ${e_flags}"
 
-    eval "${setdata}" #. NOTE: This sets module, fn, $@, etc.
-    : ${module?}
-    : ${fn?}
+    eval "${setdata}" #. -={
+    #. NOTE: This sets module, fn, $@, etc.
+    : ${module_22884db148f0ffb0d830ba431102b0b5?}
+    module=${module_22884db148f0ffb0d830ba431102b0b5}
+
+    : ${fn_4d9d6c17eeae2754c9b49171261b93bd?}
+    fn=${fn_4d9d6c17eeae2754c9b49171261b93bd}
+    #. }=-
+
     core:log DEBUG "core:wrapper(module=${module}, fn=${fn}, argv=( $@ ))"
 
     local regex=':+[a-z0-9]+(:[a-z0-9]+) |*'
