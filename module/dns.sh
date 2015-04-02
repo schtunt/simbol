@@ -44,10 +44,11 @@ function :dns:resolve() {
             if [ ${PIPESTATUS[0]} -ne 0 -o ${#resolved} -eq 0 ]; then
                 resolved="$(
                     getent hosts |
+                        awk "\$2~/^${qdn}\>/{print}" |
                         grep -E "\<${qdn}\>" |
-                        head -n1 |
-                        awk '{print$1}';
-                    exit $((PIPESTATUS[0]|PIPESTATUS[1]))
+                        awk '{print$1}' |
+                        head -n1
+                    exit $((${PIPESTATUS[0]}|${PIPESTATUS[2]}))
                 )"
                 e=$?
             else
