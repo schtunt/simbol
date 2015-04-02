@@ -557,9 +557,11 @@ function ng:host() {
                 ${FUNCNAME?} "$ng" ${hni}
             done
         else
-            local -a didumean=( $(:ldap:search -2 netgroup nisNetgroupTriple~="\(${fqdn},,\)" nisNetgroupTriple) )
-            if [ ${#didumean[@]} -gt 0 ]; then
-                printf "? %s\n" ${didumean[@]}
+            if [ ${g_VERBOSE?} -eq 1 ]; then
+                local -a didumean=( $(:ldap:search -2 netgroup nisNetgroupTriple~="\(${fqdn},,\)" nisNetgroupTriple) )
+                if [ ${#didumean[@]} -gt 0 ]; then
+                    printf "? %s\n" ${didumean[@]}
+                fi
             fi
         fi
 
