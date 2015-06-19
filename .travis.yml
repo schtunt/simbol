@@ -36,6 +36,7 @@ matrix:
   allow_failures:
     - env: CONTEXT=execute MODULE=xplm
     - env: CONTEXT=execute MODULE=tunnel
+    - env: CONTEXT=execute MODULE=vault
 
 before_install:
   - sudo apt-get update -qq
