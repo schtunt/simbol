@@ -234,7 +234,7 @@ function core:softimport() {
 
     if [ $# -eq 1 ]; then
         local module="$1"
-        local modulepath="${1//./\/}.sh"
+        local modulepath="${1//.//}.sh"
         local ouch="${SIMBOL_USER_TMP}/softimport.${module}.$$.ouch"
         if [ -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
             if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
