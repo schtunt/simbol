@@ -106,7 +106,7 @@ function aws.ec2:describe() {
                                 for instance in $(jq -c "select(.SubnetId == \"${subnet}\")|.InstanceId" <<< "${instances}"); do
                                     instance=${instance//\"/}
                                     cpf "         \\___ %{@host:%s}..." ${instance}
-                                    jq -c "select(.InstanceId == \"${instance}\")|.State.Name" <<< "${instances}"
+                                    jq -c "select(.InstanceId == \"${instance}\")|[.InstanceType,.State.Name,.PublicDnsName]" <<< "${instances}"
                                 done
                             done
                         done
@@ -163,9 +163,23 @@ function aws.ec2:describe() {
                     igws=$(py:run aws --region="${region}" ec2 describe-internet-gateways | jq '.InternetGateways[]')
                     [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
 
+                    local rts
+                    rts=$(py:run aws --region="${region}" ec2 describe-route-tables | jq '.RouteTables[]')
+                    [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
+
+                    local subnets
+                    subnets=$(py:run aws --region="${region}" ec2 describe-subnets | jq -c ".Subnets[]")
+                    [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
+
                     local vpcs
                     vpcs=$(py:run aws --region="${region}" ec2 describe-vpcs | jq -c '.Vpcs[]')
-                    if [ $? -eq ${CODE_SUCCESS?} ]; then
+                    [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
+
+                    local instances
+                    instances=$(py:run aws --region="${region}" ec2 describe-instances | jq '.Reservations[].Instances[]' )
+                    [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
+
+                    if [ $e -eq ${CODE_SUCCESS?} ]; then
                         theme HAS_PASSED
                         local vpc
                         for vpc in $(jq '.VpcId' <<< "${vpcs}"); do
@@ -177,8 +191,32 @@ function aws.ec2:describe() {
                             for igw in $(jq -c "select(.Attachments[].VpcId == \"${vpc}\")|.InternetGatewayId" <<< "${igws}"); do
                                 igw=${igw//\"/}
                                 cpf "      \\___ %{@host:%s}..." ${igw}
-                                jq -c "select(.InternetGatewayId == \"${igw}\") | .Attachments" <<< "${igws}"
+                                jq -c "select(.InternetGatewayId == \"${igw}\")|[.Attachments,.Tags]" <<< "${igws}"
+
+                                local rts
+                                for rt in $(jq -c "select(.VpcId==\"${vpc}\")|.Routes[]|select(.GatewayId==\"${igw}\")|.DestinationCidrBlock" <<< "${rts}"); do
+                                    rt=${rt//\"/}
+                                    cpf "         \\___ Routes %{@subnet:%s}\n" "${rt}"
+                                done
                             done
+
+                            local subnet
+                            for subnet in $(jq -c "select(.VpcId == \"${vpc}\")|.SubnetId" <<< "${subnets}"); do
+                                subnet=${subnet//\"/}
+                                cpf "      \\___ %{@subnet:%s}..." ${subnet}
+                                jq -c "select(.SubnetId == \"${subnet}\")" <<< "${subnets}"
+
+                                local instance
+                                for instance in $(jq -c "select(.NetworkInterfaces[].SubnetId == \"${subnet}\")|.InstanceId" <<< "${instances}"); do
+                                    instance=${instance//\"/}
+                                    cpf "         \\___ %{@host:%s}..." "${instance}"
+                                    jq -c "select(.InstanceId == \"${instance}\")|[.InstanceType,.State.Name,.PublicDnsName,.ImageId]" <<< "${instances}"
+                                    for sg in $(jq -c "select(.InstanceId == \"${instance}\")|.SecurityGroups[]|[.GroupName,.GroupId]" <<< "${instances}"); do
+                                        cpf "            \\___ %{@key:sg}: %{@val:%s}\n" "${sg}"
+                                    done
+                                done
+                            done
+
                         done
                     fi
                 done
@@ -235,8 +273,10 @@ function aws.ec2:describe() {
 #. aws.ec2:vpc -={
 function aws.ec2:vpc:usage() {
     cat <<!
+list
 create <cidr>
-create-subnet <vpc> <cidr> <region> <az>
+create-subnet <region> <vpc> <az> <cidr>
+set-dns-hostnames <region> <vpc> enable|disable
 !
 }
 function aws.ec2:vpc() {
@@ -244,6 +284,11 @@ function aws.ec2:vpc() {
 
     local subcmd="$1"
     case ${subcmd}:$# in
+        list:2)
+            local region="$2"
+            py:run aws ec2 --region="${region}" describe-vpcs | jq -c '.Vpcs[]'
+            e=${PIPESTATUS[0]}
+        ;;
         create:2)
             local cidr="$2"
             py:run aws ec2 create-vpc --cidr="${cidr}" |
@@ -251,19 +296,32 @@ function aws.ec2:vpc() {
             e=${PIPESTATUS[0]}
         ;;
         create-subnet:5)
-            local vpc="$2"
-            local cidr="$3"
-            local region="$4"
-            local az="$5"
+            local region="$2"
+            local vpc="$3"
+            local az="$4"
+            local cidr="$5"
             py:run aws --region="${region}" ec2 create-subnet --vpc="${vpc}" --cidr="${cidr}" --availability-zone=${az} |
                 jq '.'
             e=${PIPESTATUS[0]}
         ;;
-        list:1)
-            local cidr="$2"
-            py:run aws ec2 describe-vpcs |
-                jq -c '.Vpcs[]'
-            e=${PIPESTATUS[0]}
+        set-dns-hostnames:4)
+            local region="$2"
+            local vpc="$3"
+            local action="$4"
+            case ${action} in
+                enable|on)
+                    py:run aws --region="${region}" ec2 modify-vpc-attribute --vpc-id="${vpc}" --enable-dns-hostnames
+                    e=${PIPESTATUS[0]}
+                ;;
+                disable|off)
+                    py:run aws --region="${region}" ec2 modify-vpc-attribute --vpc-id="${vpc}" --disable-dns-hostnames
+                    e=${PIPESTATUS[0]}
+                ;;
+            esac
+        ;;
+        *)
+            theme ERR_USAGE "Unsupported option \`${subcmd}'"
+            e=${CODE_FAILURE?}
         ;;
     esac
 
@@ -310,23 +368,31 @@ function aws.ec2:i() {
 }
 #. }=-
 #. aws.ec2:sg -={
-function aws.ec2:sg:usage() { echo "list|apply <instance> <sgs>"; }
+function aws.ec2:sg:usage() {
+cat <<!
+list <region>
+apply <region> <instance> <sgs>
+!
+}
 function aws.ec2:sg() {
     local -i e=${CODE_DEFAULT?}
 
     local subcmd="$1"
     case ${subcmd}:$# in
-        list:1)
-            py:run aws ec2 describe-security-groups |
+        list:2)
+            local region="$2"
+            py:run aws --region="${region}" ec2 describe-security-groups |
                 jq -e -c '.SecurityGroups[]|[.GroupId,.GroupName]'
             e=$?
         ;;
-        apply:3)
-            local instance="$2"
-            local sgs="${3}"
-            py:run aws ec2 modify-instance-attribute\
+        apply:4)
+            local region="$2"
+            local instance="$3"
+            local sgs="$4"
+            py:run aws ec2 --region="${region}" modify-instance-attribute\
                 --instance-id "${instance}"\
                 --groups "$(:util:listify ${sgs})"
+            e=$?
         ;;
     esac
 
@@ -339,9 +405,12 @@ function aws.ec2:acl() {
     local -i e=${CODE_DEFAULT?}
     local secgrp="SG:simbol/${SIMBOL_PROFILE}/${USER_USERNAME}/SSHOnly"
     local subcmd="$1"
+    local region="$2"
     local myip
     case $#:${subcmd} in
-        1:check)
+        2:check)
+            region="$2"
+
             cpf "Your public IP address..."
             myip=$(:net:myip)
             e=$?
@@ -350,7 +419,7 @@ function aws.ec2:acl() {
 
                 cpf "Testing ACL for ssh access from ${myip}/32..."
                 local ip
-                ip=$(py:run aws ec2 describe-security-groups |
+                ip=$(py:run aws --region="${region}" ec2 describe-security-groups |
                     jq -e '
                         .SecurityGroups[]
                         |   select(.GroupName == "'${secgrp}'" )
@@ -363,7 +432,9 @@ function aws.ec2:acl() {
                 theme HAS_FAILED "NO_INTERNET"
             fi
         ;;
-        1:create)
+        2:create)
+            region="$2"
+
             cpf "Your public IP address..."
             myip=$(:net:myip)
             e=$?
@@ -371,11 +442,11 @@ function aws.ec2:acl() {
                 theme HAS_PASSED "${myip}/32"
 
                 cpf "Creating a rule for ${myip}/32..."
-                py:run aws ec2 create-security-group \
+                py:run aws --region="${region}" ec2 create-security-group \
                     --group-name "${secgrp}" \
                     --description "/inbound/ssh/src:${myip}" >/dev/null 2>&1
                 if [ $? -eq 0 ]; then
-                    py:run aws ec2 authorize-security-group-ingress \
+                    py:run aws --region="${region}" ec2 authorize-security-group-ingress \
                         --group-name "${secgrp}" \
                         --cidr "${myip}/32" \
                         --protocol tcp --port 22 >/dev/null 2>&1
@@ -388,7 +459,9 @@ function aws.ec2:acl() {
                 theme HAS_FAILED "NO_INTERNET"
             fi
         ;;
-        1:delete)
+        2:delete)
+            region="$2"
+
             cpf "Your public IP address..."
             myip=$(:net:myip)
             e=$?
@@ -396,7 +469,7 @@ function aws.ec2:acl() {
                 theme HAS_PASSED "${myip}/32"
 
                 cpf "Deleting rule for ${myip}/32..."
-                py:run aws ec2 delete-security-group \
+                py:run aws --region="${region}" ec2 delete-security-group \
                     --group-name "${secgrp}" &>/dev/null
                 e=$?
                 theme HAS_AUTOED $e
