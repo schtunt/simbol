@@ -168,7 +168,7 @@ function aws.ec2:describe() {
                     [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
 
                     local subnets
-                    subnets=$(py:run aws --region="${region}" ec2 describe-subnets | jq -c ".Subnets[]")
+                    subnets=$(py:run aws --region="${region}" ec2 describe-subnets | jq -c '.Subnets[]')
                     [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
 
                     local vpcs
@@ -176,47 +176,94 @@ function aws.ec2:describe() {
                     [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
 
                     local instances
-                    instances=$(py:run aws --region="${region}" ec2 describe-instances | jq '.Reservations[].Instances[]' )
+                    instances=$(py:run aws --region="${region}" ec2 describe-instances | jq '.Reservations[].Instances[]')
+                    [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
+
+                    local interfaces
+                    interfaces=$(py:run aws --region="${region}" ec2 describe-network-interfaces | jq '.NetworkInterfaces[]')
                     [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
 
                     if [ $e -eq ${CODE_SUCCESS?} ]; then
                         theme HAS_PASSED
+                        cpf "   \\___ %{@key:version}: %{@subnet:%s}...\n" "Amazon VPC"
+
                         local vpc
                         for vpc in $(jq '.VpcId' <<< "${vpcs}"); do
                             vpc="${vpc//\"/}"
-                            cpf "   \\___ %{y:%s}..." ${vpc}
+                            cpf "      \\___ %{y:%s}..." ${vpc}
                             jq -c "select(.VpcId == \"${vpc}\")" <<< "${vpcs}"
+
+                            local subnet
+                            for subnet in $(jq -c "select(.VpcId == \"${vpc}\")|.SubnetId" <<< "${subnets}"); do
+                                subnet=${subnet//\"/}
+                                cpf "         \\___ %{@key:subnet}: %{@subnet:%s}..." ${subnet}
+                                jq -c "select(.SubnetId == \"${subnet}\")" <<< "${subnets}"
+
+                                local instance
+                                for instance in $(jq -c "select(.NetworkInterfaces[].SubnetId == \"${subnet}\")|.InstanceId" <<< "${instances}" | sort -u); do
+                                    instance=${instance//\"/}
+
+                                    cpf "            \\___ %{@key:instance}:%{@host:%s}..." "${instance}"
+                                    jq -c "select(.InstanceId == \"${instance}\")|[.InstanceType,.State.Name,.PublicDnsName,.ImageId]" <<< "${instances}"
+
+                                    local sg
+                                    for sg in $(jq -c "select(.InstanceId == \"${instance}\")|.SecurityGroups[]|[.GroupId,.GroupName]" <<< "${instances}"); do
+                                        cpf "               \\___ %{@key:sg}: %{@val:%s}\n" "${sg}"
+                                    done
+
+                                    local eni
+                                    for eni in $(jq -c "select(.Attachment.InstanceId == \"${instance}\")|[.NetworkInterfaceId,.VpcId,.SubnetId,.AvailabilityZone,.PrivateIpAddress,.Association.PublicIp,.Association.PublicDnsName]" <<< "${interfaces}"); do
+                                        cpf "               \\___ %{@key:eni}: %{@val:%s}\n" "${eni}"
+                                    done
+
+                                    local kv
+                                    for kv in $(jq -c "select(.InstanceId==\"${instance}\")|.Tags[]|.Key+\",\"+.Value" <<< "${instances}" 2>/dev/null); do
+                                        kv=${kv//\"/}
+                                        IFS=, read key val <<< "${kv}"
+                                        cpf "              \\___ %{@key:%s}:%{@val:%s}\n" "${key}" ${val}
+                                    done
+                                done
+                            done
 
                             local igw
                             for igw in $(jq -c "select(.Attachments[].VpcId == \"${vpc}\")|.InternetGatewayId" <<< "${igws}"); do
                                 igw=${igw//\"/}
-                                cpf "      \\___ %{@host:%s}..." ${igw}
+                                cpf "         \\___ %{@key:igw}: %{@host:%s}..." ${igw}
                                 jq -c "select(.InternetGatewayId == \"${igw}\")|[.Attachments,.Tags]" <<< "${igws}"
 
                                 local rts
                                 for rt in $(jq -c "select(.VpcId==\"${vpc}\")|.Routes[]|select(.GatewayId==\"${igw}\")|.DestinationCidrBlock" <<< "${rts}"); do
                                     rt=${rt//\"/}
-                                    cpf "         \\___ Routes %{@subnet:%s}\n" "${rt}"
+                                    cpf "            \\___ %{@key:routes}: %{@subnet:%s}\n" "${rt}"
                                 done
                             done
+                        done
 
-                            local subnet
-                            for subnet in $(jq -c "select(.VpcId == \"${vpc}\")|.SubnetId" <<< "${subnets}"); do
-                                subnet=${subnet//\"/}
-                                cpf "      \\___ %{@subnet:%s}..." ${subnet}
-                                jq -c "select(.SubnetId == \"${subnet}\")" <<< "${subnets}"
+                        cpf "   \\___ %{@key:version}: %{@subnet:%s}...\n" "Amazon Classic"
+                        cpf "      \\___ %{@key:subnet}: %{@subnet:%s}...\n" "amazon-classic-subnet"
 
-                                local instance
-                                for instance in $(jq -c "select(.NetworkInterfaces[].SubnetId == \"${subnet}\")|.InstanceId" <<< "${instances}"); do
-                                    instance=${instance//\"/}
-                                    cpf "         \\___ %{@host:%s}..." "${instance}"
-                                    jq -c "select(.InstanceId == \"${instance}\")|[.InstanceType,.State.Name,.PublicDnsName,.ImageId]" <<< "${instances}"
-                                    for sg in $(jq -c "select(.InstanceId == \"${instance}\")|.SecurityGroups[]|[.GroupName,.GroupId]" <<< "${instances}"); do
-                                        cpf "            \\___ %{@key:sg}: %{@val:%s}\n" "${sg}"
-                                    done
-                                done
+                        local instance
+                        for instance in $(jq -c "select(.VpcId == null)|.InstanceId" <<< "${instances}" | sort -u); do
+                            instance=${instance//\"/}
+                            cpf "        \\___ %{@key:instance}:%{@host:%s}..." "${instance}"
+                            jq -c "select(.InstanceId == \"${instance}\")|[.InstanceType,.State.Name,.PublicDnsName,.ImageId]" <<< "${instances}"
+
+                            local sg
+                            for sg in $(jq -c "select(.InstanceId == \"${instance}\")|.SecurityGroups[]|[.GroupId,.GroupName]" <<< "${instances}"); do
+                                cpf "            \\___ %{@key:sg}: %{@val:%s}\n" "${sg}"
                             done
 
+                            local eni
+                            for eni in $(jq -c "select(.Attachment.InstanceId == \"${instance}\")|[.NetworkInterfaceId,.VpcId,.SubnetId,.AvailabilityZone,.PrivateIpAddress,.Association.PublicIp,.Association.PublicDnsName]" <<< "${interfaces}"); do
+                                cpf "            \\___ %{@key:eni}: %{@val:%s}\n" "${eni}"
+                            done
+
+                            local kv
+                            for kv in $(jq -c "select(.InstanceId==\"${instance}\")|.Tags[]|.Key+\",\"+.Value" <<< "${instances}" 2>/dev/null); do
+                                kv=${kv//\"/}
+                                IFS=, read key val <<< "${kv}"
+                                cpf "            \\___ %{@key:%s}:%{@val:%s}\n" "${key}" ${val}
+                            done
                         done
                     fi
                 done
