@@ -134,7 +134,33 @@ function ::cpf:function() {
     cpf "${fmt}%s %{b:%s}%{N}" ${module} ${fn}
 }
 #. }=-
-
+#. cpf:indentation -={
+declare -i INDENT=0
+declare INDENT_STR=''
+function mkindentstr() {
+    INDENT_STR=""
+    if [ ${INDENT} -gt 0 ]; then
+        local -i i
+        for ((i=0; i<INDENT; i++)); do
+            case $i in
+                0) INDENT_STR+=" ";;
+                *) INDENT_STR+="  ";;
+            esac
+        done
+        INDENT_STR+=" \___ "
+    fi
+}
+function block() {
+    case $1 in
+        open) ((INDENT++)); ;;
+        close) ((INDENT--)); ;;
+    esac
+    mkindentstr
+}
+alias -- -{='block open; '
+alias -- }-='block close; '
+shopt -s expand_aliases
+#. }=-
 #. cpf:theme -={
 function ::cpf:is_fmt() {
     grep -qE '%' <<<"$1"
@@ -192,6 +218,7 @@ function ::cpf:theme() {
                     warn)                fmt="%{y:${fmt}}";;
                     info)                fmt="%{wh:${fmt}}";;
                     pass)                fmt="%{g:${fmt}}";;
+                    name)                fmt="%{m:${fmt}}";;
                     note)                fmt="%{m:${fmt}}";;
                     link)                fmt="%{b:${fmt}}";;
                     loc)                 fmt="%{c:${fmt}}";;

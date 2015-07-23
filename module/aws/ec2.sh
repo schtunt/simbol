@@ -93,19 +93,19 @@ function aws.ec2:describe() {
                         local az
                         for az in $(jq -c '.ZoneName' <<< "${zones}"); do
                             az=${az//\"/}
-                            cpf "   \\___ %{y:%s}..." ${az}
+                            cpf "${INDENT_STR}%{y:%s}..." ${az}
                             jq -c "select(.ZoneName == \"${az}\")" <<< "${zones}"
 
                             local subnet
                             for subnet in $(jq -c "select(.AvailabilityZone == \"${az}\")|.SubnetId" <<< "${subnets}"); do
                                 subnet=${subnet//\"/}
-                                cpf "      \\___ %{@subnet:%s}..." ${subnet}
+                                cpf "${INDENT_STR}%{@subnet:%s}..." ${subnet}
                                 jq -c "select(.SubnetId == \"${subnet}\")" <<< "${subnets}"
 
                                 local instance
                                 for instance in $(jq -c "select(.SubnetId == \"${subnet}\")|.InstanceId" <<< "${instances}"); do
                                     instance=${instance//\"/}
-                                    cpf "         \\___ %{@host:%s}..." ${instance}
+                                    cpf "${INDENT_STR}%{@host:%s}..." ${instance}
                                     jq -c "select(.InstanceId == \"${instance}\")|[.InstanceType,.State.Name,.PublicDnsName]" <<< "${instances}"
                                 done
                             done
@@ -143,6 +143,7 @@ function aws.ec2:describe() {
 
             cpf "Gathering data..."
 
+            local raw
             local regions
             regions=$(py:run aws --region="${2:-us-west-1}" ec2 describe-regions | jq '.Regions[]')
             [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
@@ -157,7 +158,7 @@ function aws.ec2:describe() {
                 local region
                 for region in $(jq -c  '.RegionName' <<< "${regions}"); do
                     region=${region//\"/}
-                    cpf "+ %{y:%s}..." ${region}
+                    cpf "${INDENT_STR?}%{y:%s}..." ${region}
 
                     local igws
                     igws=$(py:run aws --region="${region}" ec2 describe-internet-gateways | jq '.InternetGateways[]')
@@ -183,89 +184,88 @@ function aws.ec2:describe() {
                     interfaces=$(py:run aws --region="${region}" ec2 describe-network-interfaces | jq '.NetworkInterfaces[]')
                     [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
 
-                    if [ $e -eq ${CODE_SUCCESS?} ]; then
+                    if [ $e -eq ${CODE_SUCCESS?} ]; then -{
                         theme HAS_PASSED
-                        cpf "   \\___ %{@key:version}: %{@subnet:%s}...\n" "Amazon VPC"
+                        cpf "${INDENT_STR}%{@version:%s}...\n" "Amazon VPC"
 
                         local vpc
-                        for vpc in $(jq '.VpcId' <<< "${vpcs}"); do
-                            vpc="${vpc//\"/}"
-                            cpf "      \\___ %{y:%s}..." ${vpc}
-                            jq -c "select(.VpcId == \"${vpc}\")" <<< "${vpcs}"
-
-                            local subnet
-                            for subnet in $(jq -c "select(.VpcId == \"${vpc}\")|.SubnetId" <<< "${subnets}"); do
-                                subnet=${subnet//\"/}
-                                cpf "         \\___ %{@key:subnet}: %{@subnet:%s}..." ${subnet}
-                                jq -c "select(.SubnetId == \"${subnet}\")" <<< "${subnets}"
-
-                                local instance
-                                for instance in $(jq -c "select(.NetworkInterfaces[].SubnetId == \"${subnet}\")|.InstanceId" <<< "${instances}" | sort -u); do
-                                    instance=${instance//\"/}
-
-                                    cpf "            \\___ %{@key:instance}:%{@host:%s}..." "${instance}"
-                                    jq -c "select(.InstanceId == \"${instance}\")|[.InstanceType,.State.Name,.PublicDnsName,.ImageId]" <<< "${instances}"
-
-                                    local sg
-                                    for sg in $(jq -c "select(.InstanceId == \"${instance}\")|.SecurityGroups[]|[.GroupId,.GroupName]" <<< "${instances}"); do
-                                        cpf "               \\___ %{@key:sg}: %{@val:%s}\n" "${sg}"
-                                    done
-
-                                    local eni
-                                    for eni in $(jq -c "select(.Attachment.InstanceId == \"${instance}\")|[.NetworkInterfaceId,.VpcId,.SubnetId,.AvailabilityZone,.PrivateIpAddress,.Association.PublicIp,.Association.PublicDnsName]" <<< "${interfaces}"); do
-                                        cpf "               \\___ %{@key:eni}: %{@val:%s}\n" "${eni}"
-                                    done
-
-                                    local kv
-                                    for kv in $(jq -c "select(.InstanceId==\"${instance}\")|.Tags[]|.Key+\",\"+.Value" <<< "${instances}" 2>/dev/null); do
-                                        kv=${kv//\"/}
-                                        IFS=, read key val <<< "${kv}"
-                                        cpf "              \\___ %{@key:%s}:%{@val:%s}\n" "${key}" ${val}
-                                    done
-                                done
-                            done
+                        for vpc in $(jq '.VpcId' <<< "${vpcs}" | tr -d '"'); do -{
+                            local name=$(jq -c "select(.VpcId==\"${vpc}\")|.Tags[]|select(.Key==\"Name\")|.Value" <<< "${vpcs}" 2>/dev/null | tr -d '"')
+                            cpf "${INDENT_STR}%{@key:%s} (%{@name:%s})..." ${vpc} "${name:-n/a}"
+                            jq -c "select(.VpcId == \"${vpc}\")|{\"cidr\":.CidrBlock,\"state\":.State}" <<< "${vpcs}"
 
                             local igw
-                            for igw in $(jq -c "select(.Attachments[].VpcId == \"${vpc}\")|.InternetGatewayId" <<< "${igws}"); do
-                                igw=${igw//\"/}
-                                cpf "         \\___ %{@key:igw}: %{@host:%s}..." ${igw}
-                                jq -c "select(.InternetGatewayId == \"${igw}\")|[.Attachments,.Tags]" <<< "${igws}"
+                            for igw in $(jq -c "select(.Attachments[].VpcId == \"${vpc}\")|.InternetGatewayId" <<< "${igws}" | tr -d '"'); do -{
+                                local name=$(jq -c "select(.InternetGatewayId==\"${igw}\")|.Tags[]|select(.Key==\"Name\")|.Value" <<< "${igws}" 2>/dev/null | tr -d '"')
+                                cpf "${INDENT_STR}%{@key:%s} (%{@name:%s})...\n" ${igw} "${name:-n/a}"
 
-                                local rts
-                                for rt in $(jq -c "select(.VpcId==\"${vpc}\")|.Routes[]|select(.GatewayId==\"${igw}\")|.DestinationCidrBlock" <<< "${rts}"); do
-                                    rt=${rt//\"/}
-                                    cpf "            \\___ %{@key:routes}: %{@subnet:%s}\n" "${rt}"
-                                done
-                            done
-                        done
+                                local rt
+                                for rt in $(jq -c "select(.VpcId==\"${vpc}\")|.Routes[]|select(.GatewayId==\"${igw}\")|.DestinationCidrBlock" <<< "${rts}" | tr -d '"'); do -{
+                                    cpf "${INDENT_STR}%{@key:routes}: %{@subnet:%s}\n" "${rt}"
+                                }- done
+                            }- done
 
-                        cpf "   \\___ %{@key:version}: %{@subnet:%s}...\n" "Amazon Classic"
-                        cpf "      \\___ %{@key:subnet}: %{@subnet:%s}...\n" "amazon-classic-subnet"
+                            local subnet
+                            for subnet in $(jq -c "select(.VpcId == \"${vpc}\")|.SubnetId" <<< "${subnets}" | tr -d '"'); do -{
+                                local name="$(jq -c "select(.SubnetId == \"${subnet}\")|.Tags[]?|select(.Key==\"Name\")|.Value" <<< "${subnets}" | tr -d '"')"
+                                cpf "${INDENT_STR}%{@key:%s} (%{@name:%s})..." "${subnet}" "${name:-n/a}"
+                                jq -c "select(.SubnetId == \"${subnet}\")|{\"az\":.AvailabilityZone,\"cidr\":.CidrBlock,\"free\":.AvailableIpAddressCount}" <<< "${subnets}"
 
-                        local instance
-                        for instance in $(jq -c "select(.VpcId == null)|.InstanceId" <<< "${instances}" | sort -u); do
-                            instance=${instance//\"/}
-                            cpf "        \\___ %{@key:instance}:%{@host:%s}..." "${instance}"
-                            jq -c "select(.InstanceId == \"${instance}\")|[.InstanceType,.State.Name,.PublicDnsName,.ImageId]" <<< "${instances}"
+                                local instance
+                                for instance in $(jq -c "select(.NetworkInterfaces[].SubnetId == \"${subnet}\")|.InstanceId" <<< "${instances}" | tr -d '"' | sort -u); do -{
+                                    local name=$(jq -c "select(.InstanceId==\"${instance}\")|.Tags[]|select(.Key==\"Name\")|.Value" <<< "${instances}" 2>/dev/null | tr -d '"')
 
-                            local sg
-                            for sg in $(jq -c "select(.InstanceId == \"${instance}\")|.SecurityGroups[]|[.GroupId,.GroupName]" <<< "${instances}"); do
-                                cpf "            \\___ %{@key:sg}: %{@val:%s}\n" "${sg}"
-                            done
+                                    cpf "${INDENT_STR}%{@key:%s}/%{@name:%s}..." "${instance}" "${name:-noname}"
+                                    jq -c "select(.InstanceId == \"${instance}\")|{\"type\":.InstanceType,\"state\":.State.Name,\"fqdn\":.PublicDnsName,\"ami\":.ImageId, \"sg\":[.SecurityGroups[].GroupId]}" <<< "${instances}"
 
-                            local eni
-                            for eni in $(jq -c "select(.Attachment.InstanceId == \"${instance}\")|[.NetworkInterfaceId,.VpcId,.SubnetId,.AvailabilityZone,.PrivateIpAddress,.Association.PublicIp,.Association.PublicDnsName]" <<< "${interfaces}"); do
-                                cpf "            \\___ %{@key:eni}: %{@val:%s}\n" "${eni}"
-                            done
+                                    for eni in $(jq -c "select(.Attachment.InstanceId == \"${instance}\")|select(.SubnetId == \"${subnet}\")|.NetworkInterfaceId" <<< "${interfaces}" | tr -d '"'); do -{
+                                        cpf "${INDENT_STR}%{@key:%s}: " "${eni}"
+                                        jq -c "select(.NetworkInterfaceId == \"${eni}\")|{\"pri\":.PrivateIpAddress,\"pub\":.Association.PublicIp,\"fqdn\":.Association.PublicDnsName}" <<< "${interfaces}"
+                                        for raw in $(jq -c "select(.NetworkInterfaceId == \"${eni}\")|.Groups[]|.GroupId+\",\"+.GroupName" <<< "${interfaces}" | tr -d '"'); do -{
+                                            local sgid sgname
+                                            IFS=, read sgid sgname <<< "${raw}"
+                                            cpf "${INDENT_STR}%{@key:%s}: %{@name:%s}\n" "${sgid}" "${sgname}"
+                                        }- done
+                                    }- done
 
-                            local kv
-                            for kv in $(jq -c "select(.InstanceId==\"${instance}\")|.Tags[]|.Key+\",\"+.Value" <<< "${instances}" 2>/dev/null); do
-                                kv=${kv//\"/}
-                                IFS=, read key val <<< "${kv}"
-                                cpf "            \\___ %{@key:%s}:%{@val:%s}\n" "${key}" ${val}
-                            done
-                        done
-                    fi
+                                    local rt
+                                    for rt in $(jq -c ".Associations[]|select(.SubnetId==\"${subnet}\")|.RouteTableId" <<< "${rts}" 2>/dev/null | tr -d '"'); do -{
+                                        cpf "${INDENT_STR}%{@key:%s}\n" ${rt}
+                                        for raw in $(jq -c "select(.VpcId==\"${vpc}\")|select(.RouteTableId==\"${rt}\")|.Routes[]|.DestinationCidrBlock+\",\"+.GatewayId" <<< "${rts}" | tr -d '"'); do -{
+                                            IFS=, read cidr gw <<< "${raw}"
+                                            cpf "${INDENT_STR}%{@key:routes}: %{@subnet:%s} via %{@host:%s}\n" "${cidr}" "${gw}"
+                                        }- done
+                                    }- done
+                                }- done
+                            }- done
+                        }- done
+
+                        cpf "${INDENT_STR}%{@version:%s}...\n" "Amazon Classic"; -{
+                            cpf "${INDENT_STR}%{@key:%s}...\n" "subnet-00000000"
+
+                            local instance
+                            for instance in $(jq -c "select(.VpcId == null)|.InstanceId" <<< "${instances}" | tr -d '"' | sort -u); do -{
+                                local name=$(jq -c "select(.InstanceId==\"${instance}\")|.Tags[]|select(.Key==\"Name\")|.Value" <<< "${instances}" | tr -d '"' 2>/dev/null)
+                                cpf "${INDENT_STR}%{@key:%s}/%{@name:%s}..." "${instance}" "${name:-noname}"
+                                jq -c "select(.InstanceId == \"${instance}\")|{\"type\":.InstanceType,\"state\":.State.Name,\"fqdn\":.PublicDnsName,\"ami\":.ImageId, \"sg\":[.SecurityGroups[].GroupId]}" <<< "${instances}"
+
+                                -{
+                                    cpf "${INDENT_STR}%{@key:sg}: "
+                                    jq -c "select(.InstanceId == \"${instance}\")|.SecurityGroups[]|[.GroupId,.GroupName]" <<< "${instances}"
+                                }-
+
+                                local eni
+                                for eni in $(jq -c "select(.Attachment.InstanceId == \"${instance}\")|[.NetworkInterfaceId,.VpcId,.SubnetId,.AvailabilityZone,.PrivateIpAddress,.Association.PublicIp,.Association.PublicDnsName]" <<< "${interfaces}"); do -{
+                                    cpf "${INDENT_STR}%{@key:eni}: %{@val:%s}\n" "${eni}"
+                                    for raw in $(jq -c "select(.NetworkInterfaceId == \"${eni}\")|.Groups[]|.GroupId+\",\"+.GroupName" <<< "${interfaces}" | tr -d '"'); do -{
+                                        local sgid sgname
+                                        IFS=, read sgid sgname <<< "${raw}"
+                                        cpf "${INDENT_STR}%{@key:%s}: %{@name:%s}\n" "${sgid}" "${sgname}"
+                                    }- done
+                                }- done
+                            }- done
+                        }-
+                    }- fi
                 done
                 e=${PIPESTATUS[0]}
             fi
@@ -304,7 +304,7 @@ function aws.ec2:describe() {
                         local vpc
                         for vpc in $(jq '.VpcId' <<< "${vpcs}"); do
                             vpc="${vpc//\"/}"
-                            cpf "   \\___ %{y:%s}..." ${vpc}
+                            cpf "${INDENT_STR}%{y:%s}..." ${vpc}
                             jq -c "select(.VpcId == \"${vpc}\")" <<< "${vpcs}"
                         done
                     fi
