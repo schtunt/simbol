@@ -130,10 +130,30 @@ function aws.ec2:describe() {
                 jq -c  '.AvailabilityZones[]'
             e=${PIPESTATUS[0]}
         ;; #. }=-
-        i:2) #. -={
-            local region="$2"
-            py:run aws --region="${region}" ec2 describe-instances |
-                jq -c '.Instances[]?'
+        i:[12]) #. -={
+            local regions
+            regions=$(py:run aws --region="${2:-us-west-1}" ec2 describe-regions | jq '.Regions[]')
+            if [ $# -eq 2 ]; then
+                regions=$(jq "select(.RegionName == \"${2}\")" <<< "${regions}")
+            fi
+
+            local region
+            for region in $(jq -c  '.RegionName' <<< "${regions}" | tr -d '"'); do
+                cpf "${INDENT_STR?}%{y:%s}..." ${region}
+
+                local instances
+                instances=$(py:run aws --region="${region}" ec2 describe-instances | jq '.Reservations[].Instances[]')
+                [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
+
+                cpf "\n"
+
+                for instance in $(jq -c ".InstanceId" <<< "${instances}" | tr -d '"' | sort -u); do -{
+                    local name=$(jq -c "select(.InstanceId==\"${instance}\")|.Tags[]|select(.Key==\"Name\")|.Value" <<< "${instances}" 2>/dev/null | tr -d '"')
+
+                    cpf "${INDENT_STR}%{r:%s}/%{@name:%s}..." "${instance}" "${name:-noname}"
+                    jq -c "select(.InstanceId == \"${instance}\")|{\"type\":.InstanceType,\"state\":.State.Name,\"fqdn\":.PublicDnsName,\"ami\":.ImageId, \"sg\":[.SecurityGroups[].GroupId]}" <<< "${instances}"
+                }- done
+            done
             e=${PIPESTATUS[0]}
         ;; #. }=-
 
@@ -143,7 +163,6 @@ function aws.ec2:describe() {
 
             cpf "Gathering data..."
 
-            local raw
             local regions
             regions=$(py:run aws --region="${2:-us-west-1}" ec2 describe-regions | jq '.Regions[]')
             [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
@@ -152,12 +171,12 @@ function aws.ec2:describe() {
                 [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
             fi
 
+            local raw
             if [ $e -eq ${CODE_SUCCESS?} ]; then
                 theme HAS_PASSED
 
                 local region
-                for region in $(jq -c  '.RegionName' <<< "${regions}"); do
-                    region=${region//\"/}
+                for region in $(jq -c  '.RegionName' <<< "${regions}" | tr -d '"'); do
                     cpf "${INDENT_STR?}%{y:%s}..." ${region}
 
                     local igws
@@ -199,9 +218,9 @@ function aws.ec2:describe() {
                                 local name=$(jq -c "select(.InternetGatewayId==\"${igw}\")|.Tags[]|select(.Key==\"Name\")|.Value" <<< "${igws}" 2>/dev/null | tr -d '"')
                                 cpf "${INDENT_STR}%{@key:%s} (%{@name:%s})...\n" ${igw} "${name:-n/a}"
 
-                                local rt
-                                for rt in $(jq -c "select(.VpcId==\"${vpc}\")|.Routes[]|select(.GatewayId==\"${igw}\")|.DestinationCidrBlock" <<< "${rts}" | tr -d '"'); do -{
-                                    cpf "${INDENT_STR}%{@key:routes}: %{@subnet:%s}\n" "${rt}"
+                                for raw in $(jq -c "select(.VpcId==\"${vpc}\")|.Routes[]|select(.GatewayId==\"${igw}\")|.DestinationCidrBlock+\",\"+.GatewayId" <<< "${rts}" | tr -d '"'); do -{
+                                    IFS=, read cidr gw <<< "${raw}"
+                                    cpf "${INDENT_STR}%{@key:routes}: %{@subnet:%s} via %{@host:%s}\n" "${cidr}" "${gw}"
                                 }- done
                             }- done
 
@@ -215,7 +234,7 @@ function aws.ec2:describe() {
                                 for instance in $(jq -c "select(.NetworkInterfaces[].SubnetId == \"${subnet}\")|.InstanceId" <<< "${instances}" | tr -d '"' | sort -u); do -{
                                     local name=$(jq -c "select(.InstanceId==\"${instance}\")|.Tags[]|select(.Key==\"Name\")|.Value" <<< "${instances}" 2>/dev/null | tr -d '"')
 
-                                    cpf "${INDENT_STR}%{@key:%s}/%{@name:%s}..." "${instance}" "${name:-noname}"
+                                    cpf "${INDENT_STR}%{r:%s}/%{@name:%s}..." "${instance}" "${name:-noname}"
                                     jq -c "select(.InstanceId == \"${instance}\")|{\"type\":.InstanceType,\"state\":.State.Name,\"fqdn\":.PublicDnsName,\"ami\":.ImageId, \"sg\":[.SecurityGroups[].GroupId]}" <<< "${instances}"
 
                                     for eni in $(jq -c "select(.Attachment.InstanceId == \"${instance}\")|select(.SubnetId == \"${subnet}\")|.NetworkInterfaceId" <<< "${interfaces}" | tr -d '"'); do -{
@@ -246,7 +265,7 @@ function aws.ec2:describe() {
                             local instance
                             for instance in $(jq -c "select(.VpcId == null)|.InstanceId" <<< "${instances}" | tr -d '"' | sort -u); do -{
                                 local name=$(jq -c "select(.InstanceId==\"${instance}\")|.Tags[]|select(.Key==\"Name\")|.Value" <<< "${instances}" | tr -d '"' 2>/dev/null)
-                                cpf "${INDENT_STR}%{@key:%s}/%{@name:%s}..." "${instance}" "${name:-noname}"
+                                cpf "${INDENT_STR}%{r:%s}/%{@name:%s}..." "${instance}" "${name:-noname}"
                                 jq -c "select(.InstanceId == \"${instance}\")|{\"type\":.InstanceType,\"state\":.State.Name,\"fqdn\":.PublicDnsName,\"ami\":.ImageId, \"sg\":[.SecurityGroups[].GroupId]}" <<< "${instances}"
 
                                 -{
@@ -381,7 +400,7 @@ function aws.ec2:i:shflags() {
 string region ${AWS_DEFAULT_REGION?} aws-default-region r
 !
 }
-function aws.ec2:i:usage() { echo "list|screendump <instance-id>"; }
+function aws.ec2:i:usage() { echo "attr|screendump <instance-id>"; }
 function aws.ec2:i() {
     local -i e=${CODE_DEFAULT?}
 
@@ -392,11 +411,6 @@ function aws.ec2:i() {
         attr:1)
             py:run aws --region="${region}" ec2 describe-account-attributes |
                 jq -c  '.AccountAttributes[]|[ .AttributeName, (.AttributeValues[]|.AttributeValue) ]'
-            e=${PIPESTATUS[0]}
-        ;;
-        list:1)
-            py:run aws --region="${region}" ec2 describe-instances |
-                jq -c '.Reservations[].Instances[]|[.InstanceId,.PublicDnsName,.ImageId,.State.Name,.SecurityGroups[].GroupId,.SecurityGroups[].GroupName]'
             e=${PIPESTATUS[0]}
         ;;
         screendump:2)
