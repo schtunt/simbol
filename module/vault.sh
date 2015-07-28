@@ -69,7 +69,6 @@ function :vault:encryption() {
     case $#:$2 in
         2:on)
             if [ -f ${vault} ]; then
-                local -i pwid=0
                 :gpg:encrypt ${vault} ${vault_bu}
                 if [ $? -eq ${CODE_SUCCESS} ]; then
                     cat ${vault_bu} > ${vault}
@@ -79,7 +78,6 @@ function :vault:encryption() {
         ;;
         2:off)
             if [ -f ${vault} ]; then
-                local -i pwid=0
                 :gpg:decrypt ${vault} ${vault_bu}
                 if [ $? -eq ${CODE_SUCCESS} ]; then
                     cat ${vault_bu} > ${vault}
@@ -96,7 +94,7 @@ function :vault:encryption() {
 }
 #. }=-
 #. vault:encrypt -={
-function vault:encrypt:usage() { echo "<file-path:${g_VAULT}>"; }
+function vault:encrypt:usage() { echo "<file-path:${g_VAULT?}>"; }
 function vault:encrypt() {
     local -i e=${CODE_DEFAULT?}
 
@@ -106,7 +104,7 @@ function vault:encrypt() {
         if [ -w ${vault} ]; then
             :vault:encryption ${vault} on
             e=$?
-            theme HAS_AUTOED $?
+            theme HAS_AUTOED $e
 
             cpf "Shredding remains..."
             ::vault:clean ${vault}
@@ -121,17 +119,17 @@ function vault:encrypt() {
 }
 #. }=-
 #. vault:decrypt -={
-function vault:decrypt:usage() { echo "<file-path:${g_VAULT}>"; }
+function vault:decrypt:usage() { echo "<file-path:${g_VAULT?}>"; }
 function vault:decrypt() {
     local -i e=${CODE_DEFAULT?}
 
     if [ $# -eq 1 ]; then
-        cpf "Encrypting %{@path:%s}..." "${vault}"
+        cpf "Decrypting %{@path:%s}..." "${vault}"
         local vault=${1:-${g_VAULT?}}
         if [ -w ${vault} ]; then
             :vault:encryption ${vault} off
             e=$?
-            theme HAS_AUTOED $?
+            theme HAS_AUTOED $e
 
             cpf "Shredding remains..."
             ::vault:clean ${vault}
@@ -271,6 +269,8 @@ function vault:list() {
         else
             theme HAS_FAILED "CANNOT_DECRYPT:${vault}"
             e=${CODE_FAILURE?}
+            #. gpg -q --batch --allow-secret-key-import --import ~/.gnupg/ntd.AWS.0xFFFFFFFF.sec
+            #. gpg -q --batch --import ~/.gnupg/ntd.AWS.0xFFFFFFFF.pub
         fi
     fi
 
