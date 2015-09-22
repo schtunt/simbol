@@ -237,7 +237,6 @@ function core:softimport() {
     #. 3: no such module defined
     #. 4: no module set
     local -i e=9
-
     if [ $# -eq 1 ]; then
         local module="$1"
         local modulepath="${1//.//}.sh"
@@ -245,9 +244,11 @@ function core:softimport() {
         if [ -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
             if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
                 if [ -f ${SIMBOL_USER_MOD}/${modulepath} ]; then
-                    if source ${SIMBOL_USER_MOD}/${modulepath} >${ouch} 2>&1; then
+                    if ( source ${SIMBOL_USER_MOD}/${modulepath} ) >${ouch} 2>&1; then
+                        source ${SIMBOL_USER_MOD}/${modulepath}
                         e=${CODE_IMPORT_GOOOD?}
                     else
+                        core:log CRIT ${ouch}
                         e=${CODE_IMPORT_ERROR?}
                     fi
                     rm -f ${ouch}
@@ -256,9 +257,11 @@ function core:softimport() {
                 fi
             elif [ ${CORE_MODULES[${module}]-9} -eq 1 ]; then
                 if [ -f ${SIMBOL_CORE_MOD}/${modulepath} ]; then
-                    if source ${SIMBOL_CORE_MOD}/${modulepath} >${ouch} 2>&1; then
+                    if ( source ${SIMBOL_CORE_MOD}/${modulepath} ) >${ouch} 2>&1; then
+                        source ${SIMBOL_CORE_MOD}/${modulepath}
                         e=${CODE_IMPORT_GOOOD?}
                     else
+                        core:log CRIT ${ouch}
                         e=${CODE_IMPORT_ERROR?}
                     fi
                     rm -f ${ouch}
