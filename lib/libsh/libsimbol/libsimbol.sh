@@ -215,7 +215,13 @@ function core:log() {
         [ -e ${SIMBOL_USER_LOG?} ] || touch ${SIMBOL_USER_LOG?}
         if [ -f ${SIMBOL_USER_LOG} ]; then
             chmod 600 ${SIMBOL_USER_LOG?}
-            echo "${msg} ${*:2}" >> ${SIMBOL_USER_LOG?}
+            if [ $# -eq 2 -a -e "$2" -a "${2:0:1}" == '/' ]; then
+                while read line; do
+                    echo "${msg} ${line}" >> ${SIMBOL_USER_LOG?}
+                done < "${2}"
+            else
+                echo "${msg} ${*:2}" >> ${SIMBOL_USER_LOG?}
+            fi
         fi
         #printf "%s; %5d; %8s[%24s]; $@\n" "${ts}" "$$" "${code}" "$(sed -e 's/ /<-/g' <<< ${FUNCNAME[@]})" >> ${WMII_LOG}
     fi
