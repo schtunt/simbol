@@ -1185,18 +1185,23 @@ function :core:complete() {
     fi
 }
 
+function core:exit() {
+    theme HAS_FAILED "CRITICAL ERROR; ABORTING! See ${SIMBOL_USER_LOG}..." >&2
+    echo '...'
+    tail ${SIMBOL_USER_LOG}
+    exit ${1:-99}
+}
+
 function core:wrapper() {
-    if [ -e ${SIMBOL_DEADMAN?} ]; then
-        theme HAS_FAILED "CRITICAL ERROR; ABORTING!" >&2
-        exit 1
-    fi
+    [ ! -e ${SIMBOL_DEADMAN?} ] || core:exit 1
 
     local -i e=${CODE_USAGE_MODS}
 
     local setdata
     setdata=$(::core:flags.eval "${@}")
     local -i e_flags=$?
-    core:log DEBUG "core:flags.eval() returned ${e_flags}"
+
+    [ ${e_flags} -eq ${CODE_SUCCESS?} ] || core:exit 2
 
     eval "${setdata}" #. -={
     #. NOTE: This sets module, fn, $@, etc.
