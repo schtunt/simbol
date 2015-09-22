@@ -4,7 +4,7 @@
 export SIMBOL_VERSION=v0.30.1
 #. 1.1  Date/Time and Basics -={
 export NOW=$(date --utc +%s)
-#. FIXME: Mac OS X needs this instead:
+#. FIXME: Mac OS X's native date needs this instead:
 #. FIXME: export NOW=$(date -u +%s)
 #. }=-
 #. 1.2  Paths -={
