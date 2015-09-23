@@ -8,7 +8,6 @@ Core vault and secrets module
 core:import gpg
 
 core:requires shred
-core:requires xclip
 
 g_VAULT=${SIMBOL_USER_ETC?}/simbol.vault
 
@@ -362,8 +361,13 @@ function vault:read() {
 
         if [ $e -eq 0 ]; then
             if [ -t 1 ]; then
-                printf "%s" "${secret}" | xclip -i
-                theme HAS_PASSED "COPIED_TO_CLIPBOARD"
+                if :core:requires xclip; then
+                    printf "%s" "${secret}" | xclip -i
+                    theme HAS_PASSED "COPIED_TO_CLIPBOARD"
+                else
+                    theme HAS_FAILED "XCLIP_NOT_FOUND"
+                    e=${CODE_FAILURE?}
+                fi
             else
                 printf "%s" "${secret}"
             fi
