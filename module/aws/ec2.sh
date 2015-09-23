@@ -107,32 +107,6 @@ function aws.ec2:describe() {
                 jq -c  '.AvailabilityZones[]'
             e=${PIPESTATUS[0]}
         ;; #. }=-
-        i:[12]) #. -={
-            local regions
-            regions=$(py:run aws --region="${2:-us-west-1}" ec2 describe-regions | jq '.Regions[]')
-            if [ $# -eq 2 ]; then
-                regions=$(jq "select(.RegionName == \"${2}\")" <<< "${regions}")
-            fi
-
-            local region
-            for region in $(jq -c  '.RegionName' <<< "${regions}" | tr -d '"'); do
-                cpf "${INDENT_STR?}%{y:%s}..." ${region}
-
-                local instances
-                instances=$(py:run aws --region="${region}" ec2 describe-instances | jq '.Reservations[].Instances[]')
-                [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
-
-                cpf "\n"
-
-                for instance in $(jq -c ".InstanceId" <<< "${instances}" | tr -d '"' | sort -u); do -{
-                    local name=$(jq -c "select(.InstanceId==\"${instance}\")|.Tags[]|select(.Key==\"Name\")|.Value" <<< "${instances}" 2>/dev/null | tr -d '"')
-
-                    cpf "${INDENT_STR}%{r:%s}/%{@name:%s}..." "${instance}" "${name:-noname}"
-                    jq -c "select(.InstanceId == \"${instance}\")|{\"type\":.InstanceType,\"state\":.State.Name,\"fqdn\":.PublicDnsName,\"ami\":.ImageId, \"sg\":[.SecurityGroups[].GroupId]}" <<< "${instances}"
-                }- done
-            done
-            e=${PIPESTATUS[0]}
-        ;; #. }=-
 
         #. Logical Queries
         ltree:[12]) #. -={
@@ -385,20 +359,52 @@ function aws.ec2:i() {
 
     local subcmd="$1"
     case ${subcmd}:$# in
+        desc:[12]) #. -={
+            local regions
+            regions=$(py:run aws --region="${2:-us-west-1}" ec2 describe-regions | jq '.Regions[]')
+            [ $# -eq 2 ] && regions=$(jq "select(.RegionName == \"${2}\")" <<< "${regions}")
+
+            local region
+            for region in $(jq -c  '.RegionName' <<< "${regions}" | tr -d '"'); do
+                cpf "${INDENT_STR?}%{y:%s}..." ${region}
+
+                local instances
+                instances=$(py:run aws --region="${region}" ec2 describe-instances | jq '.Reservations[].Instances[]')
+                [ $? -ne ${CODE_SUCCESS?} ] && cpf '!' && e=${CODE_FAILURE} || cpf '.'
+
+                cpf "\n"
+
+                for instance in $(jq -c ".InstanceId" <<< "${instances}" | tr -d '"' | sort -u); do -{
+                    local name=$(jq -c "select(.InstanceId==\"${instance}\")|.Tags[]|select(.Key==\"Name\")|.Value" <<< "${instances}" 2>/dev/null | tr -d '"')
+
+                    cpf "${INDENT_STR}%{r:%s}/%{@name:%s}..." "${instance}" "${name:-noname}"
+                    jq -c "select(.InstanceId == \"${instance}\")|{\"type\":.InstanceType,\"state\":.State.Name,\"fqdn\":.PublicDnsName,\"ami\":.ImageId, \"sg\":[.SecurityGroups[].GroupId]}" <<< "${instances}"
+                }- done
+            done
+            e=${PIPESTATUS[0]}
+        ;; #. }=-
+
         attr:1)
             py:run aws --region="${region}" ec2 describe-account-attributes |
                 jq -c '.AccountAttributes[]|{ (.AttributeName): (.AttributeValues[]|.AttributeValue) }'
             e=${PIPESTATUS[0]}
         ;;
-        screendump:2)
-            local iid=$2
 
+        screendump:2)
             e=${CODE_FAILURE?}
 
+            local iid=$2
+            cpf "Retrieving screen dump from EC2 instance %{r:%s}..." ${iid}
             local dump
-            dump=$(py:run aws --region="${region}" ec2 get-console-output --instance-id ${iid} | jq -e '.Output' | tr -d '\040-\042')
-            e=$?
-            echo -e "${dump}"
+            dump="$(py:run aws --region="${region}" ec2 get-console-output --instance-id ${iid} 2>/dev/null | jq -e '.Output' | tr '\040-\042' ' ')"
+            if [ ${PIPESTATUS[0]} -eq ${CODE_SUCCESS?} -a ${#dump} -gt 0 ]; then
+                e=${CODE_SUCCESS?}
+                theme HAS_PASSED
+                echo -e "${dump}"
+            else
+                theme HAS_FAILED
+                e=${CODE_FAILURE?}
+            fi
         ;;
     esac
 
