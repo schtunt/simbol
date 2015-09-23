@@ -12,29 +12,6 @@ core:import net
 
 AWS_DEFAULT_REGION="${USER_AWS_DEFAULT_REGION:-us-east-1}"
 
-#. aws.ec2:selfcheck -={
-function aws.ec2:selfcheck() {
-    local -i e=${CODE_DEFAULT?}
-
-    if [ $# -eq 0 ]; then
-        e=${CODE_SUCCESS?}
-
-        cpf "Dependency check..."
-        local dep
-        for dep in boto awscli dateutils jmespath docutils rsa; do
-            if :xplm:requires py ${dep}; then
-                cpf '.'
-            else
-                cpf '![%s]' "${dep}"
-                e=${CODE_FAILURE?}
-            fi
-        done
-        cpf '...'
-
-        theme HAS_AUTOED $e
-    fi
-}
-#. }=-
 #. aws.ec2:describe -={
 function aws.ec2:describe:usage() {
     cat <<!
