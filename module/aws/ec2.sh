@@ -387,7 +387,7 @@ function aws.ec2:i() {
     case ${subcmd}:$# in
         attr:1)
             py:run aws --region="${region}" ec2 describe-account-attributes |
-                jq -c  '.AccountAttributes[]|[ .AttributeName, (.AttributeValues[]|.AttributeValue) ]'
+                jq -c '.AccountAttributes[]|{ (.AttributeName): (.AttributeValues[]|.AttributeValue) }'
             e=${PIPESTATUS[0]}
         ;;
         screendump:2)
