@@ -31,10 +31,11 @@ _simbol() {
     esac
 }
 
-SIMBOL_PROFILE=$(${HOME}/.simbol/bin/activate)
-e=$?
-if [ $e -eq 0 ]; then
-    export SIMBOL_PROFILE
-    source ~/.simbol/.scm/lib/libsh/libsimbol/libsimbol.sh
-    complete -F _simbol simbol
+if [ ${TERM} != 'dumb' ]; then
+    SIMBOL_PROFILE=$(${HOME}/.simbol/bin/activate)
+    if [ $? -eq 0 ]; then
+        export SIMBOL_PROFILE
+        source ~/.simbol/.scm/lib/libsh/libsimbol/libsimbol.sh
+        complete -F _simbol simbol
+    fi
 fi
