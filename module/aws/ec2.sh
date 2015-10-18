@@ -351,7 +351,7 @@ function aws.ec2:i:shflags() {
 string region ${AWS_DEFAULT_REGION?} aws-default-region r
 !
 }
-function aws.ec2:i:usage() { echo "attr|screendump <instance-id>"; }
+function aws.ec2:i:usage() { echo "desc|attr|screendump|terminate <instance-id>"; }
 function aws.ec2:i() {
     local -i e=${CODE_DEFAULT?}
 
@@ -359,6 +359,11 @@ function aws.ec2:i() {
 
     local subcmd="$1"
     case ${subcmd}:$# in
+        attr:1) #. -={
+            py:run aws --region="${region}" ec2 describe-account-attributes |
+                jq -c '.AccountAttributes[]|{ (.AttributeName): (.AttributeValues[]|.AttributeValue) }'
+            e=${PIPESTATUS[0]}
+        ;; #. }=-
         desc:[12]) #. -={
             local regions
             regions=$(py:run aws --region="${2:-us-west-1}" ec2 describe-regions | jq '.Regions[]')
@@ -383,14 +388,7 @@ function aws.ec2:i() {
             done
             e=${PIPESTATUS[0]}
         ;; #. }=-
-
-        attr:1)
-            py:run aws --region="${region}" ec2 describe-account-attributes |
-                jq -c '.AccountAttributes[]|{ (.AttributeName): (.AttributeValues[]|.AttributeValue) }'
-            e=${PIPESTATUS[0]}
-        ;;
-
-        screendump:2)
+        screendump:2) #. -={
             e=${CODE_FAILURE?}
 
             local iid=$2
@@ -405,7 +403,16 @@ function aws.ec2:i() {
                 theme HAS_FAILED
                 e=${CODE_FAILURE?}
             fi
-        ;;
+        ;; #. }=-
+        terminate:[2-9]) #. -={
+            e=${CODE_SUCCESS?}
+            local iid
+            for iid in ${@:2}; do
+                cpf "${INDENT_STR}Terminating %{r:%s}..." "${iid}"
+                py:run aws --region="${region}" ec2 terminate-instances --instance-ids=${iid} | jq -c
+                [ ${PIPESTATUS[0]} -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
+            done
+        ;; #. }=-
     esac
 
     return $e
