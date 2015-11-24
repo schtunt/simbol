@@ -613,7 +613,7 @@ function :core:age() {
 
 function core:global() {
     local -i e=${CODE_FAILURE?}
-    local contaxt
+    local context
     local key
     local value
     local globalstore
