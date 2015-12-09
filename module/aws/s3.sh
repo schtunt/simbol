@@ -9,7 +9,7 @@ AWS S3 (Simple Storage Service)
 core:import util
 core:import vault
 
-#. aws.s3:uploda -={
+#. aws.s3:upload -={
 function :aws.s3:upload() {
     local -i e=${CODE_FAILURE?}
 
@@ -63,7 +63,7 @@ function aws.s3:upload() {
             local file
             for file in "${@:3}"; do
                 printf "Uploading ${file} to S3 bucket ${bucket}..."
-                :aws_s3:upload "${key_id}" "${key_secret}" "${bucket}" "${file}"
+                :aws.s3:upload "${key_id}" "${key_secret}" "${bucket}" "${file}"
                 e=$?
                 theme HAS_AUTOED $e
             done
