@@ -141,7 +141,7 @@ function :remote:connect() {
 #       ssh_options+=" $(:remote:sshproxyopts ${tldid})"
 
         export TERM=vt100
-        eval "ssh ${ssh_options} ${hcs} ${*:3}"
+        eval "for i in {1..3}; do ssh ${ssh_options} ${hcs} ${*:3} && break || sleep 0.${RANDOM}; done"
         e=$?
     else
         core:raise EXCEPTION_BAD_FN_CALL
