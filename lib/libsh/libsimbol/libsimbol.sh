@@ -547,12 +547,16 @@ function g_CACHE_OUT() {
 function g_CACHE_IN() {
     local -i e=$?
 
-    if [ ${e:-${CODE_SUCCESS?}} -eq ${CODE_SUCCESS?} ]; then
+    sync
+
+    if [ $e -eq ${CODE_SUCCESS?} ]; then
         cat ${g_CACHE_FILE?}
     else
         rm -f ${g_CACHE_FILE?}
     fi
+
     #:core:cache "${g_CACHE_FILE}"
+
     return $e
 }
 :<<! USAGE:
@@ -563,16 +567,15 @@ the start of the function, and one right at the end:
 function <module>:<function>() {
   #. Optional...
   #local l_CACHE_SIG="optional-custom-sinature-hash:template:funk/$3";
-  #local -i l_CACHE_TTL=0
 
   #. vvv 1. Use cache and return or continue
-  g_CACHE_OUT "$*" || {
+  local -i l_CACHE_TTL=600; g_CACHE_OUT "$*" || (
     local -i e=${CODE_DEFAULT?}
 
     ...
 
-    e=...
-  } > ${g_CACHE_FILE}; g_CACHE_IN; return $?
+    return $e
+  ) > ${g_CACHE_FILE}; g_CACHE_IN; return $?
   #. ^^^ 2. Update cache if previous did not return
 }
 function :<module>:<function>() { #. Same as above...; }
@@ -584,13 +587,6 @@ you please.
 
 Note that public functions that take local shflags will not allow caching,
 and will generate an error.
-
-Finally, the default cache time is g_CACHE_TTL minutes, but this can be
-modified for each function by creating the auxiliary function:
-
-function :[:]<module>:<function>:cached() { echo 3600; }
-
-The value echoed will be the replacement TTL.
 
 Don't use this all over the place, only on computationally expensive code
 or otherwise slow code (network latency) that is expected to also produce the
@@ -723,10 +719,12 @@ function :core:cached() {
                         #. Cache Miss (Expiry)
                         rm -f ${cachefile}
                         e=${CODE_FAILURE?}
+                        core:log DEBUG "Cache Miss: {ttl:${ttl}, age:${age}}"
                     else
                         #. Cache Hit
                         echo ${cachefile} >> ${g_CACHE_USED?}
                         #cat ${cachefile}
+                        core:log DEBUG "Cache Hit: {ttl:${ttl}, age:${age}}"
                         e=${CODE_SUCCESS?}
                     fi
                 else
@@ -1019,7 +1017,6 @@ function :core:functions() {
 
     return $e
 }
-function :core:usage:cached() { echo 0; }
 function :core:usage() {
 #. FIXME: The caching here is unaware of -O|--options that are eaten up by
 #. FIXME: shflags before this function is called, and so caching becomes
