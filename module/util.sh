@@ -220,10 +220,30 @@ function :util:join() {
     if [ $# -eq 2 ]; then
         local IFS=$1
         eval "echo \"\${${2}[*]}\""
+    elif [ $# -eq 3 ]; then
+        local IFS=$1
+        eval "echo \"\${${2}[*]:${3}}\""
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
 }
+
+function :util:zip.eval() {
+    #. Usage: k=(a b c); v=(x y z); eval a=( $(zip.eval k v) )
+    if [ $# -eq 2 ]; then
+        local -i size=$(eval "echo \${#$1[@]}")
+        local -i i=0
+        echo '('
+        while [ $i -lt ${size} ]; do
+            eval echo "[\${$1[$i]}]=\${$2[$i]}"
+            ((i++))
+        done
+        echo ')'
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+}
+
 
 function :util:is_int() {
     [[ $1 =~ ^-?[0-9]+$ ]]
