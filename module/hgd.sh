@@ -16,6 +16,23 @@ core:softimport mongo
 declare -g g_HGD_CACHE=${SIMBOL_USER_ETC?}/hgd.conf
 [ -e ${g_HGD_CACHE?} ] || touch ${g_HGD_CACHE?}
 
+#. :hdg:ishgd -={
+function :hgd:ishgd() {
+    # Maybe add more checks
+    if [ $# -eq 1 ]; then
+        #. &(...|...) or |(...|...) patterns
+        if [[ ${1:0:2} =~ ^[\|\&\!]\($ ]]; then
+            return 0
+        else
+            return 1
+        fi
+    else
+        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 1 expected"
+    fi
+}
+#. }=-
+
+
 #. HGD Resolvers -={
 function ::hgd:explode() {
     local -i e=${CODE_FAILURE?}
