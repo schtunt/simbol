@@ -80,7 +80,8 @@ ${TGZ_SHFLAGS}:
 #. }=-
 #. shunit2 -={
 .PHONY: shunit2.purge shunit2.uninstall shunit2.install
-TGZ_SHUNIT2 := src/shunit2-2.1.6.tgz
+VER_SHUNIT2 := 2.1.6
+TGZ_SHUNIT2 := src/shunit2-${VER_SHUNIT2}.tgz
 SRC_SHUNIT2 := $(TGZ_SHUNIT2:.tgz=)
 shunit2.purge: shunit2.uninstall
 	@rm -f  ${TGZ_SHUNIT2}
@@ -89,7 +90,7 @@ shunit2.purge: shunit2.uninstall
 shunit2.uninstall:
 shunit2.install: libexec/shunit2
 libexec/shunit2: ${SRC_SHUNIT2}
-	@ln -sf ${HOME}/.simbol/var/$</src/shunit2 $@
+	@ln -sf ${HOME}/.simbol/var/src/shunit2-source/${VER_SHUNIT2}/src/$(@F) $@
 ${SRC_SHUNIT2}: ${TGZ_SHUNIT2}
 	@printf "Untarring $< into $(@D)..."
 	@tar -C $(@D) -xzf $<
@@ -97,7 +98,7 @@ ${SRC_SHUNIT2}: ${TGZ_SHUNIT2}
 	@echo "DONE"
 ${TGZ_SHUNIT2}:
 	@printf "Downloading $@..."
-	@${DLA} http://shunit2.googlecode.com/files/$(@F) > $@
+	@${DLA} https://github.com/kward/shunit2/archive/source.tar.gz > $@
 	@echo "DONE"
 #. }=-
 #. vimpager -={
