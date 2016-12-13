@@ -57,7 +57,8 @@ purge: $(EXTERN:%=%.purge)
 
 #. shflags -={
 .PHONY: shflags.purge shflags.uninstall shflags.install
-TGZ_SHFLAGS := src/shflags-1.0.3.tgz
+VER_SHFLAGS := 1.0.3
+TGZ_SHFLAGS := src/shflags-${VER_SHFLAGS}.tgz
 SRC_SHFLAGS := $(TGZ_SHFLAGS:.tgz=)
 shflags.purge: shflags.uninstall
 	@rm -f  ${TGZ_SHFLAGS}
@@ -74,7 +75,7 @@ ${SRC_SHFLAGS}: ${TGZ_SHFLAGS}
 	@echo "DONE"
 ${TGZ_SHFLAGS}:
 	@printf "Downloading $@..."
-	@${DLA} http://shflags.googlecode.com/files/$(@F) > $@
+	@${DLA} https://github.com/kward/shflags/archive/${VER_SHFLAGS}.tar.gz > $@
 	@echo "DONE"
 #. }=-
 #. shunit2 -={
