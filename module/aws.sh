@@ -19,9 +19,11 @@ core:import py
 function aws:cli() {
     local -i e=${CODE_DEFAULT?}
 
+    local data
     if [ $# -gt 0 ]; then
-        py:run aws "${@}" | jq .
+        data=$(py:run aws "${@}")
         if [ $? -eq 0 ]; then
+            jq . <<< "${data}"
             e=${CODE_SUCCESS?}
         else
             e=${CODE_FAILURE?}
