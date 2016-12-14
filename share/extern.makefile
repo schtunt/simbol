@@ -57,7 +57,8 @@ purge: $(EXTERN:%=%.purge)
 
 #. shflags -={
 .PHONY: shflags.purge shflags.uninstall shflags.install
-TGZ_SHFLAGS := src/shflags-1.0.3.tgz
+VER_SHFLAGS := 1.0.3
+TGZ_SHFLAGS := src/shflags-${VER_SHFLAGS}.tgz
 SRC_SHFLAGS := $(TGZ_SHFLAGS:.tgz=)
 shflags.purge: shflags.uninstall
 	@rm -f  ${TGZ_SHFLAGS}
@@ -74,12 +75,13 @@ ${SRC_SHFLAGS}: ${TGZ_SHFLAGS}
 	@echo "DONE"
 ${TGZ_SHFLAGS}:
 	@printf "Downloading $@..."
-	@${DLA} http://shflags.googlecode.com/files/$(@F) > $@
+	@${DLA} https://github.com/kward/shflags/archive/${VER_SHFLAGS}.tar.gz > $@
 	@echo "DONE"
 #. }=-
 #. shunit2 -={
 .PHONY: shunit2.purge shunit2.uninstall shunit2.install
-TGZ_SHUNIT2 := src/shunit2-2.1.6.tgz
+VER_SHUNIT2 := 2.1.6
+TGZ_SHUNIT2 := src/shunit2-${VER_SHUNIT2}.tgz
 SRC_SHUNIT2 := $(TGZ_SHUNIT2:.tgz=)
 shunit2.purge: shunit2.uninstall
 	@rm -f  ${TGZ_SHUNIT2}
@@ -88,7 +90,7 @@ shunit2.purge: shunit2.uninstall
 shunit2.uninstall:
 shunit2.install: libexec/shunit2
 libexec/shunit2: ${SRC_SHUNIT2}
-	@ln -sf ${HOME}/.simbol/var/$</src/shunit2 $@
+	@ln -sf ${HOME}/.simbol/var/src/shunit2-source/${VER_SHUNIT2}/src/$(@F) $@
 ${SRC_SHUNIT2}: ${TGZ_SHUNIT2}
 	@printf "Untarring $< into $(@D)..."
 	@tar -C $(@D) -xzf $<
@@ -96,7 +98,7 @@ ${SRC_SHUNIT2}: ${TGZ_SHUNIT2}
 	@echo "DONE"
 ${TGZ_SHUNIT2}:
 	@printf "Downloading $@..."
-	@${DLA} http://shunit2.googlecode.com/files/$(@F) > $@
+	@${DLA} https://github.com/kward/shunit2/archive/source.tar.gz > $@
 	@echo "DONE"
 #. }=-
 #. vimpager -={
