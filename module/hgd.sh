@@ -16,7 +16,59 @@ core:softimport mongo
 declare -g g_HGD_CACHE=${SIMBOL_USER_ETC?}/hgd.conf
 [ -e ${g_HGD_CACHE?} ] || touch ${g_HGD_CACHE?}
 
+#. }=-
 #. HGD Resolvers -={
+function ::hgd:validate() {
+    local -i e=${CODE_FAILURE?}
+
+    if [ $# -eq 1 ]; then
+        e=${CODE_SUCCESS?}
+
+        local -i balance=0
+        local -i opset=0
+
+        local -i i
+        local ch
+        for (( i=0; i<${#1}; i++ )); do
+            ch="${1:$i:1}"
+            case "${ch}" in
+                '(')
+                    if [ ${opset} -eq 1 ]; then
+                        ((balance++))
+                        opset=0
+                    else
+                        e=1
+                    fi
+                ;;
+                ')')
+                    ((balance--))
+                    [ ${balance} -ge 0 ] || e=2
+                ;;
+                '|'|'!'|'&')
+                    if [ ${opset} -eq 0 ]; then
+                        opset=1
+                    else
+                        e=3
+                    fi
+                ;;
+                *)
+                    [ ${balance} -gt 0 ] || e=4
+                ;;
+            esac
+
+            [ $e -eq ${CODE_SUCCESS?} ] || break
+        done
+
+        if [ $e -eq 0 ]; then
+            [ ${balance} -eq 0 ] || e=5
+        fi
+    else
+        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 1 expected"
+    fi
+
+    return $e
+}
+
 function ::hgd:explode() {
     local -i e=${CODE_FAILURE?}
 
