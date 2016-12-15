@@ -351,13 +351,11 @@ function :hgd:save() {
         local session="$2"
         local hgd="$3"
 
-        local -a hosts
-        hosts=( $(:hgd:resolve ${tldid} ${hgd}) )
-        if [ $? -eq 0 -a ${#hosts[@]} -gt 0 ]; then
-            :hgd:delete ${session}
-        fi
+        :hgd:delete ${session}
+
+        local -a hosts=( $(:hgd:resolve ${tldid} ${hgd}) )
         echo -ne "${session}\t${tldid}\t${NOW?}\t${hgd}\t${hosts[@]}\n" >> ${g_HGD_CACHE?}
-        e=${CODE_SUCCESS?}
+        [ ${#hosts[@]} -eq 0 ] || e=${CODE_SUCCESS?}
     else
         core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 2 expected"
     fi
