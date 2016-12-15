@@ -3,6 +3,25 @@
 Core HGD (Host-Group Directive) module
 [core:docstring]
 
+#. A quick note on the language used in this module.
+#
+# A `session' is the `id' of the entries in the `hgd' cache file, like the
+# primary key if you will.
+#
+# A `formula' here refers to the logic statements that look something like
+# `&(...,...,|(...,...))'. The elements referenced inside these formulas are
+# host groups entities or `hgrp'.  These all start with a special character
+# like `%', `#', `@', and so on.  These can further be expanded into individual
+# hosts or IP addresses.
+#
+# So to summarize:
+# - A session is the key by which we save entries in the `hgd' cache.
+# - Each cache entry contains the `session' name, the logic `formula', and
+#   the resolution of that `formula'.
+# - A `formula' is composed of one or more `hgrp' elements.
+# - A `hgrp' element can be expanded to one or more hosts, or ip addresses.
+
+
 #. HGD -={
 core:requires python
 
@@ -70,6 +89,12 @@ function ::hgd:validate() {
 }
 
 function ::hgd:explode() {
+    # FIXME: This method is poorly named
+
+    # This method takes a `hgrp' and expands it either into a set of hosts,
+    # or a set of IP addresses - depending on the expansion definition associated
+    # with the `hgrp' (based on the first character in the `hgrp'.
+
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 2 ]; then
@@ -184,6 +209,11 @@ function ::hgd:explode() {
 }
 
 function ::hgd:resolve() {
+    # FIXME: This method is poorly named
+
+    # This method takes a `formula' and resolves it into its constituent
+    # `hgrp' entries; and then expand all these entries into their constituent
+    # hosts and/or IP addresses.
     local -i e=${CODE_FAILURE?}
 
     local hgd
@@ -414,6 +444,8 @@ function hgd:list() {
 #. }=-
 #. HGD Load -={
 function :hgd:load() {
+    # This function simply returns the `formula' of a given `session'.
+
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 2 ]; then
