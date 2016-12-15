@@ -545,9 +545,13 @@ function hgd:delete:usage(){ echo "<session>"; }
 function hgd:delete() {
     local -i e=${CODE_DEFAULT?}
 
-    if [ $# -eq 1 ]; then
-        :hgd:delete ${1}
-        e=$?
+    if [ $# -ge 1 ]; then
+        e=${CODE_SUCCESS?}
+        local session
+        for session in "${@}"; do
+            :hgd:delete ${session}
+            [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
+        done
     fi
 
     return $e
