@@ -456,7 +456,7 @@ function ::unit:test() {
                 module=${module%.sh}
                 if [ ${#g_MODULES[@]} -eq 0 -o ${g_MODULES[${module}]--1} -eq 1 ]; then
                     g_MODE="prime"
-                    cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?} -=[}\n";
+                    cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?}} via %{b:%s} %{r:-=[}\n" "${BASH_VERSION?}";
                     (
                         export g_RUNTIME_CWD=${profiles[${profile}]}
                         export g_RUNTIME_PROFILE=${profile}
@@ -465,7 +465,8 @@ function ::unit:test() {
                         export g_RUNTIME_SCRIPT=${SIMBOL_USER_CACHE?}/unittest-${module}.sh
 
                         cat <<!SCRIPT > ${g_RUNTIME_SCRIPT?}
-#!/bin/bash
+#!${SIMBOL_SHELL:-${SHELL}}
+#. Shell     : ${SIMBOL_SHELL:-${SHELL}}
 #. Script    : ${script}
 #. Profile   : ${profile}
 #. Module    : ${module}
@@ -490,7 +491,7 @@ function ::unit:test() {
                     cpf "%{@comment:#############################################################################}\n"
 
                     g_MODE="execute"
-                    cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?} -=[}\n";
+                    cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?}} via %{b:%s} %{r:-=[}\n" "${BASH_VERSION?}";
                     script=${SIMBOL_USER_CACHE?}/unittest-${module}.sh
                     local -i ee=-1
                     if [ -r "${script}" ]; then
