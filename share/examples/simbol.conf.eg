@@ -80,3 +80,9 @@ USER_MON_CMDGRPLOCAL+=(
     [dpkage]="expr ( ${NOW} - %s ) / 3600 / 24"
 )
 #. }=-
+#. hgd:resolve -={
+# You can define your own HGD resolvers here (see the `%' identifier in the hgd
+# module for how this is used).  This is a dummy example which exemplifies such
+# a custom resolver; in this case it simply lower-cases the subjects passed in.
+#USER_HGD_RESOLVERS[lower]="echo '%s' | tr 'A-Z' 'a-z'"
+#. }=-
