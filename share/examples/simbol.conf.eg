@@ -3,9 +3,7 @@
 USER_LOG_LEVEL=DEBUG
 
 #. Change key values to 1 to enable the module
-USER_MODULES=(
-    [mymod]=0
-)
+USER_MODULES[mymod]=0
 
 #. Disable some special-case modules by default, users should enable them if
 #. they have use for them:
@@ -14,31 +12,29 @@ CORE_MODULES[ldap]=0
 CORE_MODULES[mongo]=0
 CORE_MODULES[softlayer]=0
 
+#. The default TLDID character, defaults to `_', no need to change but possible
+#USER_TLDID_DEFAULT='_'
+
 #. Let's say our hosts have 2 interfaces in general:
 #. Public, which we will call `p', and management which we will call `m':
 #. First we also define which interface is on subnet:
-USER_IFACE=(
-    [_]=lo #. The period is a special tldid which matches all others
-    [m]=eth0
-    [p]=eth1
-)
-#. Next we define which ones are mandatory per host, arbitrary characters
-USER_TLDIDS_REQUIRED=( m p )
-#. When unspecified on the commandline, we will default to wildcard (`_')
-USER_TLDID_DEFAULT=_
-#. Now we declare the TLD for these subnets:
-USER_TLDS=(
-    [m]='mgmt.simbol'          #. Management network
-    [p]='simbol.org'           #. Public network, add more as you please
-)
-#. Finally, for each TLD, we define the list of possible subdomain for any
-#. given host:
-declare -g -r -a USER_SUBDOMAIN_m=(
+USER_IFACE[${USER_TLDID_DEFAULT?}]=lo #. The period is a special tldid which matches all others
+
+#. Next we define which interfaces are mandatory, and for each define various
+#. bits of information as per the following examples:
+USER_TLDIDS_REQUIRED+=( m )
+USER_IFACE[m]=eth0
+USER_TLDS[m]='mgmt.simbol'          #. Management network
+declare -g -a USER_SUBDOMAIN_m=(
     unit-tests
     networks
     systems
 )
-declare -g -r -a USER_SUBDOMAIN_p=(
+
+USER_TLDIDS_REQUIRED+=( p )
+USER_IFACE[p]=eth1
+USER_TLDS[p]='simbol.org'           #. Public network, add more as you please
+declare -g -a USER_SUBDOMAIN_p=(
     api
     products
     support
@@ -57,7 +53,7 @@ declare -g -r -a USER_SUBDOMAIN_p=(
 #. }=-
 #. remote:mon -={
 #. These get executed remotely first...
-USER_MON_CMDGRPREMOTE=(
+USER_MON_CMDGRPREMOTE+=(
     [sap2nfs]='IFS=- read -a host <<< "$(hostname -s)"; ls -ld /sapmnt/${host[1]^^}/.'
     [sap2afs]="df -Ph \$(awk '\$1~/^\//{print\$1}' /etc/autofs.d/auto.sap) | awk '\$1~/^nas/{printf(\",%s\",\$6)}'"
     [build]='stat --printf "[%y]" /var/log/anaconda.log 2>/dev/null'
@@ -78,7 +74,7 @@ USER_MON_CMDGRPREMOTE=(
 )
 
 #. These get executed locally using the output from the remote in place of %s...
-USER_MON_CMDGRPLOCAL=(
+USER_MON_CMDGRPLOCAL+=(
     [dc]="subnetdb gw=%s dc env"
     [cfran]=':util:date_i2s %s'
     [dpkage]="expr ( ${NOW} - %s ) / 3600 / 24"
