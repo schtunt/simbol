@@ -102,6 +102,7 @@ declare -gA USER_TLDS
 declare -gA USER_MON_CMDGRPREMOTE
 declare -gA USER_MON_CMDGRPLOCAL
 declare -g  USER_LOG_LEVEL=INFO
+declare -gA USER_HGD_RESOLVERS
 source ${SIMBOL_USER_ETC}/simbol.conf
 
 test ! -f ~/.simbolrc || source ~/.simbolrc
