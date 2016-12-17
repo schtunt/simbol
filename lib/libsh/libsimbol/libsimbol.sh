@@ -753,72 +753,118 @@ function :core:age() {
 }
 
 function core:global() {
+    #. Usage:
+    #.     core:global <context>.<key>                  (read value from store)
+    #.     core:global <context>.<key> <value>          (write value to store)
+    #.     core:global <context>.<key> <oper> <value>   (amend value in store)
+    #.
+    #. For the last case, the supported operators are math operators available
+    #. to use via `let', for instance:
+    #.
+    #.     core:global g.delta += 4
+    #.
+    #. Obviously the latter case only supports integer types.
+
+    [ $# -ge 1 -o $# -le 3 ] || core:raise EXCEPTION_BAD_FN_CALL
+
     local -i e=${CODE_FAILURE?}
-    local contaxt
+
+    local context
     local key
-    local value
     local globalstore
-    case $# in
-        1)
-            IFS='.' read context key <<< "${1}"
-            globalstore="$(:core:cachefile "${context}" "${key}")"
-            e=$?
-            if [ $e -eq ${CODE_SUCCESS?} ]; then
-                cat ${globalstore}
-            fi
-        ;;
-        2)
-            IFS='.' read context key <<< "${1}"
-            value="${2}"
-            globalstore="$(:core:cachefile "${context}" "${key}")"
-            echo "${value}" > ${globalstore}
-            e=$?
-        ;;
-        *)
-            core:raise EXCEPTION_BAD_FN_CALL
-        ;;
-    esac
+
+    local lockfile=/tmp/.simbol.lockfile
+
+    while true; do
+        if ( set -o noclobber; echo "locked" > "$lockfile" ) 2>/dev/null; then
+            trap 'rm -f "$lockfile"; exit $?' INT TERM EXIT
+
+            case $# in
+                1)
+                    IFS='.' read context key <<< "${1}"
+                    globalstore="$(:core:cachefile "${context}" "${key}")"
+                    if [ $? -eq ${CODE_SUCCESS?} ]; then
+                        cat ${globalstore}
+                        e=$?
+                    fi
+                ;;
+                2)
+                    IFS='.' read context key <<< "${1}"
+                    local value="${2}"
+                    globalstore="$(:core:cachefile "${context}" "${key}")"
+                    printf "${value}" > ${globalstore}
+                    e=$?
+                ;;
+                3)
+                    IFS='.' read context key <<< "${1}"
+                    local oper="${2}"
+                    local -i amendment=$3
+                    if [ $? -eq ${CODE_SUCCESS?} ]; then
+                        globalstore="$(:core:cachefile "${context}" "${key}")"
+                        if [ $? -eq ${CODE_SUCCESS?} ]; then
+                            local -i current
+                            let -i current=$(cat ${globalstore})
+                            if [ $? -eq ${CODE_SUCCESS?} ]; then
+                                local -i amendment
+                                let -i amendment=${3}
+                                if [ $? -eq ${CODE_SUCCESS?} ]; then
+                                    ((current${oper}amendment))
+                                    echo ${current} > ${globalstore}
+                                    e=$?
+                                fi
+                            fi
+                        fi
+                    fi
+                ;;
+            esac
+
+            rm -f "$lockfile"
+            break
+        else
+            sleep 0.1
+        fi
+    done
+
     return $e
 }
 
 function :core:cachefile() {
-    #. Prints the file path
-    #. Return code encodes if the files exists (0) or not (1)
+    #. Constructs and prints a cachefile path
+    local effective_format="${g_FORMAT?}"
 
-    local effective_format=${g_FORMAT}
-
-    local cachefile=${SIMBOL_USER_VAR_CACHE}
+    local cachefile=${SIMBOL_USER_VAR_CACHE?}
 
     if [ $# -eq 2 ]; then
         #. Automaticly named cachefile...
         local modfn="$1"
-        local effective_format=${g_FORMAT}
-        if [[ $1 =~ ^: ]] && [ ${g_FORMAT} == "ansi" ]; then
-            effective_format=text
+        local effective_format=${g_FORMAT?}
+        if [ ${g_FORMAT?} == "ansi" ] && [[ $1 =~ ^: ]] ; then
+            effective_format='text'
         fi
 
         cachefile+=/${1//:/=}
-        cachefile+=+${g_TLDID}
-        cachefile+=+${g_VERBOSE}
+        cachefile+=+${g_TLDID?}
+        cachefile+=+${g_VERBOSE?}
         cachefile+=+$(md5sum <<< "$2"|cut -b -32);
     elif [ $# -eq 1 ]; then
         #. Hand-picked signature from caller...
 
         cachefile+=/
-        cachefile+=+${g_TLDID}
-        cachefile+=+${g_VERBOSE}
+        cachefile+=+${g_TLDID?}
+        cachefile+=+${g_VERBOSE?}
         cachefile+=+${1}
-        effective_format=sig
+        effective_format='sig'
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
 
-    cachefile+=.${effective_format}
-
+    cachefile+=".${effective_format}"
     echo "${cachefile}"
 
-    local -i e=${CODE_FAILURE}
-    [ ! -e "${cachefile}" ] || e=${CODE_SUCCESS?}
+    #. Return code is 0 if the files exists, and 1 otherwise
+    local -i e=${CODE_FAILURE?}
+    [ ! -r "${cachefile}" ] || e=${CODE_SUCCESS?}
+
     return $e
 }
 
