@@ -143,12 +143,14 @@ function ::hgd:explode() {
                 fi
             ;;
             '%')
-                if core:imported mongo; then
-                    local -a filters
-                    IFS=% read -a filters <<< "${hgdn}"
-                    local -a hosts
-                    :mongo:query ${SIMBOL_PROFILE//@*} qdn ${filters[@]}
-                    [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
+                if [ ${#USER_HGD_RESOLVERS[@]} -gt 0 ]; then
+                    # Try reading in key-value pair from %<key>=<value>
+                    IFS='=' read -a kvp <<< "${hgdn}"
+                    if [ ${#kvp[@]} -eq 2 -a ${#USER_HGD_RESOLVERS[${kvp}]} -gt 0 ]; then
+                        ${SIMBOL_SHELL:-${SHELL}} -c "$(printf "${USER_HGD_RESOLVERS[${kvp[0]}]}" "${kvp[1]}")"
+                    else
+                        e=${CODE_FAILURE?}
+                    fi
                 else
                     e=${CODE_FAILURE?}
                 fi
@@ -543,9 +545,13 @@ function hgd:delete:usage(){ echo "<session>"; }
 function hgd:delete() {
     local -i e=${CODE_DEFAULT?}
 
-    if [ $# -eq 1 ]; then
-        :hgd:delete ${1}
-        e=$?
+    if [ $# -ge 1 ]; then
+        e=${CODE_SUCCESS?}
+        local session
+        for session in "${@}"; do
+            :hgd:delete ${session}
+            [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
+        done
     fi
 
     return $e

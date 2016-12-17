@@ -94,14 +94,15 @@ declare -g -A CORE_MODULES=(
     [ng]=0         [ldap]=0      [mongo]=0     [softlayer]=0
 )
 
-declare -gA USER_MODULES=( )
+declare -gA USER_MODULES
 declare -gA USER_IFACE
 declare -ga USER_TLDIDS_REQUIRED
-declare -g  USER_TLDID_DEFAULT
+declare -g  USER_TLDID_DEFAULT='_'
 declare -gA USER_TLDS
 declare -gA USER_MON_CMDGRPREMOTE
 declare -gA USER_MON_CMDGRPLOCAL
 declare -g  USER_LOG_LEVEL=INFO
+declare -gA USER_HGD_RESOLVERS
 source ${SIMBOL_USER_ETC}/simbol.conf
 
 test ! -f ~/.simbolrc || source ~/.simbolrc
