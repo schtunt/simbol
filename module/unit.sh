@@ -583,6 +583,7 @@ function unit:core() {
     local -i e=${CODE_SUCCESS?}
 
     g_MODE="core"
+    local module="core"
 
     cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?} -=[}\n";
     script=${SIMBOL_UNIT_TESTS?}/core.sh
