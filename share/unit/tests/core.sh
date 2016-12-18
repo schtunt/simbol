@@ -57,6 +57,12 @@ function testCoreGlobal() {
     #assertEquals "1.4" 2600 $v
 }
 
+function testCoreUnsupportedAssociativeArrayAssignments() {
+    local vetted
+    vetted="$(md5sum <(git grep -E '[a-zA-Z0-9]+\+=\( *\['))"
+    assertEquals '0.0.1' '09a2684a0023bdd670ad455efbd74d8e' "${vetted%% *}"
+}
+
 function exitWith() {
   g_CACHE_OUT || {
     md5sum <<< "$(date +%N)" | cut -b 1-32

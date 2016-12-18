@@ -53,7 +53,7 @@ declare -g -a USER_SUBDOMAIN_p=(
 #. }=-
 #. remote:mon -={
 #. These get executed remotely first...
-USER_MON_CMDGRPREMOTE+=(
+USER_MON_CMDGRPREMOTE=(
     [sap2nfs]='IFS=- read -a host <<< "$(hostname -s)"; ls -ld /sapmnt/${host[1]^^}/.'
     [sap2afs]="df -Ph \$(awk '\$1~/^\//{print\$1}' /etc/autofs.d/auto.sap) | awk '\$1~/^nas/{printf(\",%s\",\$6)}'"
     [build]='stat --printf "[%y]" /var/log/anaconda.log 2>/dev/null'
@@ -74,7 +74,7 @@ USER_MON_CMDGRPREMOTE+=(
 )
 
 #. These get executed locally using the output from the remote in place of %s...
-USER_MON_CMDGRPLOCAL+=(
+USER_MON_CMDGRPLOCAL=(
     [dc]="subnetdb gw=%s dc env"
     [cfran]=':util:date_i2s %s'
     [dpkage]="expr ( ${NOW} - %s ) / 3600 / 24"
