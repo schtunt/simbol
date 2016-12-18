@@ -238,7 +238,8 @@ function testCoverage() {
                 if [ $count -gt 0 ]; then
                     local -a fns=(
                         $(grep -oE "${regex}" ${modulepath} |
-                            sed -e "s/^function :\{0,2\}${module}:\([^.()]\+\)\(\.[a-z]\+\)\?()/\1/")
+                            sed -e "s/^function :\{0,2\}${module}:\([^.()]\+\)\(\.[a-z]\+\)\?()/\1/"
+                        )
                     )
                     for fn in ${fns[@]}; do
                         local utf="test${profile^}${modulecaps}${fn^}${context^}"
