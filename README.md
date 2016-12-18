@@ -54,8 +54,6 @@ The following set of modules are generally only useful under special-circumstanc
 | ------------- | ----------------------- | ------------------------------------------------------------------- |
 | ng            | :last_quarter_moon:     | Core Netgroup module                                                |
 | ldap          | :last_quarter_moon:     | The simbol LDAP module                                                |
-| mongo         | :new_moon:              | MongoDB helper module                                               |
-| softlayer     | :new_moon:              | Softlayer CLI interface                                             |
 | pagerduty     | :new_moon:              | PagerDuty CLI interface                                             |
 
 ---
