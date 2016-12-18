@@ -80,6 +80,11 @@ unset  CDPATH
 export SIMBOL_DEADMAN=${SIMBOL_USER_CACHE}/deadman
 export SIMBOL_IN_COLOR=1
 export SIMBOL_DATE_FORMAT="%x-%X"
+
+declare -gi USER_CPF_INDENT=0
+declare -gi USER_CPF_INDENT_SIZE=2
+declare -g  USER_CPF_INDENT_CHAR=' *'
+
 source ${SIMBOL_CORE_MOD?}/cpf.sh
 PS4+="${COLORS[r]}\${BASH_SOURCE}${COLORS[N]}"
 PS4+=":${COLORS[g]}\${LINENO}${COLORS[N]}"

@@ -6,6 +6,9 @@ Site's color printf module
 
 #. The Color PrintF Module -={
 : ${SIMBOL_IN_COLOR?}
+: ${USER_CPF_INDENT?}
+: ${USER_CPF_INDENT_CHAR?}
+: ${USER_CPF_INDENT_SIZE?}
 
 #declare -i ncolors=$(tput colors)
 #if [ ${ncolors:=-2} -ge 8 ]; then
@@ -132,6 +135,13 @@ function ::cpf:function() {
     [ ${enabled} -eq 0 ] || fmt+="%{bo}"
 
     cpf "${fmt}%s %{b:%s}%{N}" ${module} ${fn}
+}
+#. }=-
+#. cpf:indent -={
+function -=[() { ((USER_CPF_INDENT++)); }
+function ]=-() { ((USER_CPF_INDENT--)); }
+function cpf:indent() {
+    printf "%$((USER_CPF_INDENT * USER_CPF_INDENT_SIZE))s" "${USER_CPF_INDENT_CHAR} "
 }
 #. }=-
 
