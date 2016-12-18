@@ -36,23 +36,25 @@ function testCoreRemoteImport() {
 function testCoreRemoteConnectPasswordlessInternal() {
     core:import remote
 
-    local hn1 hn2
-    hn1=$(hostname -f)
-    user1=$(id -un)
+    local hn=$(hostname -f)
+    local user=$(id -un)
     # First run should run into a host key validation
-    :remote:connect:passwordless ${hn1}
+    :remote:connect:passwordless ${hn}
     assertFalse  1.1 $?
 
     # Force the acception of the host key to make the next run successful
-    ssh -o PasswordAuthentication=no -o PreferredAuthentications=publickey -o StrictHostKeyChecking=no ${hn1} -- /bin/true
+    ssh -o PasswordAuthentication=no -o PreferredAuthentications=publickey -o StrictHostKeyChecking=no ${hn} -- /bin/true
 
-    :remote:connect:passwordless ${hn1}
+    :remote:connect:passwordless ${hn}
     assertTrue  1.2 $?
-    :remote:connect:passwordless ${user1}@${hn1}
+
+    :remote:connect:passwordless ${user}@${hn}
     assertTrue  1.3 $?
+
     :remote:connect:passwordless hostdoesnotexist
     assertFalse  1.4 $?
-    :remote:connect:passwordless userdoesnotexist@${hn1}
+
+    :remote:connect:passwordless userdoesnotexist@${hn}
     assertFalse  1.5 $?
 }
 #. }=-
