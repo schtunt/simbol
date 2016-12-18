@@ -84,6 +84,9 @@ export SIMBOL_DATE_FORMAT="%x-%X"
 declare -gi FD_STDOUT=1
 declare -gi FD_STDERR=2
 
+declare -gi USER_CPF_INDENT_SIZE=4
+declare -g  USER_CPF_INDENT_STR='*'
+
 source ${SIMBOL_CORE_MOD?}/cpf.sh
 
 PS4+="${COLORS[r]}\${BASH_SOURCE}${COLORS[N]}"
