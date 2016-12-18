@@ -14,6 +14,23 @@ core:requires tmux
 core:requires socat
 core:requires netstat
 
+#.   remote:connect:passwordless -={
+function :remote:connect:passwordless() {
+    # Verify if we can connect to box with a certain connection string
+    local -i e=${CODE_FAILURE?}
+    local teststring="$(date +"%s")"
+    local hcs="$1"
+    local ssh_options
+    ssh_options="${g_SSH_OPTS?} -ttt -o PasswordAuthentication=no -o PreferredAuthentications=publickey -o StrictHostKeyChecking=yes"
+    local rv
+    rv=$(ssh ${ssh_options} ${hcs} -- echo -n "${teststring}" 2> /dev/null)
+    e=$?
+    [ ${e} -eq ${CODE_SUCCESS?} -a "${rv}" = "${teststring}" ] || e=${CODE_FAILURE?}
+
+    return $e
+}
+#. }=-
+
 #.  :remote:sshproxy*() DEPRECATED -={
 #function :remote:sshproxystr() {
 #    core:raise EXCEPTION_DEPRECATED
