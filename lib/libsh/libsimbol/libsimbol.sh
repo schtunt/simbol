@@ -226,7 +226,7 @@ function core:log() {
 function validate_bash() {
     local -i e=${CODE_FAILURE?}
 
-    local vv="/tmp/.simbol-bash-${BASH_VERSION}.verified"
+    local vv="${SIMBOL_USER_TMP?}/.simbol-bash-${BASH_VERSION}.verified"
     if [ -e "${vv}" ]; then
         e=${CODE_SUCCESS?}
     else
@@ -245,7 +245,7 @@ function validate_bash() {
             core:log CRIT "ValidationFailure: error code $e"
         }
 
-        #. Avoid this syle - `aa+=( ... )' - unless you know what you're doing.
+        #. Avoid this style - `aa+=( ... )' - unless you know what you're doing.
         #
         # Only use this if the life-span of the variable is local, otherwise
         # if you do this on a variable that's controlled elsewhere, and the
