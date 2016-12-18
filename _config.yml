@@ -2,3 +2,9 @@ safe: true
 lsi: false
 pygments: true
 source: .
+
+title: site
+description: Modular shell-scripting framework - 99% native bash, 1% phat!
+google_analytics: 
+show_downloads: true
+theme: jekyll-theme-hacker
