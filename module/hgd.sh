@@ -30,7 +30,6 @@ core:import net
 core:import util
 
 core:softimport ng
-core:softimport mongo
 
 declare -g g_HGD_CACHE=${SIMBOL_USER_ETC?}/hgd.conf
 [ -e ${g_HGD_CACHE?} ] || touch ${g_HGD_CACHE?}
