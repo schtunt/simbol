@@ -10,7 +10,6 @@ USER_MODULES[mymod]=0
 CORE_MODULES[ng]=0
 CORE_MODULES[ldap]=0
 CORE_MODULES[mongo]=0
-CORE_MODULES[softlayer]=0
 
 #. The default TLDID character, defaults to `_', no need to change but possible
 #USER_TLDID_DEFAULT='_'

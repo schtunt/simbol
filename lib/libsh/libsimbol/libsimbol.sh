@@ -92,7 +92,7 @@ declare -g -A CORE_MODULES=(
     [dns]=1        [net]=1       [tunnel]=1    [remote]=1
     [xplm]=1       [rb]=1        [py]=1        [pl]=1
     [gpg]=1        [vault]=1
-    [ng]=0         [ldap]=0      [mongo]=0     [softlayer]=0
+    [ng]=0         [ldap]=0      [mongo]=0
 )
 
 declare -gA USER_MODULES
