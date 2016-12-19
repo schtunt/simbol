@@ -80,7 +80,12 @@ unset  CDPATH
 export SIMBOL_DEADMAN=${SIMBOL_USER_CACHE}/deadman
 export SIMBOL_IN_COLOR=1
 export SIMBOL_DATE_FORMAT="%x-%X"
+
+declare -gi FD_STDOUT=1
+declare -gi FD_STDERR=2
+
 source ${SIMBOL_CORE_MOD?}/cpf.sh
+
 PS4+="${COLORS[r]}\${BASH_SOURCE}${COLORS[N]}"
 PS4+=":${COLORS[g]}\${LINENO}${COLORS[N]}"
 PS4+="/\${FUNCNAME}/ "
@@ -104,6 +109,7 @@ declare -gA USER_MON_CMDGRPREMOTE
 declare -gA USER_MON_CMDGRPLOCAL
 declare -g  USER_LOG_LEVEL=INFO
 declare -gA USER_HGD_RESOLVERS
+
 source ${SIMBOL_USER_ETC}/simbol.conf
 
 test ! -f ~/.simbolrc || source ~/.simbolrc
