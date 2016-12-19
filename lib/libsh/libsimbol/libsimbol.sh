@@ -288,6 +288,23 @@ function validate_bash() {
         # The output of the following should not match anything other than
         # some of the tests in this functioa body itself:
         #   git grep -E '[a-zA-Z0-9]+\+=\( *\['
+
+        local buf="${SIMBOL_USER_TMP?}/.simbol-null-term-rw-test"
+        local -a wstrs=( 11 'aa' 33 'stuff' ) #. TODO: \n, \r, etc.
+
+        touch "${buf}"
+        printf '%s\0' "${wstrs[@]}" >> "${buf}"
+
+        local -a rstrs
+        while read -d $'\0' y; do
+            rstrs+=( "$y" )
+        done < "${buf}"
+        rm -f "${buf}"
+
+        if [ "${rstrs[*]}" != "${wstrs[*]}" -o "${#rstrs[@]}" -ne "${#wstrs[@]}" ]; then
+            e=6
+            core:log CRIT "ValidationFailure: error code $e"
+        fi
     fi
 
     #. Cache the Response
