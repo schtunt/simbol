@@ -129,15 +129,19 @@ declare -i g_CACHED=1
 declare -i g_LDAPHOST=-1
 declare g_FORMAT=ansi
 declare g_TLDID=${USER_TLDID_DEFAULT:-_}
-#. }=-
-
 declare g_DUMP
-declare -g g_SSH_OPT
-g_SSH_OPTS="-q"
-g_SSH_CONF=${SIMBOL_USER_ETC?}/${SIMBOL_USER_SSH_CONF:-ssh.conf}
-if [ -e "${g_SSH_CONF}" ]; then
-    g_SSH_OPTS+=" -F ${g_SSH_CONF}"
+
+# -n breaks remote:copy (rsync via rsync)
+#declare -g g_SSH_OPTS="-n"
+declare -g g_SSH_OPTS=""
+if grep -qw -- -E <( ssh 2>&1 ); then
+    #. Log to file if supported
+    g_SSH_OPTS+=" -E ${SIMBOL_USER_VAR}/log/ssh.log"
 fi
+
+g_SSH_CONF=${SIMBOL_USER_ETC?}/ssh.conf
+[ ! -e "${g_SSH_CONF}" ] || g_SSH_OPTS+=" -F ${g_SSH_CONF}"
+#. }=-
 #. }=-
 #. 1.5  Error Code Constants -={
 true
@@ -979,11 +983,26 @@ declare -g fn_4d9d6c17eeae2754c9b49171261b93bd=${fn:-}
     if [ $? -eq 0 ]; then
         #. GLOBAL_OPTS 3/4 -={
         FLAGS_HELP="simbol ${module} ${fn} [<flags>]"
+
         #. Booleans get inverted:
         let g_HELP=~${FLAGS_help?}+2; unset FLAGS_help
         let g_VERBOSE=~${FLAGS_verbose?}+2; unset FLAGS_verbose
         let g_DEBUG=~${FLAGS_debug?}+2; unset FLAGS_debug
+
+        if grep -qw -- -E <<< "${g_SSH_OPTS?}"; then
+            case ${g_DEBUG?}:${g_VERBOSE?} in
+                00) g_SSH_OPTS+=" -q";;
+                01) g_SSH_OPTS+=" -v";;
+                10) g_SSH_OPTS+=" -vv";;
+                11) g_SSH_OPTS+=" -vvv";;
+            esac
+        fi
+
+        #. Last amendment to g_SSH_OPTS
+        g_SSH_OPTS+=" ${USER_SSH_OPTS}"
+
         let g_CACHED=~${FLAGS_cached?}+2; unset FLAGS_cached
+
         #. Everything else is straight-forward:
         g_LDAPHOST=${FLAGS_ldaphost?}; unset FLAGS_ldaphost
         g_FORMAT=${FLAGS_format?}; unset FLAGS_format
@@ -1004,6 +1023,7 @@ declare g_CACHED=${g_CACHED?}
 declare g_LDAPHOST=${g_LDAPHOST?}
 declare g_FORMAT=${g_FORMAT?}
 declare g_TLDID=${g_TLDID?}
+declare g_SSH_OPTS="${g_SSH_OPTS?}"
 #. }=-
 set -- ${FLAGS_ARGV?}
 !
@@ -1332,7 +1352,6 @@ function core:wrapper() {
     : ${fn_4d9d6c17eeae2754c9b49171261b93bd?}
     fn=${fn_4d9d6c17eeae2754c9b49171261b93bd}
     #. }=-
-
     core:log DEBUG "core:wrapper(module=${module}, fn=${fn}, argv=( $@ ))"
 
     local regex=':+[a-z0-9]+(:[a-z0-9]+) |*'
