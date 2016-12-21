@@ -6,8 +6,8 @@ Site's color printf module
 
 #. The Color PrintF Module -={
 : ${SIMBOL_IN_COLOR?}
-: ${USER_CPF_INDENT?}
-: ${USER_CPF_INDENT_CHAR?}
+
+: ${USER_CPF_INDENT_STR?}
 : ${USER_CPF_INDENT_SIZE?}
 
 #declare -i ncolors=$(tput colors)
@@ -138,10 +138,13 @@ function ::cpf:function() {
 }
 #. }=-
 #. cpf:indent -={
-function -=[() { ((USER_CPF_INDENT++)); }
-function ]=-() { ((USER_CPF_INDENT--)); }
+declare -gi CPF_INDENT=0
+function -=[() { ((CPF_INDENT++)); }
+function ]=-() { ((CPF_INDENT--)); }
 function cpf:indent() {
-    printf "%$((USER_CPF_INDENT * USER_CPF_INDENT_SIZE))s" "${USER_CPF_INDENT_CHAR} "
+    if [ ${CPF_INDENT} -gt 0 ]; then
+        printf "%$((CPF_INDENT * USER_CPF_INDENT_SIZE))s" "${USER_CPF_INDENT_STR}"
+    fi
 }
 #. }=-
 
@@ -369,6 +372,12 @@ function cpf() {
 
     #echo "XXX FUNC RETN" > /dev/stderr
     [ ${g_DEBUG} -eq 0 ] || set -x
+}
+#. }=-
+#. cpfi -={
+function cpfi() {
+    cpf:indent
+    cpf "$@"
 }
 #. }=-
 #. theme -={
