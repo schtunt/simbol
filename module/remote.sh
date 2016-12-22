@@ -856,12 +856,6 @@ function remote:mon:usage() {
 function remote:mon() {
     local -i e=${CODE_DEFAULT?}
 
-    #core:requires RUBY gpgme
-    #core:requires RUBY parallel
-    #core:requires RUBY net-ssh
-    #core:requires RUBY net-ssh-multi
-    #core:requires RUBY net-ssh-gateway
-
     if [ $# -ge 2 ]; then
         local -i timeout=${FLAGS_timeout:-8}; unset FLAGS_timeout
         local -i threads=${FLAGS_threads:-32}; unset FLAGS_threads

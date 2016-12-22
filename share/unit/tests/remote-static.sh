@@ -149,8 +149,8 @@ function testCoreRemoteMonPublic() {
     cat ~/.ssh/authorized_keys
     ssh host-8.simbol.org hostname
 
-    simbol rb install
-    assertTrue 1.1 $?
+    #simbol rb install
+    #assertTrue 1.1 $?
 
     simbol hgd save myhgd /host-8./
     assertTrue 1.2 $?
