@@ -856,9 +856,6 @@ function remote:mon:usage() {
 function remote:mon() {
     local -i e=${CODE_DEFAULT?}
 
-    #core:requires PYTHON futures
-    #core:requires PYTHON paramiko
-
     #core:requires RUBY gpgme
     #core:requires RUBY parallel
     #core:requires RUBY net-ssh
