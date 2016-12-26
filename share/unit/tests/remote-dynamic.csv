@@ -1,9 +1,11 @@
 #. format: profile|module|function|context|stdin|arguments|stdout|stderr|exitcode
 #. Remote -={
 #core|remote|mon|public
+#core|remote|mon|internal
 #core|remote|tmux|public
 #core|remote|tmux|private
 #core|remote|cluster|public
 #core|remote|pipewrap|private
 #core|remote|serialmon|private
+#core|remote|serialmon|internal
 #. }=-
