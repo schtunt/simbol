@@ -29,17 +29,22 @@ declare -A COLORS=(
 )
 
 #. cpf:module -={
-function ::cpf:module_is_modified() {
+function ::cpf:module_is_unchanged() {
     local -i e=9
     local profile=$1
     local module=$2
-    cd ${SIMBOL_CORE?}
-    if [ -e "${SIMBOL_USER_MOD?}/${module}" ]; then
-        local path=$(readlink "${SIMBOL_USER_MOD?}/${module}")
-        local amended=$(:core:git status --porcelain "${path}"|wc -l)
-        [ ${PIPESTATUS[0]} -ne 0 ] || e=${amended}
+    local module_path
+
+    if [ "${profile}" = "core" ]; then
+	    module_path=${SIMBOL_SCM?}/module
+    else
+	    module_path=${SIMBOL_USER_MOD?}
     fi
-    #cd ${OLDPWD?}
+    if [ -e "${module_path}" ]; then
+        cd ${module_path}
+	    local amended=$(git status --porcelain "${module}.sh"|wc -l)
+	    [ ${PIPESTATUS[0]} -ne 0 ] || e=${amended}
+    fi
 
     return $e
 }
@@ -48,8 +53,15 @@ function ::cpf:module_has_alerts() {
 
     local profile=$1
     local module=$2
-    if [ -e "${SIMBOL_USER_MOD?}/${module}" ]; then
-        grep -qE "^function ${module}:[a-z0-9]+:alert()" "${SIMBOL_USER_MOD?}/${module}"
+    local module_path
+
+    if [ "${profile}" = "core" ]; then
+	    module_path=${SIMBOL_SCM?}/module
+    else
+	    module_path=${SIMBOL_USER_MOD?}
+    fi
+    if [ -e "${module_path}" ]; then
+        grep -qE "^function ${module}:[a-z0-9]+:alert()" "${module_path}/${module}.sh" 2>/dev/null
         [ $? -ne 0 ] || e=${CODE_SUCCESS?}
     fi
 
@@ -57,7 +69,6 @@ function ::cpf:module_has_alerts() {
 }
 function ::cpf:module() {
     local -r module=$1
-
     local -i enabled=1
     local -i alerts=0
     local -i amended=0
@@ -68,7 +79,7 @@ function ::cpf:module() {
             fmt="%{y}"
         else
             fmt="%{c}"
-            ::cpf:module_is_modified core ${module}
+            ::cpf:module_is_unchanged core ${module}
             amended=$?
         fi
         enabled=${CORE_MODULES[${module}]}
@@ -78,7 +89,7 @@ function ::cpf:module() {
             fmt="%{y}"
         else
             fmt="%{b}"
-            ::cpf:module_is_modified ${SIMBOL_PROFILE?} ${module}
+            ::cpf:module_is_unchanged ${SIMBOL_PROFILE?} ${module}
             amended=$?
         fi
         enabled=${USER_MODULES[${module}]}
@@ -97,8 +108,14 @@ function ::cpf:function_has_alerts() {
     local profile=$1
     local module=$2
     local fn=$3
-    if [ -e "${SIMBOL_USER_MOD?}/${module}" ]; then
-        grep -qE "^function ${module}:${fn}:alert()" "${SIMBOL_USER_MOD?}/${module}"
+
+    if [ "${profile}" = "core" ]; then
+	    module_path=${SIMBOL_SCM?}/module
+    else
+	    module_path=${SIMBOL_USER_MOD?}
+    fi
+    if [ -e "${module_path}" ]; then
+        grep -qE "^function ${module}:${fn}:alert()" "${module_path}/${module}.sh" 2> /dev/null
         [ $? -ne 0 ] || e=${CODE_SUCCESS?}
     fi
 
@@ -118,7 +135,7 @@ function ::cpf:function() {
             fmt="%{y}"
         else
             fmt="%{g}"
-            ::cpf:module_is_modified core ${module}
+            ::cpf:module_is_unchanged core ${module}
             amended=$?
         fi
         enabled=${CORE_MODULES[${module}]}
@@ -128,7 +145,7 @@ function ::cpf:function() {
             fmt="%{y}"
         else
             fmt="%{g}"
-            ::cpf:module_is_modified ${SIMBOL_PROFILE?} ${module}
+            ::cpf:module_is_unchanged ${SIMBOL_PROFILE?} ${module}
             amended=$?
         fi
         enabled=${USER_MODULES[${module}]}
@@ -149,14 +166,22 @@ function cpf:indent() {
         printf "%$((CPF_INDENT * USER_CPF_INDENT_SIZE))s" "${USER_CPF_INDENT_STR}"
     fi
 }
+#. cpfi -={
+function cpfi() {
+    cpf:indent
+    cpf "$@"
+}
+#. }=-
 #. }=-
 
-#. cpf:theme -={
+#. TODO:
+#. This might need more detailed checking
 function ::cpf:is_fmt() {
-    grep -qE '%' <<<"$1"
+    grep -qE '%.+' <<<"$1"
     return $?
 }
 
+#. cpf:theme -={
 function ::cpf:theme() {
     local e=1
 
@@ -375,12 +400,6 @@ function cpf() {
 
     #echo "XXX FUNC RETN" >&${FD_STDERR}
     [ ${g_DEBUG} -eq 0 ] || set -x
-}
-#. }=-
-#. cpfi -={
-function cpfi() {
-    cpf:indent
-    cpf "$@"
 }
 #. }=-
 #. theme -={

@@ -19,23 +19,24 @@ env:
   matrix:
     - CONTEXT=installer MODULE=-
     - CONTEXT=execute MODULE=core
-    - CONTEXT=execute MODULE=remote   #. nima/simbol#13  util hgd dns
-    # CONTEXT=execute MODULE=tutorial #. nima/simbol#15  util
-    - CONTEXT=execute MODULE=util     #. nima/simbol#4
-    - CONTEXT=execute MODULE=dns      #. nima/simbol#10  util
-    - CONTEXT=execute MODULE=net      #. nima/simbol#7   dns
-    - CONTEXT=execute MODULE=git      #. nima/simbol#9   net
-    - CONTEXT=execute MODULE=hgd      #. nima/simbol#3   util net
-    - CONTEXT=execute MODULE=tunnel   #. nima/simbol#18  util net dns
-    - CONTEXT=execute MODULE=gpg      #. nima/simbol#5
-    - CONTEXT=execute MODULE=vault    #. nima/simbol#17  gpg
-    - CONTEXT=execute MODULE=help     #. nima/simbol#19
-    - CONTEXT=execute MODULE=xplm     #. nima/simbol#29
+    - CONTEXT=execute MODULE=cpf
+    - CONTEXT=execute MODULE=dns
+    - CONTEXT=execute MODULE=git
+    - CONTEXT=execute MODULE=gpg
+    - CONTEXT=execute MODULE=help
+    - CONTEXT=execute MODULE=hgd
+    - CONTEXT=execute MODULE=net
+    - CONTEXT=execute MODULE=remote
+    - CONTEXT=execute MODULE=tunnel
+    # CONTEXT=execute MODULE=tutorial
+    - CONTEXT=execute MODULE=util
+    - CONTEXT=execute MODULE=vault
+    - CONTEXT=execute MODULE=xplm
 
 matrix:
   allow_failures:
-    - env: CONTEXT=execute MODULE=xplm
     - env: CONTEXT=execute MODULE=tunnel
+    - env: CONTEXT=execute MODULE=xplm
 
 before_install:
   - sudo apt-get update -qq
