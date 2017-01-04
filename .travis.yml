@@ -9,6 +9,8 @@ branches:
     - /^release\/.*$/
     - /^support\/.*$/
     - /^hotfix\/.*$/
+  except:
+    - feature/#42
 
 env:
   global:
