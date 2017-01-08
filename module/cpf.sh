@@ -31,93 +31,61 @@ declare -A COLORS=(
 #. cpf:module -={
 function ::cpf:module_is_unchanged() {
     local -i e=9
-    local profile=$1
+    local module_path="$1"
     local module=$2
-    local module_path
 
-    if [ "${profile}" = "core" ]; then
-	    module_path=${SIMBOL_SCM?}/module
-    else
-	    module_path=${SIMBOL_USER_MOD?}
-    fi
-    if [ -e "${module_path}" ]; then
-        cd ${module_path}
-	    local amended=$(git status --porcelain "${module}.sh"|wc -l)
-	    [ ${PIPESTATUS[0]} -ne 0 ] || e=${amended}
-    fi
+    cd "${module_path}"
+    local amended=$(git status --porcelain "${module}.sh"|wc -l)
+    [ ${PIPESTATUS[0]} -ne 0 ] || e=${amended}
 
     return $e
 }
 function ::cpf:module_has_alerts() {
     local -i e=${CODE_FAILURE?}
 
-    local profile=$1
+    local module_path="$1"
     local module=$2
-    local module_path
 
-    if [ "${profile}" = "core" ]; then
-	    module_path=${SIMBOL_SCM?}/module
-    else
-	    module_path=${SIMBOL_USER_MOD?}
-    fi
-    if [ -e "${module_path}" ]; then
-        grep -qE "^function ${module}:[a-z0-9]+:alert()" "${module_path}/${module}.sh" 2>/dev/null
-        [ $? -ne 0 ] || e=${CODE_SUCCESS?}
-    fi
+    grep -qE "^function ${module}:[a-z0-9]+:alert()" "${module_path}/${module}.sh" 2>/dev/null
+    [ $? -ne 0 ] || e=${CODE_SUCCESS?}
 
     return $e
 }
 function ::cpf:module() {
     local -r module=$1
-    local -i enabled=1
-    local -i alerts=0
     local -i amended=0
-    local fmt
-    if [ -e ${SIMBOL_CORE_MOD?}/${module} ]; then
-        if ::cpf:module_has_alerts core ${module}; then
-            alerts=1
-            fmt="%{y}"
-        else
-            fmt="%{c}"
-            ::cpf:module_is_unchanged core ${module}
-            amended=$?
-        fi
-        enabled=${CORE_MODULES[${module}]}
-    elif [ -e ${SIMBOL_USER_MOD?}/${module} ]; then
-        if ::cpf:module_has_alerts ${SIMBOL_PROFILE?} ${module}; then
-            alerts=1
-            fmt="%{y}"
-        else
-            fmt="%{b}"
-            ::cpf:module_is_unchanged ${SIMBOL_PROFILE?} ${module}
-            amended=$?
-        fi
-        enabled=${USER_MODULES[${module}]}
-    fi
+    local -i enabled=0
 
+    local module_path
+    module_path="$(core:module_path "${module}")"
+    local fmt
+    local -i alerts=0
+    if ::cpf:module_has_alerts "${module_path}" ${module}; then
+        alerts=1
+        fmt="%{y}"
+    else
+        fmt="%{c}"
+        ::cpf:module_is_unchanged "${module_path}" ${module}
+        amended=$?
+    fi
+    enabled="$(core:module_enabled "${module}")"
     [ ${amended} -eq 0 ] || fmt+="%{ul}"
+
     [ ${enabled} -eq 0 ] || fmt+="%{bo}"
 
-    cpf "${fmt}%s%{N}" ${module}
+    cpf "${fmt}%s%{N}" "${module}"
 }
 #. }=-
 #. cpf:function -={
 function ::cpf:function_has_alerts() {
     local -i e=${CODE_FAILURE?}
 
-    local profile=$1
+    local module_path="$1"
     local module=$2
     local fn=$3
 
-    if [ "${profile}" = "core" ]; then
-	    module_path=${SIMBOL_SCM?}/module
-    else
-	    module_path=${SIMBOL_USER_MOD?}
-    fi
-    if [ -e "${module_path}" ]; then
-        grep -qE "^function ${module}:${fn}:alert()" "${module_path}/${module}.sh" 2> /dev/null
-        [ $? -ne 0 ] || e=${CODE_SUCCESS?}
-    fi
+    grep -qE "^function ${module}:${fn}:alert()" "${module_path}/${module}.sh" 2> /dev/null
+    [ $? -ne 0 ] || e=${CODE_SUCCESS?}
 
     return $e
 }
@@ -125,33 +93,23 @@ function ::cpf:function() {
     local -r module=$1
     local -r fn=$2
 
-    local -i enabled=1
     local -i alerts=0
     local -i amended=0
     local fmt
-    if [ -e ${SIMBOL_CORE_MOD?}/${module//\./\/}.sh ]; then
-        if ::cpf:function_has_alerts core ${module} ${fn}; then
-            alerts=1
-            fmt="%{y}"
-        else
-            fmt="%{g}"
-            ::cpf:module_is_unchanged core ${module}
-            amended=$?
-        fi
-        enabled=${CORE_MODULES[${module}]}
-    elif [ -e ${SIMBOL_USER_MOD?}/${module//\./\/}.sh ]; then
-        if ::cpf:function_has_alerts ${SIMBOL_PROFILE?} ${module} ${fn}; then
-            alerts=1
-            fmt="%{y}"
-        else
-            fmt="%{g}"
-            ::cpf:module_is_unchanged ${SIMBOL_PROFILE?} ${module}
-            amended=$?
-        fi
-        enabled=${USER_MODULES[${module}]}
+
+    local module_path="$(core:module_path "${module}")"
+    if ::cpf:function_has_alerts "${module_path}" ${module} ${fn}; then
+        alerts=1
+        fmt="%{y}"
+    else
+        fmt="%{g}"
+        ::cpf:module_is_unchanged "${module_path}" ${module}
+        amended=$?
     fi
 
     [ ${amended} -eq 0 ] || fmt+="%{ul}"
+
+    local -i enabled=$(core:module_enabled "${module}")
     [ ${enabled} -eq 0 ] || fmt+="%{bo}"
 
     cpf "${fmt}%s %{b:%s}%{N}" ${module} ${fn}
@@ -190,11 +148,10 @@ function ::cpf:theme() {
         local th=${1:1:${#1}}
         local arg="${2}"
         local fmt="%s"
-
         case ${op} in
             !)
                 case ${th} in
-                    module) ::cpf:module ${arg};;
+                    module) ::cpf:module "${arg}";;
                     function)
                         IFS=: read -r module fn <<< "${arg}"
                         ::cpf:function ${module} ${fn}
@@ -285,6 +242,10 @@ function ::cpf:theme() {
 #. }=-
 #. cpf -={
 function cpf() {
+    #. For `!' operators, use the literal value and not a placeholder `%s'; eg:
+    #. Good: "%{!module:${module}}"
+    #. Bad:  "%{!module:%s}" "${module}"
+
     [ ${g_DEBUG} -eq 0 ] || set +x
 
     #. cpf "%{ul:%s}, %{r}%{bo:%s}, and %{st:%s}%{no}\n" underlined bold standard
@@ -370,8 +331,8 @@ function cpf() {
         #echo "XXX arg ${#args[@]}: ${args[@]}" >&${FD_STDERR}
         #echo "XXX sym ${#prefix[@]}: ${prefix[@]}" >&${FD_STDERR}
         local -i substitutions=$(echo ${fmtstr}|sed -e 's/%{\([^}]*\)}/\1/g'|tr -c -d '%'|wc -c)
-        #echo "XXX [ ${substitutions} == ${#args[@]} ]" >&${FD_STDERR}
-        if [ ${substitutions} -eq ${#args[@]} ]; then
+            #echo "XXX [ ${substitutions} == ${#args[@]} ]" >&${FD_STDERR}
+            if [ ${substitutions} -eq ${#args[@]} ]; then
             if ! echo "${fmtstr}"|grep -qE '%{'; then
                 local -i i
                 for ((i=0; i<${#args[@]}; i++)); do
