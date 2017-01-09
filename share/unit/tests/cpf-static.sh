@@ -16,11 +16,11 @@ function testCoreCpfPublic() {
     assertEquals "${data}" "Hello world"
 }
 
-function testCoreCpfModule_is_unchangedPrivate() {
+function testCoreCpfModule_is_modifiedPrivate() {
     local data
-    #data=$(::cpf:module_is_unchanged core cpf)
+    #data=$(::cpf:module_is_modified core cpf)
     #assertFalse 1.1 $?
-    data=$(::cpf:module_is_unchanged core dns)
+    data=$(::cpf:module_is_modified core dns)
     assertTrue 1.2 $?
 }
 

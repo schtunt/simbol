@@ -29,14 +29,17 @@ declare -A COLORS=(
 )
 
 #. cpf:module -={
-function ::cpf:module_is_unchanged() {
-    local -i e=9
+function ::cpf:module_is_modified() {
+    local -i e=${FALSE?}
+
     local module_path="$1"
     local module=$2
 
     cd "${module_path}"
     local amended=$(git status --porcelain "${module}.sh"|wc -l)
-    [ ${PIPESTATUS[0]} -ne 0 ] || e=${amended}
+    [ ${PIPESTATUS[0]} -eq ${CODE_SUCCESS?} ] || core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+
+    [ ${amended} -eq 0 ] || e=${TRUE?}
 
     return $e
 }
@@ -53,27 +56,28 @@ function ::cpf:module_has_alerts() {
 }
 function ::cpf:module() {
     local -r module=$1
-    local -i amended=0
-    local -i enabled=0
 
-    local module_path
-    module_path="$(core:module_path "${module}")"
-    local fmt
-    local -i alerts=0
-    if ::cpf:module_has_alerts "${module_path}" ${module}; then
-        alerts=1
-        fmt="%{y}"
-    else
-        fmt="%{c}"
-        ::cpf:module_is_unchanged "${module_path}" ${module}
-        amended=$?
+    local -i enabled="$(core:module_enabled "${module}")"
+    if [ ${enabled} -eq ${TRUE?} ]; then
+        local -i amended=${FALSE?}
+
+        local module_path
+        module_path="$(core:module_path "${module}")"
+        local fmt=''
+        if ::cpf:module_has_alerts "${module_path}" ${module}; then
+            fmt+="%{y}"
+        else
+            fmt+="%{c}"
+            ::cpf:module_is_modified "${module_path}" ${module}
+            amended=$?
+        fi
+
+        [ ${amended} -eq ${FALSE?} ] || fmt+="%{+bo}"
+        fmt+='%s'
+        [ ${amended} -eq ${FALSE?} ] || fmt+="%{-bo}"
+
+        cpf "${fmt}%{N}" "${module}"
     fi
-    enabled="$(core:module_enabled "${module}")"
-    [ ${amended} -eq 0 ] || fmt+="%{ul}"
-
-    [ ${enabled} -eq 0 ] || fmt+="%{bo}"
-
-    cpf "${fmt}%s%{N}" "${module}"
 }
 #. }=-
 #. cpf:function -={
@@ -93,26 +97,22 @@ function ::cpf:function() {
     local -r module=$1
     local -r fn=$2
 
-    local -i alerts=0
-    local -i amended=0
-    local fmt
+    local -i enabled="$(core:module_enabled "${module}")"
+    if [ ${enabled} -eq ${TRUE?} ]; then
+        local fmt=''
 
-    local module_path="$(core:module_path "${module}")"
-    if ::cpf:function_has_alerts "${module_path}" ${module} ${fn}; then
-        alerts=1
-        fmt="%{y}"
-    else
-        fmt="%{g}"
-        ::cpf:module_is_unchanged "${module_path}" ${module}
-        amended=$?
+        local module_path="$(core:module_path "${module}")"
+        ::cpf:function_has_alerts "${module_path}" ${module} ${fn}
+        local has_alerts=$?
+
+        fmt+="%{b}"
+        [ ${has_alerts} -eq ${FALSE?} ] || fmt+="%{+bo}"
+        fmt+='%s'
+        [ ${has_alerts} -eq ${FALSE?} ] || fmt+="%{-bo}"
+
+        ::cpf:module "${module}"
+        cpf " ${fmt}%{N}" ${fn}
     fi
-
-    [ ${amended} -eq 0 ] || fmt+="%{ul}"
-
-    local -i enabled=$(core:module_enabled "${module}")
-    [ ${enabled} -eq 0 ] || fmt+="%{bo}"
-
-    cpf "${fmt}%s %{b:%s}%{N}" ${module} ${fn}
 }
 #. }=-
 #. cpf:indent -={

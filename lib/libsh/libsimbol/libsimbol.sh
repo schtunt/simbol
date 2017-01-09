@@ -378,15 +378,15 @@ function core:module_path() {
 }
 
 function core:module_enabled() {
-    local -i enabled
+    local -i enabled=${FALSE?}
 
     if [ $# -eq 1 ]; then
         local module="$1"
 
         if [ -e ${SIMBOL_CORE_MOD?}/${module//\./\/}.sh ]; then
-            enabled=${CORE_MODULES[${module}]}
+            [ ${CORE_MODULES[${module}]} -eq 0 ] || enabled=${TRUE?}
         elif [ -e ${SIMBOL_USER_MOD?}/${module//\./\/}.sh ]; then
-            enabled=${USER_MODULES[${module}]}
+            [ ${USER_MODULES[${module}]} -eq 0 ] || enabled=${TRUE?}
         else
             core:raise EXCEPTION_SHOULD_NOT_GET_HERE\
                 "No such module found: \`${module}'"
