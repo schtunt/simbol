@@ -35,7 +35,7 @@ function ::cpf:module_is_modified() {
     local module_path="$1"
     local module=$2
 
-    cd "${module_path}"
+    [ -x ${module_path} ] && cd "${module_path}" || core:raise EXCEPTION_SHOULD_NOT_GET_HERE
     local amended=$(git status --porcelain "${module}.sh"|wc -l)
     [ ${PIPESTATUS[0]} -eq ${CODE_SUCCESS?} ] || core:raise EXCEPTION_SHOULD_NOT_GET_HERE
 

@@ -11,29 +11,24 @@ function cpfTearDown() {
 
 function testCoreCpfPublic() {
     local data
-    data=$(cpf "Hello world")
-    assertTrue 1.1 $?
-    assertEquals "${data}" "Hello world"
+    data="$(cpf "Hello World!")"
+    assertTrue 'cpf.cpf/1.1' $?
+    assertEquals "${data}" "Hello World!"
 }
 
 function testCoreCpfModule_is_modifiedPrivate() {
-    local data
-    #data=$(::cpf:module_is_modified core cpf)
-    #assertFalse 1.1 $?
-    data=$(::cpf:module_is_modified core dns)
-    assertTrue 1.2 $?
+    ::cpf:module_is_modified $(core:module_path dns) dns
+    assertFalse '::cpf:is_modified/1.1' $?
 }
 
 function testCoreCpfModule_has_alertsPrivate() {
     local data
-    data=$(::cpf:module_has_alerts core remote)
-    assertTrue 1.1 $?
-    data=$(::cpf:module_has_alerts core dns)
-    assertFalse 1.2 $?
-    data=$(::cpf:module_has_alerts foo dns)
-    assertEquals 1 $?
-    data=$(::cpf:module_has_alerts core foo)
-    assertEquals 1 $?
+
+    data=$(::cpf:module_has_alerts $(core:module_path remote) remote)
+    assertTrue '::cpf:has_alerts/1.1' $?
+
+    data=$(::cpf:module_has_alerts  $(core:module_path dns) dns)
+    assertFalse '::cpf:has_alerts/1.2' $?
 }
 
 function testCoreCpfModulePrivate() {
@@ -42,16 +37,15 @@ function testCoreCpfModulePrivate() {
 
 function testCoreCpfFunction_has_alertsPrivate() {
     local data
-    data=$(::cpf:function_has_alerts core remote cluster)
-    assertTrue 1.1 $?
-    data=$(::cpf:function_has_alerts core dns resolve)
-    assertFalse 1.2 $?
-    data=$(::cpf:function_has_alerts core remote clusterfoo)
-    assertEquals 1 $?
-    data=$(::cpf:function_has_alerts core foo cluster)
-    assertEquals 1 $?
-    data=$(::cpf:function_has_alerts foo remote cluster)
-    assertEquals 1 $?
+
+    data="$(::cpf:function_has_alerts $(core:module_path remote) remote cluster)"
+    assertTrue '::cpf:function_has_alerts/1.1' $?
+
+    data="$(::cpf:function_has_alerts $(core:module_path dns) dns resolve)"
+    assertFalse '::cpf:function_has_alerts/1.2' $?
+
+    data="$(::cpf:function_has_alerts $(core:module_path remote) remote clusterfoo)"
+    assertFalse '::cpf:function_has_alerts/1.3' $?
 }
 
 function testCoreCpfFunctionPrivate() {
@@ -60,15 +54,19 @@ function testCoreCpfFunctionPrivate() {
 
 function testCoreCpfIs_fmtPrivate() {
     ::cpf:is_fmt '%s'
-    assertTrue 1.1 $?
+    assertTrue '::cpf:is_fmt/1.1' $?
+
     ::cpf:is_fmt '%%s'
-    assertTrue 1.2 $?
+    assertTrue '::cpf:is_fmt/1.2' $?
+
     ::cpf:is_fmt '%'
-    assertFalse 1.3 $?
+    assertFalse '::cpf:is_fmt/1.3' $?
+
     ::cpf:is_fmt '%{%ss}'
-    assertTrue 1.4 $?
+    assertTrue '::cpf:is_fmt/1.4' $?
+
     ::cpf:is_fmt '%{%ss}%'
-    assertTrue 1.5 $?
+    assertTrue '::cpf:is_fmt/1.5' $?
 }
 
 function testCoreCpfThemePrivate() {
@@ -78,12 +76,12 @@ function testCoreCpfThemePrivate() {
 function testCoreCpfIndentPublic() {
     CPF_INDENT=0
     -=[
-    assertEquals 1 ${CPF_INDENT}
+    assertEquals 'cpf:indent/1.1' 1 ${CPF_INDENT}
     -=[
     -=[
     -=[
-    assertEquals 4 ${CPF_INDENT}
+    assertEquals 'cpf:indent/1.2' 4 ${CPF_INDENT}
     ]=-
     ]=-
-    assertEquals 2 ${CPF_INDENT}
+    assertEquals 'cpf:indent/1.3' 2 ${CPF_INDENT}
 }
