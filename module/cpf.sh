@@ -7,6 +7,9 @@ Site's color printf module
 #. The Color PrintF Module -={
 : ${SIMBOL_IN_COLOR?}
 
+: ${USER_CPF_INDENT_STR?}
+: ${USER_CPF_INDENT_SIZE?}
+
 : ${FD_STDOUT?}
 : ${FD_STDERR?}
 
@@ -27,77 +30,66 @@ declare -A COLORS=(
 
 #. cpf:module -={
 function ::cpf:module_is_modified() {
-    local -i e=9
-    local profile=$1
+    local -i e=${FALSE?}
+
+    local module_path="$1"
     local module=$2
-    cd ${SIMBOL_CORE?}
-    if [ -e "${SIMBOL_USER_MOD?}/${module}" ]; then
-        local path=$(readlink "${SIMBOL_USER_MOD?}/${module}")
-        local amended=$(:core:git status --porcelain "${path}"|wc -l)
-        [ ${PIPESTATUS[0]} -ne 0 ] || e=${amended}
-    fi
-    #cd ${OLDPWD?}
+
+    [ -x ${module_path} ] && cd "${module_path}" || core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+    local amended=$(git status --porcelain "${module}.sh"|wc -l)
+    [ ${PIPESTATUS[0]} -eq ${CODE_SUCCESS?} ] || core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+
+    [ ${amended} -eq 0 ] || e=${TRUE?}
 
     return $e
 }
 function ::cpf:module_has_alerts() {
     local -i e=${CODE_FAILURE?}
 
-    local profile=$1
+    local module_path="$1"
     local module=$2
-    if [ -e "${SIMBOL_USER_MOD?}/${module}" ]; then
-        grep -qE "^function ${module}:[a-z0-9]+:alert()" "${SIMBOL_USER_MOD?}/${module}"
-        [ $? -ne 0 ] || e=${CODE_SUCCESS?}
-    fi
+
+    grep -qE "^function ${module}:[a-z0-9]+:alert()" "${module_path}/${module}.sh" 2>/dev/null
+    [ $? -ne 0 ] || e=${CODE_SUCCESS?}
 
     return $e
 }
 function ::cpf:module() {
     local -r module=$1
 
-    local -i enabled=1
-    local -i alerts=0
-    local -i amended=0
-    local fmt
-    if [ -e ${SIMBOL_CORE_MOD?}/${module} ]; then
-        if ::cpf:module_has_alerts core ${module}; then
-            alerts=1
-            fmt="%{y}"
+    local -i enabled="$(core:module_enabled "${module}")"
+    if [ ${enabled} -eq ${TRUE?} ]; then
+        local -i amended=${FALSE?}
+
+        local module_path
+        module_path="$(core:module_path "${module}")"
+        local fmt=''
+        if ::cpf:module_has_alerts "${module_path}" ${module}; then
+            fmt+="%{y}"
         else
-            fmt="%{c}"
-            ::cpf:module_is_modified core ${module}
+            fmt+="%{c}"
+            ::cpf:module_is_modified "${module_path}" ${module}
             amended=$?
         fi
-        enabled=${CORE_MODULES[${module}]}
-    elif [ -e ${SIMBOL_USER_MOD?}/${module} ]; then
-        if ::cpf:module_has_alerts ${SIMBOL_PROFILE?} ${module}; then
-            alerts=1
-            fmt="%{y}"
-        else
-            fmt="%{b}"
-            ::cpf:module_is_modified ${SIMBOL_PROFILE?} ${module}
-            amended=$?
-        fi
-        enabled=${USER_MODULES[${module}]}
+
+        [ ${amended} -eq ${FALSE?} ] || fmt+="%{+bo}"
+        fmt+='%s'
+        [ ${amended} -eq ${FALSE?} ] || fmt+="%{-bo}"
+
+        cpf "${fmt}%{N}" "${module}"
     fi
-
-    [ ${amended} -eq 0 ] || fmt+="%{ul}"
-    [ ${enabled} -eq 0 ] || fmt+="%{bo}"
-
-    cpf "${fmt}%s%{N}" ${module}
 }
 #. }=-
 #. cpf:function -={
 function ::cpf:function_has_alerts() {
     local -i e=${CODE_FAILURE?}
 
-    local profile=$1
+    local module_path="$1"
     local module=$2
     local fn=$3
-    if [ -e "${SIMBOL_USER_MOD?}/${module}" ]; then
-        grep -qE "^function ${module}:${fn}:alert()" "${SIMBOL_USER_MOD?}/${module}"
-        [ $? -ne 0 ] || e=${CODE_SUCCESS?}
-    fi
+
+    grep -qE "^function ${module}:${fn}:alert()" "${module_path}/${module}.sh" 2> /dev/null
+    [ $? -ne 0 ] || e=${CODE_SUCCESS?}
 
     return $e
 }
@@ -105,45 +97,49 @@ function ::cpf:function() {
     local -r module=$1
     local -r fn=$2
 
-    local -i enabled=1
-    local -i alerts=0
-    local -i amended=0
-    local fmt
-    if [ -e ${SIMBOL_CORE_MOD?}/${module//\./\/}.sh ]; then
-        if ::cpf:function_has_alerts core ${module} ${fn}; then
-            alerts=1
-            fmt="%{y}"
-        else
-            fmt="%{g}"
-            ::cpf:module_is_modified core ${module}
-            amended=$?
-        fi
-        enabled=${CORE_MODULES[${module}]}
-    elif [ -e ${SIMBOL_USER_MOD?}/${module//\./\/}.sh ]; then
-        if ::cpf:function_has_alerts ${SIMBOL_PROFILE?} ${module} ${fn}; then
-            alerts=1
-            fmt="%{y}"
-        else
-            fmt="%{g}"
-            ::cpf:module_is_modified ${SIMBOL_PROFILE?} ${module}
-            amended=$?
-        fi
-        enabled=${USER_MODULES[${module}]}
+    local -i enabled="$(core:module_enabled "${module}")"
+    if [ ${enabled} -eq ${TRUE?} ]; then
+        local fmt=''
+
+        local module_path="$(core:module_path "${module}")"
+        ::cpf:function_has_alerts "${module_path}" ${module} ${fn}
+        local has_alerts=$?
+
+        fmt+="%{b}"
+        [ ${has_alerts} -eq ${FALSE?} ] || fmt+="%{+bo}"
+        fmt+='%s'
+        [ ${has_alerts} -eq ${FALSE?} ] || fmt+="%{-bo}"
+
+        ::cpf:module "${module}"
+        cpf " ${fmt}%{N}" ${fn}
     fi
-
-    [ ${amended} -eq 0 ] || fmt+="%{ul}"
-    [ ${enabled} -eq 0 ] || fmt+="%{bo}"
-
-    cpf "${fmt}%s %{b:%s}%{N}" ${module} ${fn}
 }
 #. }=-
+#. cpf:indent -={
+declare -gi CPF_INDENT=0
+function -=[() { ((CPF_INDENT++)); }
+function ]=-() { ((CPF_INDENT--)); }
+function cpf:indent() {
+    if [ ${CPF_INDENT} -gt 0 ]; then
+        printf "%$((CPF_INDENT * USER_CPF_INDENT_SIZE))s" "${USER_CPF_INDENT_STR}"
+    fi
+}
+#. cpfi -={
+function cpfi() {
+    cpf:indent
+    cpf "$@"
+}
+#. }=-
+#. }=-
 
-#. cpf:theme -={
+#. TODO:
+#. This might need more detailed checking
 function ::cpf:is_fmt() {
-    grep -qE '%' <<<"$1"
+    grep -qE '%.+' <<<"$1"
     return $?
 }
 
+#. cpf:theme -={
 function ::cpf:theme() {
     local e=1
 
@@ -152,11 +148,10 @@ function ::cpf:theme() {
         local th=${1:1:${#1}}
         local arg="${2}"
         local fmt="%s"
-
         case ${op} in
             !)
                 case ${th} in
-                    module) ::cpf:module ${arg};;
+                    module) ::cpf:module "${arg}";;
                     function)
                         IFS=: read -r module fn <<< "${arg}"
                         ::cpf:function ${module} ${fn}
@@ -247,6 +242,10 @@ function ::cpf:theme() {
 #. }=-
 #. cpf -={
 function cpf() {
+    #. For `!' operators, use the literal value and not a placeholder `%s'; eg:
+    #. Good: "%{!module:${module}}"
+    #. Bad:  "%{!module:%s}" "${module}"
+
     [ ${g_DEBUG} -eq 0 ] || set +x
 
     #. cpf "%{ul:%s}, %{r}%{bo:%s}, and %{st:%s}%{no}\n" underlined bold standard
@@ -332,8 +331,8 @@ function cpf() {
         #echo "XXX arg ${#args[@]}: ${args[@]}" >&${FD_STDERR}
         #echo "XXX sym ${#prefix[@]}: ${prefix[@]}" >&${FD_STDERR}
         local -i substitutions=$(echo ${fmtstr}|sed -e 's/%{\([^}]*\)}/\1/g'|tr -c -d '%'|wc -c)
-        #echo "XXX [ ${substitutions} == ${#args[@]} ]" >&${FD_STDERR}
-        if [ ${substitutions} -eq ${#args[@]} ]; then
+            #echo "XXX [ ${substitutions} == ${#args[@]} ]" >&${FD_STDERR}
+            if [ ${substitutions} -eq ${#args[@]} ]; then
             if ! echo "${fmtstr}"|grep -qE '%{'; then
                 local -i i
                 for ((i=0; i<${#args[@]}; i++)); do

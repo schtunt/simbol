@@ -10,7 +10,7 @@ export NOW=$(date --utc +%s)
 #. }=-
 #. 1.2  Paths -={
 : ${SIMBOL_PROFILE?}
-export SIMBOL_SIMBOL_BASENAME=$(basename -- $0)
+export SIMBOL_BASENAME=$(basename -- $0)
 
 export SIMBOL_SCM=$(readlink ~/.simbol/.scm)
 
@@ -84,6 +84,9 @@ export SIMBOL_DATE_FORMAT="%x-%X"
 declare -gi FD_STDOUT=1
 declare -gi FD_STDERR=2
 
+declare -gi USER_CPF_INDENT_SIZE=4
+declare -g  USER_CPF_INDENT_STR='*'
+
 source ${SIMBOL_CORE_MOD?}/cpf.sh
 
 PS4+="${COLORS[r]}\${BASH_SOURCE}${COLORS[N]}"
@@ -96,7 +99,7 @@ declare -g -A CORE_MODULES=(
     [unit]=1       [util]=1      [hgd]=1       [git]=1
     [dns]=1        [net]=1       [tunnel]=1    [remote]=1
     [xplm]=1       [rb]=1        [py]=1        [pl]=1
-    [gpg]=1        [vault]=1
+    [gpg]=1        [vault]=1     [cpf]=1
     [ng]=0         [ldap]=0
 )
 
@@ -349,6 +352,50 @@ function core:softimport() {
     fi
 
     return $e
+}
+
+function core:module_path() {
+    local -i e=${CODE_SUCCESS?}
+
+    local path
+    if [ $# -eq 1 ]; then
+        local module="$1"
+
+        if [ -e ${SIMBOL_CORE_MOD?}/${module//\./\/}.sh ]; then
+            path=${SIMBOL_SCM?}/module
+        elif [ -e ${SIMBOL_USER_MOD?}/${module//\./\/}.sh ]; then
+            path=${SIMBOL_USER_MOD?}
+        else
+            core:raise EXCEPTION_SHOULD_NOT_GET_HERE\
+                "No such module found: \`${module}'"
+        fi
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+
+    echo "${path}"
+    return $e
+}
+
+function core:module_enabled() {
+    local -i enabled=${FALSE?}
+
+    if [ $# -eq 1 ]; then
+        local module="$1"
+
+        if [ -e ${SIMBOL_CORE_MOD?}/${module//\./\/}.sh ]; then
+            [ ${CORE_MODULES[${module}]} -eq 0 ] || enabled=${TRUE?}
+        elif [ -e ${SIMBOL_USER_MOD?}/${module//\./\/}.sh ]; then
+            [ ${USER_MODULES[${module}]} -eq 0 ] || enabled=${TRUE?}
+        else
+            core:raise EXCEPTION_SHOULD_NOT_GET_HERE\
+                "No such module found: \`${module}'"
+        fi
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+
+    return ${enabled}
 }
 
 function core:import() {
@@ -1136,9 +1183,8 @@ function :core:usage() {
                     cpf "%{r:!!! }"
                 fi
 
-                cpf "%{bl:%s} %{!module:%s}:%{+bo}%{@int:%s}%{-bo}/%{@int:%s}"\
-                    "${SIMBOL_BASENAME}" "${module}"\
-                    "${#fn_public[@]}" "${#fn_private[@]}"
+                cpf "%{bl:%s} %{!module:${module}}:%{+bo}%{@int:%s}%{-bo}/%{@int:%s}"\
+                    "${SIMBOL_BASENAME}" "${#fn_public[@]}" "${#fn_private[@]}"
 
                 if [ $ie -eq ${CODE_IMPORT_GOOOD?} ]; then
                     cpf "%{@comment:%s}\n" "${docstring:+; ${docstring}}"
