@@ -1,4 +1,6 @@
-language: c    #. Not really, it's actually bash
+language: bash
+
+sudo: required
 
 branches:
   only:
@@ -18,25 +20,45 @@ env:
     - PATH="${PATH}:${HOME}/bin"
   matrix:
     - CONTEXT=installer MODULE=-
-    - CONTEXT=execute MODULE=core
-    - CONTEXT=execute MODULE=cpf
-    - CONTEXT=execute MODULE=dns
-    - CONTEXT=execute MODULE=git
-    - CONTEXT=execute MODULE=gpg
-    - CONTEXT=execute MODULE=help
-    - CONTEXT=execute MODULE=hgd
-    - CONTEXT=execute MODULE=net
-    - CONTEXT=execute MODULE=remote
-    - CONTEXT=execute MODULE=tunnel
-    # CONTEXT=execute MODULE=tutorial
-    - CONTEXT=execute MODULE=util
-    - CONTEXT=execute MODULE=vault
-    - CONTEXT=execute MODULE=xplm
+    - CONTEXT=execute   MODULE=core
+    - CONTEXT=coverage  MODULE=core
+    - CONTEXT=execute   MODULE=cpf
+    - CONTEXT=coverage  MODULE=cpf
+    - CONTEXT=execute   MODULE=dns
+    - CONTEXT=coverage  MODULE=dns
+    - CONTEXT=execute   MODULE=git
+    - CONTEXT=coverage  MODULE=git
+    - CONTEXT=execute   MODULE=gpg
+    - CONTEXT=coverage  MODULE=gpg
+    - CONTEXT=execute   MODULE=help
+    - CONTEXT=coverage  MODULE=help
+    - CONTEXT=execute   MODULE=hgd
+    - CONTEXT=coverage  MODULE=hgd
+    - CONTEXT=execute   MODULE=net
+    - CONTEXT=coverage  MODULE=net
+    - CONTEXT=execute   MODULE=remote
+    - CONTEXT=coverage  MODULE=remote
+    - CONTEXT=execute   MODULE=tunnel
+    - CONTEXT=coverage  MODULE=tunnel
+    - CONTEXT=execute   MODULE=tutorial
+    - CONTEXT=coverage  MODULE=tutorial
+    - CONTEXT=execute   MODULE=util
+    - CONTEXT=coverage  MODULE=util
+    - CONTEXT=execute   MODULE=vault
+    - CONTEXT=coverage  MODULE=vault
+    - CONTEXT=execute   MODULE=xplm
+    - CONTEXT=coverage  MODULE=xplm
 
 matrix:
   allow_failures:
-    - env: CONTEXT=execute MODULE=tunnel
-    - env: CONTEXT=execute MODULE=xplm
+    - env: CONTEXT=coverage  MODULE=git
+    - env: CONTEXT=coverage  MODULE=hgd
+    - env: CONTEXT=execute   MODULE=tunnel
+    - env: CONTEXT=coverage  MODULE=tunnel
+    - env: CONTEXT=execute   MODULE=tutorial
+    - env: CONTEXT=coverage  MODULE=tutorial
+    - env: CONTEXT=execute   MODULE=xplm
+    - env: CONTEXT=coverage  MODULE=xplm
 
 before_install:
   - sudo apt-get update -qq

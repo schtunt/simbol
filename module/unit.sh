@@ -49,7 +49,9 @@ moduleScaffold() {
 oneTimeSetUp() {
     : ${module?}
 
-    cpf "%{@comment:unitSetUp...}"
+    #FIXME: can't have this line here without a terminating \n, otherwise
+    #FIXME: coverage tests hang indefinitely.  Need to do an RCA.
+    #cpf "%{@comment:unitSetUp...}"
     local -i e=${CODE_SUCCESS?}
 
     declare -gi tid=0
@@ -159,6 +161,9 @@ oneTimeSetUp() {
             fi
         ;;
     esac
+
+    #FIXME: Remove the next line once the previous FIXME has been addressed
+    cpf "%{@comment:unitSetUp...}"
     theme HAS_PASSED
 
     moduleScaffold setUp ${module?}
@@ -238,7 +243,8 @@ function testCoverage() {
                 if [ $count -gt 0 ]; then
                     local -a fns=(
                         $(grep -oE "${regex}" ${modulepath} |
-                            sed -e "s/^function :\{0,2\}${module}:\([^.()]\+\)\(\.[a-z]\+\)\?()/\1/")
+                            sed -e "s/^function :\{0,2\}${module}:\([^.()]\+\)\(\.[a-z]\+\)\?()/\1/"
+                        )
                     )
                     for fn in ${fns[@]}; do
                         local utf="test${profile^}${modulecaps}${fn^}${context^}"
