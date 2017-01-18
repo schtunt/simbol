@@ -18,11 +18,11 @@ core:requires netstat
 function :remote:connect:passwordless() {
     # Verify if we can connect to box with a certain connection string
     local -i e=${CODE_SUCCESS?}
-
+    local extra_SSH_OPTS="-o PasswordAuthentication=no -o StrictHostKeyChecking=no"
     local hcs="$1"
 
     local rv
-    rv=$(ssh ${g_SSH_OPTS?} ${hcs} -- echo -n "${NOW}" 2> /dev/null)
+    rv=$(ssh ${g_SSH_OPTS?} ${extra_SSH_OPTS} ${hcs} -- echo -n "${NOW}" 2> /dev/null)
     [ $? -eq ${CODE_SUCCESS?} -a "${rv}" = "${NOW}" ] || e=${CODE_FAILURE?}
 
     return $e
