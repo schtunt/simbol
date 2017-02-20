@@ -145,7 +145,9 @@ function ::hgd:explode() {
                     # Try reading in key-value pair from %<key>=<value>
                     IFS='=' read -a kvp <<< "${hgdn}"
                     if [ ${#kvp[@]} -eq 2 -a ${#USER_HGD_RESOLVERS[${kvp}]} -gt 0 ]; then
-                        ${SIMBOL_SHELL:-${SHELL}} -c "$(printf "${USER_HGD_RESOLVERS[${kvp[0]}]}" "${kvp[1]}")"
+                        local -a v
+                        IFS='+' read -a v <<< "${kvp[1]}"
+                        ${SIMBOL_SHELL:-${SHELL}} -c "$(printf "${USER_HGD_RESOLVERS[${kvp[0]}]}" "${v[@]}")"
                     else
                         e=${CODE_FAILURE?}
                     fi
