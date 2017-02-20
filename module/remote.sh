@@ -54,13 +54,8 @@ function :remote:connect() {
         fi
 
         export TERM=vt100
-        eval "\
-            for i in {1..3}; do\
-                ssh ${ssh_options} ${hcs} ${*:3} && break || sleep 0.${RANDOM};\
-            done\
-        "
+        ssh ${ssh_options} "${hcs}" "${@:3}"
         e=$?
-        set +x
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
@@ -85,7 +80,7 @@ function remote:connect() {
 
         local hnh=${1##*@}
         local -i resolve=${FLAGS_resolve:-0}; ((resolve=~resolve+2)); unset FLAGS_resolve
-        [ "${hnh: -1}" != '.' ] || resolve=0
+        [ "${hnh:-1}" != '.' ] || resolve=0
 
         local hcs qdn qt hnh_ qual tldid_ usdn dn fqdn resolved qid
         [ ! -t 1 ] || cpf "Resolving %{@host:%s} in %{@tldid:%s}..." "${hnh}" "${tldid}"
@@ -483,7 +478,7 @@ function ::remote:tmux() {
 
                     [ ${lpid} -eq 0 ] || tmux split-window -h
                     cpf "Connection %{g:${tab}}:%{@int:${pid}} to %{@host:${hosts[${pid}]}}..."
-                    tmux send-keys -t "${lpid}" simbol remote connect '${hosts[${pid}]}' C-m
+                    tmux send-keys -t "${lpid}" "simbol remote connect '${hosts[${pid}]}' || ( tput setab 1; clear; echo 'ERROR: Could not connect to ${hosts[${pid}]}'; read -n1 ); exit" C-m
                     tmux select-layout -t "${session}:${tab}" tiled >/dev/null
                     theme HAS_PASSED "${tab}:${pid}"
                 done
