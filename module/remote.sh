@@ -461,6 +461,8 @@ function ::remote:tmux() {
                 local -i nodes=${#hosts[@]}
 
                 local -i zoning=12 #. Terminals per tab (tmux window)
+                local missconnects=${SIMBOL_USER_TMP?}/${session}.missconnects
+                > ${missconnects}
                 for ((pid=0; pid<nodes; pid++)); do
                     ((lpid=pid%zoning))
                     ((tid=pid/zoning))
@@ -478,7 +480,8 @@ function ::remote:tmux() {
 
                     [ ${lpid} -eq 0 ] || tmux split-window -h
                     cpf "Connection %{g:${tab}}:%{@int:${pid}} to %{@host:${hosts[${pid}]}}..."
-                    tmux send-keys -t "${lpid}" "simbol remote connect '${hosts[${pid}]}' || ( tput setab 1; clear; echo 'ERROR: Could not connect to ${hosts[${pid}]}'; read -n1 ); exit" C-m
+                    tmux send-keys -t "${lpid}" "  clear" C-m
+                    tmux send-keys -t "${lpid}" "  simbol remote connect '${hosts[${pid}]}' || ( tput setab 1; clear; echo ${hosts[${pid}]} >> ${missconnects};echo 'ERROR: Could not connect to ${hosts[${pid}]}'; read -n1 ); exit" C-m
                     tmux select-layout -t "${session}:${tab}" tiled >/dev/null
                     theme HAS_PASSED "${tab}:${pid}"
                 done
@@ -498,6 +501,16 @@ function ::remote:tmux() {
 
                 tmux attach-session -t "${session}"
                 [ $? -ne 0 ] || e=${CODE_SUCCESS?}
+                [ -s ${missconnects} ] || rm -f ${missconnects}
+                if [ -e ${missconnects} ]; then
+                    cpf "%{r:ERROR}: Failed to connect to the following hosts...\n"
+                    local host
+                    while read host; do
+                        cpf " ! %{@host:%s}\n" "${host}"
+                    done < ${missconnects}
+                fi
+
+                cat ${missconnects}
             else
                 core:log WARN "Empty HGD resolution"
             fi
