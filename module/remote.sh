@@ -596,83 +596,6 @@ function lock() {
 }
 #. }=-
 
-#. ::remote:ssh_thread() -={
-function ::remote:ssh_thread() {
-    local -i e=-1
-
-    local -i retries=$1
-    local -i timeout=$2
-    local hcs="$3"
-    local cmd="${@:4}"
-
-    #. Maybe we want to read data one day, for now it's /dev/null
-    local stdin="/dev/null"
-    exec 5<"${stdin}"
-
-    #. Create a process-local read (7) and write (6) stdout file descriptor and
-    #. associated buffer file
-    local stdout="/tmp/stdout.${BASHPID}.sct"
-    exec 6>"${stdout}"
-    exec 7<"${stdout}"
-
-    #. Create a process-local read (9) and write (8) stderr file descriptor and
-    #. associated buffer file
-    local stderr="/tmp/stderr.${BASHPID}.sct"
-    exec 8>"${stderr}"
-    exec 9<"${stderr}"
-
-    #. Execute the command, reading from file descriptor 5, writing stdout to
-    #. file descriptor 6, and writing errors to file descriptor 8
-    local -i tries=0
-    while ((tries < retries)); do
-        ((tries++))
-        core:log DEBUG "Remote execution launched; attempt ${tries} of ${retries}; timeout of ${timeout}s"
-        ssh -xTTT ${g_SSH_OPTS?}\
-            -o ConnectionAttempts=${retries}\
-            -o ConnectTimeout=${timeout}\
-            -o PasswordAuthentication=no\
-            -o PreferredAuthentications=publickey\
-            -o StrictHostKeyChecking=no\
-            -o BatchMode=yes\
-            -o UserKnownHostsFile=/dev/null\
-                "${hcs}" -- "${cmd}" <&5 1>&6 2>&8
-        e=$?
-        [ $e -ne 0 ] || break
-        sleep 1.${RANDOM}
-    done
-
-    #. Close all write file descriptors
-    exec 6>&-
-    exec 8>&-
-
-    #. IPC/write -={
-    #. Get the mutex and write all data as null-terminated tokens in the
-    #. order of: <hcs>, <exit-code>, <stdout>, <stderr>; note that the latter
-    #. two can be 0 or more lines.
-    lock on
-    printf "%s\0" "${hcs}"   >&3 #. hcs
-    cat <&7 >&3; printf "\0" >&3 #. stdout
-    cat <&9 >&3; printf "\0" >&3 #. stderr
-    printf "%d\0" ${e}       >&3 #. ee
-    printf "%s=%d;"\
-        "tries" ${tries}\
-                             >&3 #. metadata
-    printf "\0"              >&3 #. metadata
-    lock off
-    #. }=-
-
-    #. Close all read file descriptors
-    exec 5>&-
-    exec 7>&-
-    exec 9>&-
-
-    #. Remove all buffer files
-    rm -f ${stdout}
-    rm -f ${stderr}
-
-    return $e
-}
-#. }=-
 #. ::remote:thread:cleanup() -={
 function ::remote:thread:cleanup() {
     local -i e=${CODE_SUCCESS?}
@@ -738,8 +661,99 @@ function :remote:serialmon() {
     return $e
 }
 #. }=-
-#.  :remote:mon() -={
-function :remote:mon() {
+
+#. ::remote:ssh_thread.ipc() -={
+function ::remote:ssh_thread.ipc() {
+    # ::remote:ssh_thread.ipc                    | ::remote:mon.ipc
+    #                                            |
+    #                _____ [5<stdin]___/dev/null |
+    #               /                            |
+    #             [.....]                        |
+    #             [.....]                        |
+    #             [.....]                        |
+    #               \ \___ [6>stdout>7]___       |
+    #                \____ [8>stderr>9]__ \      |
+    #                                    \ \     |
+    #                                     \_\__ [3>user>4]___*
+    #                                            |
+
+    local -i e=-1
+
+    local -i retries=$1
+    local -i timeout=$2
+    local hcs="$3"
+    local cmd="${@:4}"
+
+    #. Maybe we want to read data one day, for now it's /dev/null
+    local stdin="/dev/null"
+    exec 5<"${stdin}"
+
+    #. Create a process-local read (7) and write (6) stdout file descriptor and
+    #. associated buffer file
+    local stdout="/tmp/stdout.${BASHPID}.sct"
+    exec 6>"${stdout}"
+    exec 7<"${stdout}"
+
+    #. Create a process-local read (9) and write (8) stderr file descriptor and
+    #. associated buffer file
+    local stderr="/tmp/stderr.${BASHPID}.sct"
+    exec 8>"${stderr}"
+    exec 9<"${stderr}"
+
+    #. Execute the command, reading stdin from file descriptor 5, writing stdout
+    #. to file descriptor 6, and writing stderr to file descriptor 8
+    local -i tries=0
+    while ((tries < retries)); do
+        ((tries++))
+        core:log DEBUG "Remote execution launched; attempt ${tries} of ${retries}; timeout of ${timeout}s"
+        ssh -xTTT ${g_SSH_OPTS?}\
+            -o ConnectionAttempts=${retries}\
+            -o ConnectTimeout=${timeout}\
+            -o PasswordAuthentication=no\
+            -o PreferredAuthentications=publickey\
+            -o StrictHostKeyChecking=no\
+            -o BatchMode=yes\
+            -o UserKnownHostsFile=/dev/null\
+                "${hcs}" -- "${cmd}" <&5 1>&6 2>&8
+        e=$?
+        [ $e -ne 0 ] || break
+        sleep 1.${RANDOM}
+    done
+
+    #. Close all write file descriptors
+    exec 6>&-
+    exec 8>&-
+
+    #. IPC/write -={
+    #. Get the mutex and write all data as null-terminated tokens in the
+    #. order of: <hcs>, <exit-code>, <stdout>, <stderr>; note that the latter
+    #. two can be 0 or more lines.
+    lock on
+    printf "%s\0" "${hcs}"   >&3 #. hcs
+    cat <&7 >&3; printf "\0" >&3 #. stdout
+    cat <&9 >&3; printf "\0" >&3 #. stderr
+    printf "%d\0" ${e}       >&3 #. ee
+    printf "%s=%d;"\
+        "tries" ${tries}\
+                             >&3 #. metadata
+    printf "\0"              >&3 #. metadata
+    lock off
+    #. }=-
+
+    #. Close all read file descriptors
+    exec 5>&-
+    exec 7>&-
+    exec 9>&-
+
+    #. Remove all buffer files
+    rm -f ${stdout}
+    rm -f ${stderr}
+
+    return $e
+}
+#. }=-
+#. ::remote:mon.ipc() -={
+function ::remote:mon.ipc() {
     local -i e=${CODE_FAILURE?}
 
     local -i threads=$1
@@ -781,7 +795,7 @@ function :remote:mon() {
             ((hcsi++))
 
             STATES[${hcs}]='PENDING'
-            ( ::remote:ssh_thread ${retries} ${timeout} "${hcs}" "${cmd}" )&
+            ( ::remote:ssh_thread.ipc ${retries} ${timeout} "${hcs}" "${cmd}" )&
 
             ((active++))
             core:log DEBUG "Active thread-count at ${active} (of ${threads})"
@@ -941,12 +955,13 @@ function remote:mon() {
                         echo "#. Local Cmd:  ${lcmd}"
                     fi
 
+                    local delim='|'
                     local line
                     local otype
                     local hcs
                     local payload
                     while read line; do
-                        IFS='|' read otype hcs payload <<< "${line}"
+                        IFS="${delim}" read otype hcs payload <<< "${line}"
                         case ${otype}:${output[${otype}]}:${#payload} in
                             xc:1:[1-9]*)
                                 case ${payload} in
@@ -982,9 +997,9 @@ function remote:mon() {
                                 core:raise EXCEPTION_SHOULD_NOT_GET_HERE
                             ;;
                         esac
-                    done < <(:remote:mon\
+                    done < <(::remote:mon.ipc\
                         ${threads} ${retries} ${timeout}\
-                        '|' "${csv_hosts}" "${rcmd}"
+                        "${delim}" "${csv_hosts}" "${rcmd}"
                     )
                 else
                     theme HAS_FAILED "NO_SUCH_HGD"
