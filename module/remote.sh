@@ -635,32 +635,6 @@ function ::remote:thread:teardown() {
     return $e
 }
 #. }=-
-#.  :remote:serialmon() -={
-function :remote:serialmon() {
-    local -i e=${CODE_FAILURE?}
-
-    if [ $# -ge 2 ]; then
-        local tldid=${g_TLDID?}
-        local -a qdns=( $(:hgd:resolve ${tldid} $1) )
-        local -r rcmd=${@:2}
-
-        if [ ${#rcmd} -gt 0 ]; then
-            local qdn info postcmd
-            for qdn in ${qdns[@]}; do
-                info="$(:remote:connect ${tldid} ${qdn} ${rcmd}|tr -d '\r\n'; exit ${PIPESTATUS[0]})"
-                if [ $? -eq ${CODE_SUCCESS?} ]; then
-                    e=${CODE_SUCCESS?}
-                    echo "${info}"
-                fi
-            done
-        else
-            core:raise EXCEPTION_BAD_FN_CALL
-        fi
-    fi
-
-    return $e
-}
-#. }=-
 
 #. ::remote:ssh_thread.ipc() -={
 function ::remote:ssh_thread.ipc() {
