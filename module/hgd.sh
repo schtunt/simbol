@@ -34,7 +34,6 @@ core:softimport ng
 declare -g g_HGD_CACHE=${SIMBOL_USER_ETC?}/hgd.conf
 [ -e ${g_HGD_CACHE?} ] || touch ${g_HGD_CACHE?}
 
-#. }=-
 #. HGD Resolvers -={
 function ::hgd:validate() {
     local -i e=${CODE_FAILURE?}

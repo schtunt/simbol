@@ -169,6 +169,32 @@ function :net:hosts() {
 
     return $e
 }
+function net:hosts:usage() { echo "<ip-subnet>"; }
+function net:hosts() {
+    local -i e=${CODE_DEFAULT?}
+
+    if [ $# -eq 1 ]; then
+        local subnet="$1"
+
+        cpf "Resolving %{@subnet:%s}..." ${subnet}
+
+        local -a hosts
+        hosts=( $(:net:hosts "${subnet}") )
+        e=$?
+        if [ $e -eq ${CODE_SUCCESS?} ]; then
+            theme HAS_PASSED
+            local host
+            for host in "${hosts[@]}"; do
+                cpf "%{@host:%s}\n" "${host}"
+            done
+        else
+            theme HAS_FAILED
+        fi
+    fi
+
+    return $e
+}
+#. }=-
 #. }=-
 #. net:firsthost -={
 function :net:firsthost() {
