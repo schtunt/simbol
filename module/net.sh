@@ -169,6 +169,32 @@ function :net:hosts() {
 
     return $e
 }
+function net:hosts:usage() { echo "<ip-subnet>"; }
+function net:hosts() {
+    local -i e=${CODE_DEFAULT?}
+
+    if [ $# -eq 1 ]; then
+        local subnet="$1"
+
+        cpf "Resolving %{@subnet:%s}..." ${subnet}
+
+        local -a hosts
+        hosts=( $(:net:hosts "${subnet}") )
+        e=$?
+        if [ $e -eq ${CODE_SUCCESS?} ]; then
+            theme HAS_PASSED
+            local host
+            for host in "${hosts[@]}"; do
+                cpf "%{@host:%s}\n" "${host}"
+            done
+        else
+            theme HAS_FAILED
+        fi
+    fi
+
+    return $e
+}
+#. }=-
 #. }=-
 #. net:firsthost -={
 function :net:firsthost() {
@@ -341,7 +367,7 @@ function net:portping() {
 #. net:myip -={
 function :net:myip:cached() { echo 3; }
 function :net:myip() {
-  ${CACHE_OUT?}; {
+  g_CACHE_OUT "$*" || {
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 0 ]; then
@@ -354,9 +380,7 @@ function :net:myip() {
             e=${CODE_SUCCESS?}
         fi
     fi
-
-    return $e
-  } | ${CACHE_IN?}; ${CACHE_EXIT?}
+  } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
 #. }=-
 #. }=-

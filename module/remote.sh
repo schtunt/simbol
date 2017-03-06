@@ -14,6 +14,23 @@ core:requires tmux
 core:requires socat
 core:requires netstat
 
+#.   remote:connect:passwordless -={
+function :remote:connect:passwordless() {
+    # Verify if we can connect to box with a certain connection string
+    local -i e=${CODE_FAILURE?}
+    local teststring="$(date +"%s")"
+    local hcs="$1"
+    local ssh_options
+    ssh_options="${g_SSH_OPTS?} -ttt -o PasswordAuthentication=no -o PreferredAuthentications=publickey -o StrictHostKeyChecking=yes"
+    local rv
+    rv=$(ssh ${ssh_options} ${hcs} -- echo -n "${teststring}" 2> /dev/null)
+    e=$?
+    [ ${e} -eq ${CODE_SUCCESS?} -a "${rv}" = "${teststring}" ] || e=${CODE_FAILURE?}
+
+    return $e
+}
+#. }=-
+
 #.  :remote:sshproxy*() DEPRECATED -={
 #function :remote:sshproxystr() {
 #    core:raise EXCEPTION_DEPRECATED
@@ -141,7 +158,7 @@ function :remote:connect() {
 #       ssh_options+=" $(:remote:sshproxyopts ${tldid})"
 
         export TERM=vt100
-        eval "ssh ${ssh_options} ${hcs} ${*:3}"
+        eval "for i in {1..3}; do ssh ${ssh_options} ${hcs} ${*:3} && break || sleep 0.${RANDOM}; done"
         e=$?
     else
         core:raise EXCEPTION_BAD_FN_CALL
@@ -224,59 +241,84 @@ function remote:connect() {
 }
 #. }=-
 #.   remote:copy() -={
-# TODO - if fqdn is sent, work out tldid backwards?
-function :remote:copy:cached() { echo 3600; }
-function :remote:copy:cachefile() { echo $4; }
-function :remote:copy() {
-  ${CACHE_OUT?}; {
-    #. Usage: :remote:copy m <fqdn> /etc/security/access.conf ${SIMBOL_USER_CACHE?}/${fqdn}-access.conf
-
-    local -i e=${CODE_FAILURE?}
-
-    if [ $# -eq 4 ]; then
-        local tldid=$1
-        local hcs=$2
-        local src=$3
-        local dst=$4
-
-        local ssh_options="${g_SSH_OPTS?}"
-#       #. DEPRECATED
-#       ssh_options+=" $(:remote:sshproxyopts ${tldid})"
-        eval "scp ${ssh_options} ${hcs}:${src} ${dst}"
-        e=$?
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
-
-    return $e
-  } | ${CACHE_IN?}; ${CACHE_EXIT?}
-}
-
-function remote:copy:usage() { echo "-T<tldid> <hnh> <src-path> <dst-path>"; }
+function remote:copy:usage() { echo "-T<tldid> [[<user>@]<dst-hnh>:]<src-path> [[<user>@]<dst-hnh>:]<dst-path>"; }
 function remote:copy() {
     local -i e=${CODE_DEFAULT?}
 
     local tldid=${g_TLDID?}
-    if [ $# -eq 3 ]; then
-        local -r hnh="$1"
-        local -r src="$2"
-        local -r dst="$3"
+    local -A data
+    if [ $# -eq 2 ]; then
+        e=${CODE_SUCCESS?}
 
-        local -a data
-        [ ! -t 1 ] || cpf "Resolving %{@host:%s} in %{@tldid:%s}..." "${hnh}" "${tldid}"
-        data=( $(:dns:lookup.csv ${tldid} a ${hnh}) )
+        local hs=src
+        local -a uri
 
-        local qt hnh_ qual tldid_ usdn dn fqdn resolved qid
-        if [ ${#data[@]} -eq 1 ]; then
-            IFS=, read qt hnh_ qual tldid_ usdn dn fqdn resolved qid <<< "${data[0]}"
+        for hstr in "$@"; do
+            if [[ ${hstr} =~ ^(([^@]+@)?[^:]+:)?[^:@]*$ ]]; then
+                IFS=':@' read -a uri <<< "${hstr}"
 
-            local qdn=${fqdn%.${dn}}
-            [ ! -t 1 ] || theme INFO "Copying from ${qdn}..."
-            :remote:copy "${tldid}" "${qdn}" "${src}" "${dst}"
-            e=$?
-        else
-            e=${CODE_FAILURE?}
-        fi
+                data[mode_${hs}]=3
+                [ ${#uri[@]} -ge 1 ] && data[pth_${hs}]="${uri[-1]}" || ((data[mode_${hs}]--))
+                [ ${#uri[@]} -ge 2 ] && data[hnh_${hs}]="${uri[-2]}" || ((data[mode_${hs}]--))
+                [ ${#uri[@]} -eq 3 ] && data[un_${hs}]="${uri[-3]}"  || ((data[mode_${hs}]--))
+
+                #. If a hostname is at all specified...
+                local hnh="${data[hnh_${hs}]}"
+                if [ ${#hnh} -gt 0 ]; then
+                    [ ! -t 1 ] || cpf "Resolving %{@host:%s} in %{@tldid:%s}..." "${hnh}" "${tldid}"
+
+                    local -a hdata=( $(:dns:lookup.csv ${tldid} a ${hnh}) )
+                    if [ ${#hdata[@]} -eq 1 ]; then
+                        local qt hnh_ qual tldid_ usdn dn fqdn resolved qid
+                        IFS=, read qt hnh_ qual tldid_ usdn dn fqdn resolved qid <<< "${hdata[0]}"
+
+                        data[qdn_${hs}]=${fqdn%.${dn}}
+                        data[fqdn_${hs}]=${fqdn}
+                        [ ! -t 1 ] || theme HAS_PASSED "${data[qdn_${hs}]}"
+                    else
+                        [ ! -t 1 ] || theme HAS_FAILED
+                        e=${CODE_FAILURE?}
+                    fi
+                fi
+
+                case ${data[mode_${hs}]} in
+                    1) data[cmd_${hs}]="${data[pth_${hs}]}";;
+                    2) data[cmd_${hs}]="${data[fqdn_${hs}]}:${data[pth_${hs}]}";;
+                    3) data[cmd_${hs}]="${data[un_${hs}]}@${data[fqdn_${hs}]}:${data[pth_${hs}]}";;
+               esac
+            else
+                e=${CODE_DEFAULT?}
+            fi
+            hs=dst
+        done
+
+        local ssh_options="${g_SSH_OPTS?}"
+
+        [ ! -t 1 ] || cpf "Copying from %{@path:%s} to %{@path:%s} [MODE:%{@int:%s}:%{@int:%s}]..."\
+            "${data[cmd_src]}" "${data[cmd_dst]}" ${data[mode_src]} ${data[mode_dst]}
+
+        case ${data[mode_src]}:${data[mode_dst]} in
+            1:1)
+                cp -a "${data[pth_src]}" "${data[pth_dst]}"
+                e=$?
+            ;;
+            [23]:1|1:[23])
+                eval "rsync -ae 'ssh ${ssh_options}' ${data[cmd_src]} ${data[cmd_dst]}"
+                e=$?
+            ;;
+            *:*)
+                local tmp="${SIMBOL_USER_TMP?}/remote-copy.$$.tmp/${data[pth_src]}"
+                rm -rf ${tmp}
+                mkdir -p $(dirname ${tmp})
+                eval "rsync -ae 'ssh ${ssh_options}' ${data[cmd_src]} ${tmp}"
+                [ $? -ne 0 ] || eval "rsync -ae 'ssh ${ssh_options}' ${tmp} ${data[cmd_dst]}"
+                e=$?
+                rm -rf ${tmp}
+            ;;
+        esac
+        theme HAS_AUTOED $e
+
+        e=$?
     fi
 
     return $e
@@ -646,7 +688,12 @@ integer attempts  3     "attempts"     a
 boolean sudo      false "run-as-root"  s
 !
 }
-function remote:mon:usage() { echo "<hgd:*> @$(echo ${!USER_MON_CMDGRPREMOTE[@]}|sed -e 's+ +|@+g') | <arbitrary-command>"; }
+function remote:mon:usage() {
+    cat <<!
+<hgd:*> @$(echo ${!USER_MON_CMDGRPREMOTE[@]}|sed -e 's+ +|@+g')
+<hgd:*> -- <arbitrary-command>"
+!
+}
 function remote:mon() {
     local -i e=${CODE_DEFAULT?}
 

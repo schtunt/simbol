@@ -32,6 +32,21 @@ e
 )"
 }
 
+function testCoreUtilZipInternal() {
+    core:import util
+
+    local -a k=( {a..d} )
+    local -a v=( {A..D} )
+    :util:zip.eval k v >${stdoutF?} 2>${stderrF?}
+    assertTrue ':util:zip.eval.0' $?
+    assertEquals ':util:zip.eval.1' "$(cat ${stdoutF})" "(
+[a]=A
+[b]=B
+[c]=C
+[d]=D
+)"
+}
+
 function testCoreUtilAnsi2htmlInternal() {
     core:import util
 

@@ -1,5 +1,6 @@
 #. format: profile|module|function|context|stdin|arguments|stdout|stderr|exitcode
 #. Vault Module -={
+#core|vault|getTempFile|private
 core|vault|cleanup|internal|||||0
 core|vault|cleanup|private|||||0
 #. }=-

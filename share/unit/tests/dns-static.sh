@@ -3,7 +3,7 @@ core:import util
 
 function testCoreDnsImport() {
     core:softimport dns
-    assertTrue 0x0 $?
+    assertTrue 0.1 $?
 }
 
 function dnsTearDown() {
@@ -155,13 +155,13 @@ function testCoreDnsLookupInternal() {
     assertEquals 2.2 1 ${#data[@]}
     assertEquals 2.3 "a,host-8f,shn,m,unit-tests,mgmt.simbol,host-8f.unit-tests.mgmt.simbol,127.1.8.15,7" "${data[0]}"
 
-    data=( $(:dns:lookup.csv pm ca 'host-8f') )
+    data=( $(:dns:lookup.csv p,m ca 'host-8f') )
     assertTrue   3.1 $?
     assertEquals 3.2 2 ${#data[@]}
     assertEquals 3.3 "a,host-8f,shn,m,unit-tests,mgmt.simbol,host-8f.unit-tests.mgmt.simbol,127.1.8.15,7" "${data[0]}"
     assertEquals 3.4 "a,host-8f,shn,p,api,simbol.org,host-8f.api.simbol.org,127.2.8.15,7" "${data[1]}"
 
-    data=( $(:dns:lookup.csv mp ac 'host-8f') )
+    data=( $(:dns:lookup.csv m,p ac 'host-8f') )
     assertTrue   4.1 $?
     assertEquals 4.2 2 ${#data[@]}
     assertEquals 4.3 "a,host-8f,shn,m,unit-tests,mgmt.simbol,host-8f.unit-tests.mgmt.simbol,127.1.8.15,7" "${data[0]}"

@@ -14,7 +14,7 @@ flycatcher:
 	@echo "Do not run make here unless you know what you're doing."
 
 EXTERN := shflags shunit2
-EXTERN += vimpager jsontool
+EXTERN += vimpager
 
 LIBSH  := lib/libsh
 LIBRB  := lib/librb
@@ -37,32 +37,34 @@ prepare:
 .PHONY: unprepare uninstall $(EXTERN:%=%.uninstall)
 unprepare:
 	@printf "Unpreparing extern build..."
-	@find ${LIBPY} -name '*.pyc' -exec rm -f {} \;
-	@find ${LIBPY} -name '*.pyo' -exec rm -f {} \;
-	@rmdir ${LIBSH} ${LIBRB} ${LIBPY} ${LIBPL} lib
-	@rmdir libexec
+	@[ ! -d ${LIBPY} ] || find ${LIBPY} -name '*.pyc' -exec rm -f {} \;
+	@[ ! -d ${LIBPY} ] || find ${LIBPY} -name '*.pyo' -exec rm -f {} \;
 	@echo "DONE"
 
 uninstall: $(EXTERN:%=%.uninstall) unprepare
-	@rm -f .install
+	@rm -fr ${LIBSH} ${LIBRB} ${LIBPY} ${LIBPL} lib
+	@rm -fr libexec
+	@rm -f  .install
 	@echo "Uninstallation (extern) complete!"
 
 purge: $(EXTERN:%=%.purge)
-	rm -rf src
-	rm -rf scm
-	rm -rf lib
-	rm -rf libexec
-	rm -f .install
+	rm -fr src
+	rm -fr scm
+	rm -fr lib
+	rm -fr libexec
+	rm -f  .install
 #. }=-
 
 #. shflags -={
-TGZ_SHFLAGS := src/shflags-1.0.3.tgz
+.PHONY: shflags.purge shflags.uninstall shflags.install
+VER_SHFLAGS := 1.0.3
+TGZ_SHFLAGS := src/shflags-${VER_SHFLAGS}.tgz
 SRC_SHFLAGS := $(TGZ_SHFLAGS:.tgz=)
 shflags.purge: shflags.uninstall
-	@-rm -r ${TGZ_SHFLAGS}
+	@rm -f  ${TGZ_SHFLAGS}
+	@rm -fr ${SRC_SHFLAGS}
+	@rm -fr ${LIBSH}/shflags
 shflags.uninstall:
-	@-rm ${LIBSH}/shflags
-	@-rm -r ${SRC_SHFLAGS}
 shflags.install: ${LIBSH}/shflags
 ${LIBSH}/shflags: ${SRC_SHFLAGS}
 	@ln -sf ${HOME}/.simbol/var/$</src/shflags $@
@@ -73,20 +75,22 @@ ${SRC_SHFLAGS}: ${TGZ_SHFLAGS}
 	@echo "DONE"
 ${TGZ_SHFLAGS}:
 	@printf "Downloading $@..."
-	@${DLA} http://shflags.googlecode.com/files/$(@F) > $@
+	@${DLA} https://github.com/kward/shflags/archive/${VER_SHFLAGS}.tar.gz > $@
 	@echo "DONE"
 #. }=-
 #. shunit2 -={
-TGZ_SHUNIT2 := src/shunit2-2.1.6.tgz
+.PHONY: shunit2.purge shunit2.uninstall shunit2.install
+VER_SHUNIT2 := 2.1.6
+TGZ_SHUNIT2 := src/shunit2-${VER_SHUNIT2}.tgz
 SRC_SHUNIT2 := $(TGZ_SHUNIT2:.tgz=)
 shunit2.purge: shunit2.uninstall
-	@-rm -r ${TGZ_SHUNIT2}
+	@rm -f  ${TGZ_SHUNIT2}
+	@rm -fr ${SRC_SHUNIT2}
+	@rm -fr libexec/shunit2
 shunit2.uninstall:
-	@-rm libexec/shunit2
-	@-rm -r ${SRC_SHUNIT2}
 shunit2.install: libexec/shunit2
 libexec/shunit2: ${SRC_SHUNIT2}
-	@ln -sf ${HOME}/.simbol/var/$</src/shunit2 $@
+	@ln -sf ${HOME}/.simbol/var/src/shunit2-source/${VER_SHUNIT2}/src/$(@F) $@
 ${SRC_SHUNIT2}: ${TGZ_SHUNIT2}
 	@printf "Untarring $< into $(@D)..."
 	@tar -C $(@D) -xzf $<
@@ -94,16 +98,16 @@ ${SRC_SHUNIT2}: ${TGZ_SHUNIT2}
 	@echo "DONE"
 ${TGZ_SHUNIT2}:
 	@printf "Downloading $@..."
-	@${DLA} http://shunit2.googlecode.com/files/$(@F) > $@
+	@${DLA} https://github.com/kward/shunit2/archive/source.tar.gz > $@
 	@echo "DONE"
 #. }=-
 #. vimpager -={
 .PHONY: vimpager.install vimpager.uninstall vimpager.purge
 vimpager.purge: vimpager.uninstall
-	-rm -rf scm/vimpager.git
+	@rm -f  libexec/vimpager
+	@rm -f  libexec/vimcat
+	@rm -fr scm/vimpager.git
 vimpager.uninstall:
-	@-rm libexec/vimpager
-	@-rm libexec/vimcat
 vimpager.install: scm/vimpager.git
 	@ln -sf $(CURDIR)/$</vimpager libexec/vimpager
 	@ln -sf $(CURDIR)/$</vimcat libexec/vimcat
@@ -112,33 +116,21 @@ scm/vimpager.git:
 	@git clone -q http://github.com/rkitover/vimpager $@
 #. }=-
 #. pyobjpath -={
+.PHONY: pyobjpath.purge pyobjpath.uninstall pyobjpath.install
+pyobjpath.purge:
+	@rm -f  ${LIBPY}/pyobjpath/core
+	@rm -f  ${LIBPY}/pyobjpath/utils
+	@rm -f  ${LIBPY}/pyobjpath/__init__.py
+	@rm -fr ${LIBPY}/pyobjpath/
 pyobjpath.uninstall:
-	@-rm ${LIBPY}/pyobjpath/core
-	@-rm ${LIBPY}/pyobjpath/utils
-	@-rm ${LIBPY}/pyobjpath/__init__.py
-	@-rmdir ${LIBPY}/pyobjpath/
 pyobjpath.install: scm/pyobjpath.git
-	@mkdir ${LIBPY}/pyobjpath
-	@touch ${LIBPY}/pyobjpath/__init__.py
+	@mkdir  ${LIBPY}/pyobjpath
+	@touch  ${LIBPY}/pyobjpath/__init__.py
 	@ln -sf $(CURDIR)/$</ObjectPathPy/core ${LIBPY}/pyobjpath/core
 	@ln -sf $(CURDIR)/$</ObjectPathPy/utils ${LIBPY}/pyobjpath/utils
 scm/pyobjpath.git:
 	@echo "Cloning $@..."
 	@git clone -q https://github.com/adriank/ObjectPath.git $@
-#. }=-
-#. jsontool -={
-.PHONY: jsontool.install jsontool.uninstall jsontool.purge
-jsontool.purgel: jsontool.uninstall; @-rm -rf libexec/jsontool
-jsontool.uninstall:; @-rm libexec/jsontool
-jsontool.install: libexec/jsontool
-libexec/jsontool: src/jsontool
-	@printf "Installing jsontool..."
-	@install -m 755 $< $@
-	@echo "DONE"
-src/jsontool:
-	@printf "Downloading jsontool..."
-	@${DLA} https://github.com/trentm/json/raw/master/lib/json.js > $@
-	@echo "DONE"
 #. }=-
 
 #. -={

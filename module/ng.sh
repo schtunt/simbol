@@ -9,7 +9,7 @@ core:import ldap
 
 #. ng:tree -={
 function ::ng:tree_data() {
-  ${CACHE_OUT?}; {
+  g_CACHE_OUT "$*" || {
     : ${#g_PROCESSED_NETGROUP[@]?}
     local -i e=${CODE_FAILURE?}
 
@@ -95,12 +95,10 @@ function ::ng:tree_data() {
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
-
-    return $e
-  } | ${CACHE_IN?}; ${CACHE_EXIT?}
+  } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
 
-function ::ng:tree:cpf() {
+function ::ng:treecpf() {
     local -i indent=$1
     ((indent--))
 
@@ -181,13 +179,13 @@ function ::ng:tree_draw() {
         # verified netgroup
         if [ ${child:1:1} == '+' ]; then
             if [ ${child:0:1} == '1' ]; then
-                ::ng:tree:cpf ${indent} netgroup ${child:2} ${parent}
+                ::ng:treecpf ${indent} netgroup ${child:2} ${parent}
             elif [ ${child:0:1} == '?' ]; then
-                ::ng:tree:cpf ${indent} netgroup ${child:2} ${parent}
+                ::ng:treecpf ${indent} netgroup ${child:2} ${parent}
             elif [ ${child:0:1} == '0' ]; then
-                ::ng:tree:cpf ${indent} netgroup_empty ${child:2} ${parent}
+                ::ng:treecpf ${indent} netgroup_empty ${child:2} ${parent}
             elif [ ${child:0:1} == '-' ]; then
-                ::ng:tree:cpf ${indent} netgroup_missing ${child:2} ${parent}
+                ::ng:treecpf ${indent} netgroup_missing ${child:2} ${parent}
             else
                 core:log ERR "${child} is an invalid entry; ${child:0:1} is unknown"
             fi
@@ -195,11 +193,11 @@ function ::ng:tree_draw() {
         # verified host
         elif [ ${child:1:1} == '@' ]; then
             if [ ${child:0:1} == '1' ]; then
-                ::ng:tree:cpf ${indent} host ${child:2} ${parent}
+                ::ng:treecpf ${indent} host ${child:2} ${parent}
             elif [ ${child:0:1} == '-' ]; then
-                ::ng:tree:cpf ${indent} host_bad ${child:2} ${parent}
+                ::ng:treecpf ${indent} host_bad ${child:2} ${parent}
             elif [ ${child:0:1} == '?' ]; then
-                ::ng:tree:cpf ${indent} host ${child:2} ${parent}
+                ::ng:treecpf ${indent} host ${child:2} ${parent}
             else
                 core:log ERR "${child} is an invalid entry; ${child:0:1} is unknown"
             fi
@@ -368,7 +366,7 @@ function :ng:resolve() {
 #. }=-
 #. ng:hosts -={
 function :ng:hosts() {
-  ${CACHE_OUT?}; {
+  g_CACHE_OUT "$*" || {
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 2 ]; then
@@ -390,8 +388,7 @@ function :ng:hosts() {
         core:raise EXCEPTION_BAD_FN_CALL
     fi
 
-    return $e
-  } | ${CACHE_IN?}; ${CACHE_EXIT?}
+  } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
 
 function ng:hosts:usage() { echo "<netgroup>"; }
@@ -560,9 +557,11 @@ function ng:host() {
                 ${FUNCNAME?} "$ng" ${hni}
             done
         else
-            local -a didumean=( $(:ldap:search -2 netgroup nisNetgroupTriple~="\(${fqdn},,\)" nisNetgroupTriple) )
-            if [ ${#didumean[@]} -gt 0 ]; then
-                printf "? %s\n" ${didumean[@]}
+            if [ ${g_VERBOSE?} -eq 1 ]; then
+                local -a didumean=( $(:ldap:search -2 netgroup nisNetgroupTriple~="\(${fqdn},,\)" nisNetgroupTriple) )
+                if [ ${#didumean[@]} -gt 0 ]; then
+                    printf "? %s\n" ${didumean[@]}
+                fi
             fi
         fi
 

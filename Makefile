@@ -103,6 +103,7 @@ uninstall: unsanity
 	-rm $(HOME)/.simbol/libexec
 	@
 	-rm $(HOME)/bin/simbol
+	-rm $(HOME)/bin/activate
 	-rm $(HOME)/.simbol/bin/simbol
 	-rm $(HOME)/.simbol/bin/ssm
 	-rm $(HOME)/.simbol/bin/ssp

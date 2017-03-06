@@ -306,22 +306,26 @@ function :xplm:install() {
 
     if [ $# -gt 1 ]; then
         local plid="${1}"
+        local virtenv="${plid}env"
         case ${plid} in
             py)
                 if ::xplm:loadvirtenv ${plid}; then
-                    pip install --upgrade -q "${@:2}"
+                    pip install --upgrade -q "${@:2}" \
+                        >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
                     e=$?
                 fi
             ;;
             rb)
                 if ::xplm:loadvirtenv ${plid}; then
-                    gem install -q "${@:2}"
+                    gem install -q "${@:2}" \
+                        >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
                     e=$?
                 fi
             ;;
             pl)
                 if ::xplm:loadvirtenv ${plid}; then
-                    cpanm ${@:2}
+                    cpanm ${@:2} \
+                        >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
                     e=$?
                 fi
             ;;

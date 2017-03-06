@@ -3,6 +3,25 @@
 Core HGD (Host-Group Directive) module
 [core:docstring]
 
+#. A quick note on the language used in this module.
+#
+# A `session' is the `id' of the entries in the `hgd' cache file, like the
+# primary key if you will.
+#
+# A `formula' here refers to the logic statements that look something like
+# `&(...,...,|(...,...))'. The elements referenced inside these formulas are
+# host groups entities or `hgrp'.  These all start with a special character
+# like `%', `#', `@', and so on.  These can further be expanded into individual
+# hosts or IP addresses.
+#
+# So to summarize:
+# - A session is the key by which we save entries in the `hgd' cache.
+# - Each cache entry contains the `session' name, the logic `formula', and
+#   the resolution of that `formula'.
+# - A `formula' is composed of one or more `hgrp' elements.
+# - A `hgrp' element can be expanded to one or more hosts, or ip addresses.
+
+
 #. HGD -={
 core:requires python
 
@@ -11,13 +30,69 @@ core:import net
 core:import util
 
 core:softimport ng
-core:softimport mongo
 
 declare -g g_HGD_CACHE=${SIMBOL_USER_ETC?}/hgd.conf
 [ -e ${g_HGD_CACHE?} ] || touch ${g_HGD_CACHE?}
 
 #. HGD Resolvers -={
+function ::hgd:validate() {
+    local -i e=${CODE_FAILURE?}
+
+    if [ $# -eq 1 ]; then
+        e=${CODE_SUCCESS?}
+
+        local -i balance=0
+        local -i opset=0
+
+        local -i i
+        local ch
+        for (( i=0; i<${#1}; i++ )); do
+            ch="${1:$i:1}"
+            case "${ch}" in
+                '(')
+                    if [ ${opset} -eq 1 ]; then
+                        ((balance++))
+                        opset=0
+                    else
+                        e=1
+                    fi
+                ;;
+                ')')
+                    ((balance--))
+                    [ ${balance} -ge 0 ] || e=2
+                ;;
+                '|'|'!'|'&')
+                    if [ ${opset} -eq 0 ]; then
+                        opset=1
+                    else
+                        e=3
+                    fi
+                ;;
+                *)
+                    [ ${balance} -gt 0 ] || e=4
+                ;;
+            esac
+
+            [ $e -eq ${CODE_SUCCESS?} ] || break
+        done
+
+        if [ $e -eq 0 ]; then
+            [ ${balance} -eq 0 ] || e=5
+        fi
+    else
+        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 1 expected"
+    fi
+
+    return $e
+}
+
 function ::hgd:explode() {
+    # FIXME: This method is poorly named
+
+    # This method takes a `hgrp' and expands it either into a set of hosts,
+    # or a set of IP addresses - depending on the expansion definition associated
+    # with the `hgrp' (based on the first character in the `hgrp'.
+
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 2 ]; then
@@ -66,12 +141,14 @@ function ::hgd:explode() {
                 fi
             ;;
             '%')
-                if core:imported mongo; then
-                    local -a filters
-                    IFS=% read -a filters <<< "${hgdn}"
-                    local -a hosts
-                    :mongo:query ${SIMBOL_PROFILE//@*} qdn ${filters[@]}
-                    [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
+                if [ ${#USER_HGD_RESOLVERS[@]} -gt 0 ]; then
+                    # Try reading in key-value pair from %<key>=<value>
+                    IFS='=' read -a kvp <<< "${hgdn}"
+                    if [ ${#kvp[@]} -eq 2 -a ${#USER_HGD_RESOLVERS[${kvp}]} -gt 0 ]; then
+                        ${SIMBOL_SHELL:-${SHELL}} -c "$(printf "${USER_HGD_RESOLVERS[${kvp[0]}]}" "${kvp[1]}")"
+                    else
+                        e=${CODE_FAILURE?}
+                    fi
                 else
                     e=${CODE_FAILURE?}
                 fi
@@ -132,6 +209,11 @@ function ::hgd:explode() {
 }
 
 function ::hgd:resolve() {
+    # FIXME: This method is poorly named
+
+    # This method takes a `formula' and resolves it into its constituent
+    # `hgrp' entries; and then expand all these entries into their constituent
+    # hosts and/or IP addresses.
     local -i e=${CODE_FAILURE?}
 
     local hgd
@@ -175,7 +257,7 @@ function :hgd:resolve() {
         local tldid=$1
 
         #. &(...|...) or |(...|...) patterns
-        if [[ ${2:0:2} =~ ^[\|\&]\($ ]]; then
+        if [[ ${2:0:2} =~ ^[\|\&\!]\($ ]]; then
             local eq="${2}"
 
             local buffer
@@ -219,13 +301,14 @@ function hgd:resolve:help() {
     .<subdomain>         //. hosts in ~/.known_hosts matching given subdomain
     /<regex>/            //. regex matching hosts in ~/.known_hosts
 
-    These patterns can then be grouped into unions or intersections using
-    the &(...) and |(...) set operators, separated with commas.  For example,
-    the following are all valid <hgd>
+    These patterns can then be grouped into unions, intersections, or
+    differences using the |(...), &(...), or !(...) set operators, separated
+    with commas.  For example, the following are all valid <hgd>
 
     @host1
-    @host1,@host1
-    |(@host1,@host1)
+    @host1,@host2
+    |(@host3,@host4)
+    &(+netgroup1,+netgroup2,+netgroup3)
 
     Finally, the set operators can be nested, but depending on the what
     combination of <hgd> classes are used, it may or may not make sense.
@@ -268,13 +351,11 @@ function :hgd:save() {
         local session="$2"
         local hgd="$3"
 
-        local -a hosts
-        hosts=( $(:hgd:resolve ${tldid} ${hgd}) )
-        if [ $? -eq 0 -a ${#hosts[@]} -gt 0 ]; then
-            :hgd:delete ${session}
-        fi
+        :hgd:delete ${session}
+
+        local -a hosts=( $(:hgd:resolve ${tldid} ${hgd}) )
         echo -ne "${session}\t${tldid}\t${NOW?}\t${hgd}\t${hosts[@]}\n" >> ${g_HGD_CACHE?}
-        e=${CODE_SUCCESS?}
+        [ ${#hosts[@]} -eq 0 ] || e=${CODE_SUCCESS?}
     else
         core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 2 expected"
     fi
@@ -342,8 +423,8 @@ function hgd:list() {
             while read line; do
                 read -a data <<< "$line"
                 cpf '%{y:%-24s} %{@tldid:%s} %{@int:%3s} %{bl:%s} %{@hgd:%s}\n'\
-                    ${data[0]} ${data[1]} $((${#data[@]}-4))\
-                    $(:util:date:i2s ${data[2]}) ${data[3]}
+                    "${data[0]}" "${data[1]}" "$((${#data[@]}-4))"\
+                    "$(:util:date_i2s ${data[2]})" "${data[3]}"
             done <<< "${data}"
         ;;
         0:2)
@@ -361,6 +442,8 @@ function hgd:list() {
 #. }=-
 #. HGD Load -={
 function :hgd:load() {
+    # This function simply returns the `formula' of a given `session'.
+
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 2 ]; then
@@ -460,9 +543,13 @@ function hgd:delete:usage(){ echo "<session>"; }
 function hgd:delete() {
     local -i e=${CODE_DEFAULT?}
 
-    if [ $# -eq 1 ]; then
-        :hgd:delete ${1}
-        e=$?
+    if [ $# -ge 1 ]; then
+        e=${CODE_SUCCESS?}
+        local session
+        for session in "${@}"; do
+            :hgd:delete ${session}
+            [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
+        done
     fi
 
     return $e

@@ -7,14 +7,13 @@ Core vault and secrets module
 #. The Vault -={
 core:import gpg
 
-core:requires pwgen
 core:requires shred
-core:requires xclip
 
 g_VAULT=${SIMBOL_USER_ETC?}/simbol.vault
-g_VAULT_TMP=${SIMBOL_USER_TMP?}/vault.killme
-g_VAULT_TS=${SIMBOL_USER_TMP?}/vault.timestamp
-g_VAULT_BU=${SIMBOL_USER_TMP?}/vault.$(date +'%Y%m%d')
+
+function ::vault:getTempFile() {
+    echo "${SIMBOL_USER_TMP?}/${1//\//_}.${2}"
+}
 
 #. vault:clean -={
 #function ::vault:draw() {
@@ -25,11 +24,23 @@ g_VAULT_BU=${SIMBOL_USER_TMP?}/vault.$(date +'%Y%m%d')
 #}
 
 function ::vault:clean() {
-    local -i e=${CODE_SUCCESS?}
-    test ! -f ${g_VAULT?}     || chmod 600 ${g_VAULT?}
-    test ! -f ${g_VAULT_BU?}  || chmod 400 ${g_VAULT_BU?}
-    test ! -f ${g_VAULT_TMP?} || shred -fuz ${g_VAULT_TMP?}
-    test ! -f ${g_VAULT_TS?}  || shred -fuz ${g_VAULT_TS?}
+    local -i e=${CODE_FAILURE?}
+
+    if [ $# -le 1 ]; then
+        local vault=${1:-${g_VAULT?}}
+        local vault_tmp=$(::vault:getTempFile ${vault} killme)
+        local vault_ts=$(::vault:getTempFile ${vault} timestamp)
+        local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
+
+        local -i e=${CODE_SUCCESS?}
+        test ! -f ${vault}     || chmod 600 ${vault}
+        test ! -f ${vault_bu}  || chmod 400 ${vault_bu}
+        test ! -f ${vault_tmp} || shred -fuz ${vault_tmp}
+        test ! -f ${vault_ts}  || shred -fuz ${vault_ts}
+
+        e=${CODE_SUCCESS?}
+    fi
+
     return $e
 }
 #. DEPRECATED
@@ -46,9 +57,96 @@ function ::vault:clean() {
 #    return $e
 #}
 #. }=-
+#. vault:encryption -={
+function :vault:encryption() {
+    local -i e=${CODE_FAILURE?}
 
+    local vault=${1:-${g_VAULT?}}
+    local vault_tmp=$(::vault:getTempFile ${vault} killme)
+    local vault_ts=$(::vault:getTempFile ${vault} timestamp)
+    local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
+
+    case $#:$2 in
+        2:on)
+            if [ -f ${vault} ]; then
+                :gpg:encrypt ${vault} ${vault_bu}
+                if [ $? -eq ${CODE_SUCCESS} ]; then
+                    cat ${vault_bu} > ${vault}
+                    e=$?
+                fi
+            fi
+        ;;
+        2:off)
+            if [ -f ${vault} ]; then
+                :gpg:decrypt ${vault} ${vault_bu}
+                if [ $? -eq ${CODE_SUCCESS} ]; then
+                    cat ${vault_bu} > ${vault}
+                    e=$?
+                fi
+            fi
+        ;;
+        *:*)
+            core:raise EXCEPTION_BAD_FN_CALL
+        ;;
+    esac
+
+    return $e
+}
+#. }=-
+#. vault:encrypt -={
+function vault:encrypt:usage() { echo "<file-path:${g_VAULT?}>"; }
+function vault:encrypt() {
+    local -i e=${CODE_DEFAULT?}
+
+    if [ $# -eq 1 ]; then
+        cpf "Encrypting %{@path:%s}..." "${vault}"
+        local vault=${1:-${g_VAULT?}}
+        if [ -w ${vault} ]; then
+            :vault:encryption ${vault} on
+            e=$?
+            theme HAS_AUTOED $e
+
+            cpf "Shredding remains..."
+            ::vault:clean ${vault}
+            theme HAS_AUTOED $?
+        else
+            e=${CODE_FAILURE?}
+            theme HAS_FAILED "NO_ACCESS/NOT_FOUND"
+        fi
+    fi
+
+    return $e
+}
+#. }=-
+#. vault:decrypt -={
+function vault:decrypt:usage() { echo "<file-path:${g_VAULT?}>"; }
+function vault:decrypt() {
+    local -i e=${CODE_DEFAULT?}
+
+    if [ $# -eq 1 ]; then
+        cpf "Decrypting %{@path:%s}..." "${vault}"
+        local vault=${1:-${g_VAULT?}}
+        if [ -w ${vault} ]; then
+            :vault:encryption ${vault} off
+            e=$?
+            theme HAS_AUTOED $e
+
+            cpf "Shredding remains..."
+            ::vault:clean ${vault}
+            theme HAS_AUTOED $?
+        else
+            e=${CODE_FAILURE?}
+            theme HAS_FAILED "NO_ACCESS/NOT_FOUND"
+        fi
+    fi
+
+    return $e
+}
+#. }=-
 #. vault:create -={
 function :vault:create() {
+    core:requires pwgen
+
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 1 ]; then
@@ -57,10 +155,15 @@ function :vault:create() {
             local -i pwid=0
             while read pw; do
                 let pwid++
-                echo MY_SECRET_${pwid}    ${pw}
+                echo "MY_SECRET_${pwid} ${pw}"
             done <<< "$(pwgen 64 7)" | :gpg:encrypt - ${vault}
             e=$?
         fi
+
+        cpf "Shredding remains..."
+        ::vault:clean ${vault}
+        theme HAS_AUTOED $?
+
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
@@ -166,6 +269,8 @@ function vault:list() {
         else
             theme HAS_FAILED "CANNOT_DECRYPT:${vault}"
             e=${CODE_FAILURE?}
+            #. gpg -q --batch --allow-secret-key-import --import ~/.gnupg/ntd.AWS.0xFFFFFFFF.sec
+            #. gpg -q --batch --import ~/.gnupg/ntd.AWS.0xFFFFFFFF.pub
         fi
     fi
 
@@ -178,29 +283,34 @@ function vault:edit() {
     local -i e=${CODE_DEFAULT?}
 
     if [ $# -eq 0 -o $# -eq 1 ]; then
-        local vault="${1:-${g_VAULT?}}"
-        mkdir -p $(dirname ${g_VAULT_TMP?})
+        local vault=${1:-${g_VAULT?}}
+        local vault_tmp=$(::vault:getTempFile ${vault} killme)
+        local vault_ts=$(::vault:getTempFile ${vault} timestamp)
+        local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
+
+        mkdir -p $(dirname ${vault_tmp?})
 
         cpf "Decrypting secrets..."
-        :gpg:decrypt ${g_VAULT?} ${g_VAULT_TMP?}
+        umask 377
+        :gpg:decrypt ${vault} ${vault_tmp}
         e=$?
         theme HAS_AUTOED $e
 
         if [ $e -eq 0 ]; then
-            touch ${g_VAULT_TS?}
-            ${EDITOR:-vim} -n ${g_VAULT_TMP?}
-            if [ ${g_VAULT_TMP?} -nt ${g_VAULT_TS?} ]; then
+            touch ${vault_ts}
+            ${EDITOR:-vim} -n ${vault_tmp}
+            if [ ${vault_tmp?} -nt ${vault_ts} ]; then
                 cpf "Encrypting secrets..."
-                #::vault:draw ${g_VAULT_TMP?}
-                mv --force ${g_VAULT?} ${g_VAULT_BU?}
-                :gpg:encrypt ${g_VAULT_TMP?} ${g_VAULT?}
+                #::vault:draw ${vault_tmp?}
+                mv --force ${vault} ${vault_bu}
+                :gpg:encrypt ${vault_tmp} ${vault}
                 e=$?
                 theme HAS_AUTOED $e
             fi
         fi
 
         cpf "Shredding remains..."
-        ::vault:clean
+        ::vault:clean ${vault}
         theme HAS_AUTOED $?
     fi
 
@@ -251,8 +361,13 @@ function vault:read() {
 
         if [ $e -eq 0 ]; then
             if [ -t 1 ]; then
-                printf "%s" "${secret}" | xclip -i
-                theme HAS_PASSED "COPIED_TO_CLIPBOARD"
+                if :core:requires xclip; then
+                    printf "%s" "${secret}" | xclip -i
+                    theme HAS_PASSED "COPIED_TO_CLIPBOARD"
+                else
+                    theme HAS_FAILED "XCLIP_NOT_FOUND"
+                    e=${CODE_FAILURE?}
+                fi
             else
                 printf "%s" "${secret}"
             fi

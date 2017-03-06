@@ -1,20 +1,36 @@
 #!/usr/bin/python
 
 def intersect(*sets):
-    s2=sets[0]
+    sets = list(sets)
+
+    s2 = sets.pop(0)
     for s in sets:
-        s2=s2.intersection(s)
+        s2 = s2.intersection(s)
+
     return s2
 
 def union(*sets):
-    s2=sets[0]
+    sets = list(sets)
+
+    s2 = sets.pop(0)
     for s in sets:
-        s2=s2.union(s)
+        s2 = s2.union(s)
+
+    return s2
+
+def difference(*sets):
+    sets = list(sets)
+
+    s2 = sets.pop(0)
+    for s in sets:
+        s2 = s2.difference(s)
+
     return s2
 
 functions = {
     '&' : intersect,
     '|' : union,
+    '!' : difference,
 }
 
 def setparser(equation, **sets):

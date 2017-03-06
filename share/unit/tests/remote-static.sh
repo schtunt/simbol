@@ -32,6 +32,32 @@ function testCoreRemoteImport() {
 #    assertFalse 1.1 $?
 #}
 #. }=-
+#. testCoreRemoteConnectPasswordlessInternal -={
+function testCoreRemoteConnectPasswordlessInternal() {
+    core:import remote
+
+    local hn=$(hostname -f)
+    local user=$(id -un)
+    # First run should run into a host key validation
+    :remote:connect:passwordless ${hn}
+    assertFalse  1.1 $?
+
+    # Force the acception of the host key to make the next run successful
+    ssh -o PasswordAuthentication=no -o PreferredAuthentications=publickey -o StrictHostKeyChecking=no ${hn} -- /bin/true
+
+    :remote:connect:passwordless ${hn}
+    assertTrue  1.2 $?
+
+    :remote:connect:passwordless ${user}@${hn}
+    assertTrue  1.3 $?
+
+    :remote:connect:passwordless hostdoesnotexist
+    assertFalse  1.4 $?
+
+    :remote:connect:passwordless userdoesnotexist@${hn}
+    assertFalse  1.5 $?
+}
+#. }=-
 #. testCoreRemoteConnectInternal -={
 function testCoreRemoteConnectInternal() {
     core:import remote
@@ -54,47 +80,16 @@ function testCoreRemoteConnectPublic() {
     assertEquals 1.2 "${hn1}" "${hn2}"
 }
 #. }=-
-#. testCoreRemoteCopyInternal -={
-function testCoreRemoteCopyInternal() {
-    core:import remote
-
-    rm -f ${SIMBOL_USER_CACHE}/hosts
-
-    :remote:copy _ host-8c.unit-tests.mgmt.simbol\
-        /etc/hosts\
-        ${SIMBOL_USER_CACHE}/hosts
-    assertTrue 1.1 $?
-
-    [ -f ${SIMBOL_USER_CACHE}/hosts ]
-    assertTrue 1.2 $?
-
-    if [ -f ${SIMBOL_USER_CACHE}/hosts ]; then
-        local same
-        same=$(
-            md5sum /etc/hosts ${SIMBOL_USER_CACHE}/hosts |
-            awk '{print$1}' |
-            sort -u |
-            wc -l
-        )
-        assertEquals 1.3 1 ${same}
-    fi
-
-    rm -f ${SIMBOL_USER_CACHE}/hosts
-}
-#. }=-
 #. testCoreRemoteCopyPublic -={
 function testCoreRemoteCopyPublic() {
     core:import remote
 
+    #. Remote File to Directory
     rm -f ${SIMBOL_USER_CACHE}/hosts
-
-    core:wrapper remote copy -T _ host-8c.unit-tests.mgmt.simbol\
-        /etc/hosts ${SIMBOL_USER_CACHE}/hosts >${stdoutF?} 2>${stderrF?}
+    core:wrapper remote copy -T _ host-8c.unit-tests.mgmt.simbol:/etc/hosts ${SIMBOL_USER_CACHE}/ >${stdoutF?} 2>${stderrF?}
     assertTrue 1.1 $?
-
     [ -f ${SIMBOL_USER_CACHE}/hosts ]
     assertTrue 1.2 $?
-
     local same
     same=$(
         md5sum /etc/hosts ${SIMBOL_USER_CACHE}/hosts |
@@ -104,7 +99,29 @@ function testCoreRemoteCopyPublic() {
     )
     assertEquals 1.3 1 ${same}
 
-    rm -f ${SIMBOL_USER_CACHE}/hosts
+    #. Remote File to File
+    rm -f ${SIMBOL_USER_CACHE}/hosts.explicit
+    core:wrapper remote copy -T _ host-8c.unit-tests.mgmt.simbol:/etc/hosts ${SIMBOL_USER_CACHE}/hosts.explicit >${stdoutF?} 2>${stderrF?}
+    assertTrue 2.1 $?
+    [ -f ${SIMBOL_USER_CACHE}/hosts.explicit ]
+    assertTrue 2.2 $?
+
+    #. Remote File to Remote File
+    core:wrapper remote copy -T _ host-8a.unit-tests.mgmt.simbol:/etc/hosts host-8f.unit-tests.mgmt.simbol:/tmp/8a-hosts >${stdoutF?} 2>${stderrF?}
+    assertTrue 3.1 $?
+
+    #. Remote Directory to Remote Directory
+    core:wrapper remote copy -T _ host-8a.unit-tests.mgmt.simbol:/etc/rc.d/ host-8f.unit-tests.mgmt.simbol:/tmp/8a-rc.d/ >${stdoutF?} 2>${stderrF?}
+    assertTrue 4.1 $?
+
+    #. Remote Directory to Directory
+    rm -rf /tmp/8a-rc.d/
+    core:wrapper remote copy -T _ host-8a.unit-tests.mgmt.simbol:/etc/rc.d/ /tmp/8a-rc.d/ >${stdoutF?} 2>${stderrF?}
+    assertTrue 5.1 $?
+
+    #. Directory to Remote Directory
+    core:wrapper remote copy -T _ /etc/rc.d/ host-8f.unit-tests.mgmt.simbol:/tmp/test-rc.d/ >${stdoutF?} 2>${stderrF?}
+    assertTrue 6.1 $?
 }
 #. }=-
 #. testCoreRemoteSudoInternal -={
@@ -127,11 +144,28 @@ function testCoreRemoteSudoPublic() {
     assertEquals 1.2 "root" "${who}"
 }
 #. }=-
+#. testCoreRemoteMonPublic -={
+function testCoreRemoteMonPublic() {
+    cat ~/.ssh/authorized_keys
+    ssh host-8.simbol.org hostname
+
+    simbol rb install
+    assertTrue 1.1 $?
+
+    simbol hgd save myhgd /host-8./
+    assertTrue 1.2 $?
+
+    eval $(ssh-add)
+
+    core:import remote
+    core:wrapper remote mon myhgd -- hostname
+    assertTrue 1.3 $?
+}
+#. }=-
 
 #testCoreRemoteClusterPublic
 #testCoreRemoteTmuxPrivate
 #testCoreRemoteTmuxPublic
-#testCoreRemoteMonPublic
 #testCoreRemotePipewrapPrivate
 #testCoreRemotePipewrapPrivate
 #testCoreRemoteSerialmonPrivate

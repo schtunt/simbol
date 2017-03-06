@@ -80,18 +80,25 @@ function util:timeout() {
 }
 #. }=-
 #. Date -={
-function :util:date:i2s() {
+function :util:date_i2s() {
+    local -i e=${CODE_FAILURE?}
+
     if [ $# -eq 1 ]; then
         #. Convert seconds to datestamp
         date --utc --date "1970-01-01 $1 sec" "+%Y%m%d%H%M%S"
+        e=$?
         #. FIXME: Mac OS X needs this line instead:
         #. FIXME: date -u -j "010112001970.$1" "+%Y%m%d%H%M%S"
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
+
+    return $e
 }
 
-function :util:date:s2i() {
+function :util:date_s2i() {
+    local -i e=${CODE_FAILURE?}
+
     if [ $# -eq 1 ]; then
         local YYYY=${1:0:4}
         local mm=${1:4:2}
@@ -102,13 +109,49 @@ function :util:date:s2i() {
 
         #. Convert datestamp to seconds
         date --utc --date "${YYYY?}-${mm}-${dd} ${HH?}:${MM?}:${SS?}" "+%s"
+        e=$?
+    elif [ $# -eq 2 ]; then
+        date --utc --date "${1} ${2}" "+%s"
+        e=$?
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
+
+    return $e
 }
+
+function :util:time_i2s() {
+    local -i e=${CODE_FAILURE?}
+
+    if [ $# -eq 1 ]; then
+        e=${CODE_SUCCESS?}
+
+        local -i secs=$1
+
+        local -i days
+        (( days = secs / 86400 ))
+        (( secs %= 86400 ))
+
+        local -i hours
+        (( hours = secs / 3600 ))
+        (( secs %= 3600 ))
+
+        local -i mins
+        (( mins = secs / 60 ))
+        (( secs %= 60 ))
+
+        [ ${days} -eq 0 ] || printf "%s" "${days} days, "
+        printf "%02d:%02d:%02d\n" ${hours} ${mins} ${secs}
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+
+    return $e
+}
+
 #. }=-
 #. Stat -={
-function :util:stat:mode() {
+function :util:statmode() {
     local -i e=${CODE_FAILURE?}
 
     local filepath="${1}"
@@ -121,20 +164,6 @@ function :util:stat:mode() {
 }
 #. }=-
 #. Misc -={
-function :util:json() {
-    local -i e=${CODE_FAILURE?}
-
-    if [ -t 1 ]; then
-        jsontool -o inspect $@
-        e=$?
-    else
-        jsontool $@
-        e=$?
-    fi
-
-    return $?
-}
-
 function :util:listify() {
     local -i e=${CODE_FAILURE?}
 
@@ -191,10 +220,30 @@ function :util:join() {
     if [ $# -eq 2 ]; then
         local IFS=$1
         eval "echo \"\${${2}[*]}\""
+    elif [ $# -eq 3 ]; then
+        local IFS=$1
+        eval "echo \"\${${2}[*]:${3}}\""
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
 }
+
+function :util:zip.eval() {
+    #. Usage: k=(a b c); v=(x y z); eval a=( $(zip.eval k v) )
+    if [ $# -eq 2 ]; then
+        local -i size=$(eval "echo \${#$1[@]}")
+        local -i i=0
+        echo '('
+        while [ $i -lt ${size} ]; do
+            eval echo "[\${$1[$i]}]=\${$2[$i]}"
+            ((i++))
+        done
+        echo ')'
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+}
+
 
 function :util:is_int() {
     [[ $1 =~ ^-?[0-9]+$ ]]
@@ -246,29 +295,29 @@ function :util:markdown() {
 
     return $e
 }
+#. }=-
 #. Set Operations -={
-#function :util:sets:explode() {
+#function :util:sets_explode() {
 #    for item in $(eval echo \${$1[@]}); do
 #        echo ${item}
 #    done | sort
 #}
 #
-#function :util:sets:set_union() {
+#function :util:sets_set_union() {
 #    sort -um <( explode $1) <(explode $2)
 #}
 #
-#function :util:sets:set_intersect() {
+#function :util:sets_set_intersect() {
 #    comm -12 <(explode $1) <(explode $2)
 #}
 #
-#function :util:sets:set_complement() {
+#function :util:sets_set_complement() {
 #    comm -23 <(explode $1) <(explode $2)
 #}
 #
-#function :util:sets:set_symdiff() {
+#function :util:sets_set_symdiff() {
 #    sd=( $(comm -3 <(explode $1) <(explode $2)) )
 #    explode sd
 #}
-#. }=-
 #. }=-
 #. }=-
