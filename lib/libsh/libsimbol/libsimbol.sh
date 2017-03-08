@@ -991,10 +991,10 @@ declare -g fn_4d9d6c17eeae2754c9b49171261b93bd=${fn:-}
 
         if grep -qw -- -E <<< "${g_SSH_OPTS?}"; then
             case ${g_DEBUG?}:${g_VERBOSE?} in
-                00) g_SSH_OPTS+=" -q";;
-                01) g_SSH_OPTS+=" -v";;
-                10) g_SSH_OPTS+=" -vv";;
-                11) g_SSH_OPTS+=" -vvv";;
+                0:0) g_SSH_OPTS+=" -q";;
+                0:1) g_SSH_OPTS+=" -v";;
+                1:0) g_SSH_OPTS+=" -vv";;
+                1:1) g_SSH_OPTS+=" -vvv";;
             esac
         fi
 
