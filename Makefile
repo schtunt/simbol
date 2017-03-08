@@ -82,7 +82,7 @@ install: require sanity .install
 	@
 	@test -f ~/.simbolrc || touch .initialize
 	@test ! -f .initialize || printf "Installing default ~/.simbolrc..."
-	@test ! -f .initialize || cp share/examples/simbolrc.eg ${HOME}/.simbolrc
+	@test ! -f .initialize || cp share/examples/dot.simbolrc ${HOME}/.simbolrc
 	@test ! -f .initialize || echo "DONE"
 	@rm -f .initialize
 	@

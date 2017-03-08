@@ -219,10 +219,10 @@ function :util:join() {
     #. Usage: array=( a b c ); :util:join $delim array
     if [ $# -eq 2 ]; then
         local IFS=$1
-        eval "echo \"\${${2}[*]}\""
+        eval "printf \"\${${2}[*]}\""
     elif [ $# -eq 3 ]; then
         local IFS=$1
-        eval "echo \"\${${2}[*]:${3}}\""
+        eval "printf \"\${${2}[*]:${3}}\""
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi

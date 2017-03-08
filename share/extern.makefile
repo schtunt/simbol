@@ -37,8 +37,6 @@ prepare:
 .PHONY: unprepare uninstall $(EXTERN:%=%.uninstall)
 unprepare:
 	@printf "Unpreparing extern build..."
-	@[ ! -d ${LIBPY} ] || find ${LIBPY} -name '*.pyc' -exec rm -f {} \;
-	@[ ! -d ${LIBPY} ] || find ${LIBPY} -name '*.pyo' -exec rm -f {} \;
 	@echo "DONE"
 
 uninstall: $(EXTERN:%=%.uninstall) unprepare
@@ -114,23 +112,6 @@ vimpager.install: scm/vimpager.git
 scm/vimpager.git:
 	@echo "Cloning $(@F)..."
 	@git clone -q http://github.com/rkitover/vimpager $@
-#. }=-
-#. pyobjpath -={
-.PHONY: pyobjpath.purge pyobjpath.uninstall pyobjpath.install
-pyobjpath.purge:
-	@rm -f  ${LIBPY}/pyobjpath/core
-	@rm -f  ${LIBPY}/pyobjpath/utils
-	@rm -f  ${LIBPY}/pyobjpath/__init__.py
-	@rm -fr ${LIBPY}/pyobjpath/
-pyobjpath.uninstall:
-pyobjpath.install: scm/pyobjpath.git
-	@mkdir  ${LIBPY}/pyobjpath
-	@touch  ${LIBPY}/pyobjpath/__init__.py
-	@ln -sf $(CURDIR)/$</ObjectPathPy/core ${LIBPY}/pyobjpath/core
-	@ln -sf $(CURDIR)/$</ObjectPathPy/utils ${LIBPY}/pyobjpath/utils
-scm/pyobjpath.git:
-	@echo "Cloning $@..."
-	@git clone -q https://github.com/adriank/ObjectPath.git $@
 #. }=-
 
 #. -={

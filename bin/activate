@@ -34,7 +34,10 @@ function profile_create() {
     mkdir -p "${simbol_profile_d}/etc"
 
     local simbolconf="${simbol_profile_d}/etc/simbol.conf"
-    cp share/examples/simbol.conf.eg "${simbolconf}"
+    cp share/examples/simbol.conf "${simbolconf}"
+
+    local sshconf="${simbol_profile_d}/etc/ssh.conf"
+    cp share/examples/ssh.conf "${sshconf}"
 
     mkdir -p "${simbol_profile_d}/lib"
     mkdir -p "${simbol_profile_d}/libexec"
