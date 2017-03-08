@@ -237,7 +237,7 @@ echo "$hs // ${data[mode_${hs}]}" >&2
 }
 #. }=-
 #.   remote:sudo() -={
-function ::remote:pipewrap() {
+function ::remote:pipewrap.eval() {
     #. This function acts mostly as a transparent pipe; data in -> data out.
     #.
     #. There is just once case where it intervenes, and that is when it is used
@@ -276,7 +276,7 @@ function :remote:sudo() {
         passwd="$(:vault:read SUDO)"
         if [ $? -eq ${CODE_SUCCESS?} ]; then
             local prompt="$(printf "\r")"
-            eval ::remote:pipewrap '${passwd}' '${lckfile}' | (
+            eval ::remote:pipewrap.eval '${passwd}' '${lckfile}' | (
                 :remote:connect ${tldid} ${hcs} sudo -p "${prompt}" -S "${@:3}"
                 e=$?
                 rm -f ${lckfile}
@@ -366,21 +366,16 @@ function remote:cluster() {
     return $e
 }
 
-function ::remote:tmux.eval() {
+function ::remote:tmux_setup.eval() {
     if [ $# -eq 3 ]; then
         local session=$1
-        echo "#. session ${session}"
+        echo "#. Session ${session} -={"
 
         local -i panes=$2
-        echo "#. ${panes} panes in total"
+        echo "#. + ${panes} panes in total"
 
-        local pane_res=$3
-        IFS=x read x y <<< "${pane_res}"
-        echo "#. window pane resolution set to ${x}x${y}"
-
-        local -i ppw
-        ((ppw=x*y))
-        echo "#. ${ppw} panes per window"
+        local -i ppw=$3
+        echo "#. + ${ppw} panes per window"
 
         local -i leftovers
         ((leftovers=panes%ppw))
@@ -390,54 +385,69 @@ function ::remote:tmux.eval() {
 
         if [ ${leftovers} -gt 0 ]; then
             ((windows++))
-            echo "#. last-window has ${leftovers} panes"
+            echo "#.   + last-window has ${leftovers} panes"
         fi
-        echo "#. ${windows} windows"
+        echo "#. + ${windows} windows"
+        echo "#. }=-"
 
-        echo "#. session creation"
-        echo tmux new-session -d -s ${session}
+        echo "#. Session Creation"
+        echo "tmux new-session -d -s ${session}"
 
-        echo "#. window creation"
-        wid=0
-        wname=${session}:w${wid}
-        echo tmux rename-window -t ${session} ${session}:w0
-        for ((wid=1; wid<${WINDOWS?}; wid++)); do
+        echo "#. Window Creation"
+        local -i wid
+        local wname=${session}:w${wid}
+        echo "tmux rename-window -t ${session} ${session}:w1"
+        for ((wid=2; wid<windows+1; wid++)); do
             wname=${session}:w${wid}
-            echo tmux new-window -t ${session} -d -a -n ${wname}
+            echo "tmux new-window -d -n ${wname}"
         done
 
         echo "#. pane creation"
-        wid=0
-        wname=${session}:w${wid}
-        for ((pid=0; pid<PANES; pid++)); do
-            if ((pid%PPW == 0)); then
-                if ((pid>0)); then
-                    echo "tmux select-layout -t ${session}:${wname} tiled >/dev/null"
-                    wname=${session}:w$((pid/PPW))
-                    echo "tmux select-window -t ${session}:${wname} #. Pane $pid, Window ${wname}"
-                else
-                    echo "#. Pane $pid, Window ${wname}"
-                fi
-            elif ((pid%X == 0)); then
-                echo "tmux split-window -h #. Pane $pid, Row $(((pid / X) % Y))"
+        for ((pid=0; pid<panes; pid++)); do
+            if ((pid % ppw == 0)); then
+                wname=${session}:w$((pid/ppw+1))
                 echo "tmux select-layout -t ${session}:${wname} tiled >/dev/null"
+                echo "tmux select-window -t ${session}:${wname} #. Pane $pid, Window ${wname}"
             else
-                echo "tmux split-window -v #. Pane $pid"
+                echo "tmux split-window #. Pane $pid"
+                echo "tmux select-layout -t ${session}:${wname} tiled >/dev/null"
             fi
         done
 
-        echo "#. view preparation and session connection"
-        wid=0
+        echo "#. View Preparation and Session Connection"
+        wid=1
         wname=${session}:w${wid}
         echo "tmux select-window -t ${session}:${wname}"
-        echo tmux select-pane -t ${session}:${wname}.0
-        echo tmux attach-session -t ${session}
-
-        echo "#. cleanup"
-        echo tmux kill-session -t tmux
+        echo "tmux select-pane -t ${session}:${wname}.0"
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
+}
+
+function ::remote:tmux_attach() {
+    local -i e=${CODE_FAILURE?}
+
+    if [ $# -eq 1 ]; then
+        local session=$1
+
+        local -a windows=(
+            $(tmux list-windows -a -t ${session}| awk -F': ' '{print$1}')
+        )
+
+        local wid
+        for wid in $(tmux list-windows -t ${session}|awk -F: '{print$1}'|sort -r); do
+            tmux select-window -t "${wid}"
+            tmux select-pane   -t "${wid}.0"
+            tmux set synchronize-panes on >/dev/null
+        done
+
+        tmux attach-session -t ${session}
+        e=$?
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+
+    return $e
 }
 
 function ::remote:tmux() {
@@ -450,72 +460,45 @@ function ::remote:tmux() {
 
         local -a hosts=( $(:hgd:resolve ${tldid} ${hgd}) )
         if [ ${#hosts[@]} -gt 0 ]; then
-            local cmd="tmux new-session -d -s '${session}'"
-            eval ${cmd}
-            if [ $? -eq 0 ]; then
-                local tab
-                local -i pid
-                local -i lpid
-                local -i tid
-                local -i otid
-                local -i nodes=${#hosts[@]}
+            eval "$(::remote:tmux_setup.eval ${session} ${#hosts[@]} 12)"
 
-                local -i zoning=12 #. Terminals per tab (tmux window)
-                local missconnects=${SIMBOL_USER_VAR_TMP?}/${session}.missconnects
-                > ${missconnects}
-                for ((pid=0; pid<nodes; pid++)); do
-                    ((lpid=pid%zoning))
-                    ((tid=pid/zoning))
-                    tab="tab-${tid}"
-                    if [ ${pid} -gt 0 ]; then
-                        if [ ${otid} -ne ${tid} ]; then
-                            tmux new-window -t "${session}" -a -n "${tab}"
-                            tmux select-window -t "${session}:${tab}"
-                        fi
-                    else
-                        tmux rename-window -t "${session}" "${tab}"
-                        tmux select-window -t "${session}:${tab}"
-                    fi
-                    ((otid=tid))
+            local -a panes=(
+                $(tmux list-panes -t ${session} -a | awk -F': ' '{print$1}')
+            )
 
-                    [ ${lpid} -eq 0 ] || tmux split-window -h
-                    cpf "Connection %{g:${tab}}:%{@int:${pid}} to %{@host:${hosts[${pid}]}}..."
-                    tmux send-keys -t "${lpid}" "  clear" C-m
-                    tmux send-keys -t "${lpid}" "  simbol remote connect '${hosts[${pid}]}' || ( tput setab 1; clear; echo ${hosts[${pid}]} >> ${missconnects};echo 'ERROR: Could not connect to ${hosts[${pid}]}'; read -n1 ); exit" C-m
-                    tmux select-layout -t "${session}:${tab}" tiled >/dev/null
-                    theme HAS_PASSED "${tab}:${pid}"
-                done
+            local -A data
+            eval data=$(:util:zip.eval hosts panes)
 
-                for tid in $(tmux list-windows -t ${session}|awk -F: '{print$1}'); do
-                    tab="tab-${tid}"
-                    tmux select-window -t "${session}:${tid}"
-                    tmux set synchronize-panes on >/dev/null
-                    tmux select-pane   -t "${session}:${tab}.0"
-                done
+            local missconnects=${SIMBOL_USER_TMP?}/${session}.missconnects
+            > ${missconnects}
 
-                tid=0
-                pid=0
-                tab="tab-${tid}"
-                tmux select-window -t "${session}:${tab}"
-                tmux select-pane   -t "${session}:${tab}.0"
+            local host pane
+            local -i pid=1
+            for host in "${hosts[@]}"; do
+                pane="${data[${host}]}"
 
-                tmux attach-session -t "${session}"
-                [ $? -ne 0 ] || e=${CODE_SUCCESS?}
-                [ -s ${missconnects} ] || rm -f ${missconnects}
-                if [ -e ${missconnects} ]; then
-                    cpf "%{r:ERROR}: Failed to connect to the following hosts...\n"
-                    local host
-                    while read host; do
-                        cpf " ! %{@host:%s}\n" "${host}"
-                    done < ${missconnects}
-                fi
+                cpf "Connection %{g:${pane}}:%{@int:${pid}} to %{@host:${host}}..."
+                tmux send-keys -t "${pane}" "  clear" C-m
+                tmux send-keys -t "${pane}" "  simbol remote connect '${host}' || ( tput setab 1; clear; echo ${host} >> ${missconnects};echo 'ERROR: Could not connect to ${host}'; read -n1 ); exit" C-m
+                theme HAS_PASSED "${pane}:${pid}"
 
-                cat ${missconnects}
-            else
-                core:log WARN "Empty HGD resolution"
+                ((pid++))
+            done
+
+            ::remote:tmux_attach ${session}
+            [ $? -ne 0 ] || e=${CODE_SUCCESS?}
+
+            [ -s ${missconnects} ] || rm -f ${missconnects}
+            if [ -e ${missconnects} ]; then
+                cpf "%{r:ERROR}: Failed to connect to the following hosts...\n"
+                while read host; do
+                    cpf " ! %{@host:%s}\n" "${host}"
+                done < ${missconnects}
             fi
+
+            tmux kill-session -t ${session}
         else
-            core:log ERR "Failed to execute cmd \`${cmd}'"
+            core:log WARN "Empty HGD resolution"
         fi
     else
         core:raise EXCEPTION_BAD_FN_CALL

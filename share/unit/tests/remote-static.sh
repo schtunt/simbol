@@ -144,21 +144,18 @@ function testCoreRemoteSudoPublic() {
     assertEquals "${FUNCNAME?}/2" "root" "${who}"
 }
 #. }=-
-#. testCoreRemoteMonPublic -={
-function testCoreRemoteMonPublic() {
-    #. FIXME
-    #ssh host-8.simbol.org hostname
+#. testCoreRemoteMonIpcPublic -={
+function testCoreRemoteMonIpcPublic() {
+    local hostname="$(hostname)"
+    core:wrapper remote mon '|(#127.0.0.1)' -- hostname >${stdoutF?} 2>${stderrF?}
+    assertTrue "${FUNCNAME?}/1.1" $?
 
-    #simbol hgd save myhgd /host-8./
-    #assertTrue "${FUNCNAME?}/1" $?
-
-    #core:wrapper remote mon myhgd -- hostname
-    #assertTrue "${FUNCNAME?}/2" $?
-    return 0
+    grep -qFw "${hostname}" ${stdoutF?}
+    assertTrue "${FUNCNAME?}/1.2" $?
 }
 #. }=-
-#. testCoreRemoteSsh_threadPrivate -={
-function testCoreRemoteSsh_threadPrivate() {
+#. testCoreRemoteSsh_threadIpcPrivate -={
+function testCoreRemoteSsh_threadIpcPrivate() {
     local hn=$(hostname -f)
 
     ::remote:thread:setup
@@ -195,8 +192,7 @@ function testCoreRemoteSsh_threadPrivate() {
 #testCoreRemoteClusterPublic
 #testCoreRemoteTmuxPrivate
 #testCoreRemoteTmuxPublic
-#testCoreRemotePipewrapPrivate
-#testCoreRemotePipewrapPrivate
+#testCoreRemotePipewrapEvalPrivate
 #testCoreRemoteSerialmonPrivate
 #testCoreRemoteSerialmonInternal
 #testCoreRemoteMonInternal
