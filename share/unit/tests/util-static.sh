@@ -2,9 +2,25 @@
 
 function testCoreUtilImport() {
     core:softimport util
-    assertEquals 0 $?
+    assertTrue 0.1 $?
 }
 
+function utilTearDown() {
+    : noop
+}
+
+function utilStartUp() {
+    : noop
+}
+
+#. -={
+#. testCoreUtilImport() -={
+function testCoreUtilImport() {
+    core:softimport util
+    assertEquals 0 $?
+}
+#. }=-
+#. testCoreUtilUndelimitInternal -={
 function testCoreUtilUndelimitInternal() {
     core:import util
 
@@ -13,7 +29,8 @@ function testCoreUtilUndelimitInternal() {
     assertTrue ':util:join.0' $?
     assertEquals ':util:join.1' $(cat ${stdoutF}) 'b,a,d,b,a,b,e'
 }
-
+#. }=-
+#. testCoreUtilJoinInternal -={
 function testCoreUtilJoinInternal() {
     core:import util
 
@@ -31,8 +48,9 @@ e
 !
 )"
 }
-
-function testCoreUtilZipInternal() {
+#. }=-
+#. testCoreUtilZipEvalInternal -={
+function testCoreUtilZipEvalInternal() {
     core:import util
 
     local -a k=( {a..d} )
@@ -46,7 +64,8 @@ function testCoreUtilZipInternal() {
 [d]=D
 )"
 }
-
+#. }=-
+#. testCoreUtilAnsi2htmlInternal -={
 function testCoreUtilAnsi2htmlInternal() {
     core:import util
 
@@ -63,3 +82,5 @@ function testCoreUtilAnsi2htmlInternal() {
     done | :util:ansi2html >${stdoutF?} 2>${stderrF?}
     #. TODO: Validate html syntax
 }
+#. }=-
+#. }=-

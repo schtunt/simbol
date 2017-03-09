@@ -218,8 +218,8 @@ function testCoverage() {
     local -i s=0
 
     local -A fnregexes=(
-        [private]='^function ::%s:[a-z0-9_]+(\.(json|csv|eval))?\(\)'
-        [internal]='^function :%s:[a-z0-9_]+(\.(json|csv|eval))?\(\)'
+        [private]='^function ::%s:[a-z0-9_]+(\.(csv|eval|ipc|json))?\(\)'
+        [internal]='^function :%s:[a-z0-9_]+(\.(csv|eval|ipc|json))?\(\)'
         [public]='^function %s:[a-z0-9_]+\(\)'
     )
 
@@ -243,10 +243,10 @@ function testCoverage() {
                 if [ $count -gt 0 ]; then
                     local -a fns=(
                         $(grep -oE "${regex}" ${modulepath} |
-                            sed -e "s/^function :\{0,2\}${module}:\([^.()]\+\)\(\.[a-z]\+\)\?()/\1/"
+                            sed -re "s/^function :{0,2}${module}:([^.()]+)(\.([a-z]+))?\(\)/\1\u\3/"
                         )
                     )
-                    for fn in ${fns[@]}; do
+                    for fn in "${fns[@]}"; do
                         local utf="test${profile^}${modulecaps}${fn^}${context^}"
                         utf=${utf/[:]/} #. Remove the colon for shunit2
                         utf=${utf/[.]/} #. Remove the dot if it exists
