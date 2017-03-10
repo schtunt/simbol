@@ -663,16 +663,24 @@ function ::remote:ssh_thread.ipc() {
     while ((tries < retries)); do
         ((tries++))
         core:log DEBUG "Remote execution launched; attempt ${tries} of ${retries}; timeout of ${timeout}s"
-        ssh -xTTT ${g_SSH_OPTS?}\
-            -o ConnectionAttempts=${retries}\
-            -o ConnectTimeout=${timeout}\
-            -o PasswordAuthentication=no\
-            -o PreferredAuthentications=publickey\
-            -o StrictHostKeyChecking=no\
-            -o BatchMode=yes\
-            -o UserKnownHostsFile=/dev/null\
-                "${hcs}" -- "${cmd}" <&5 1>&6 2>&8
-        e=$?
+        case ${hcs} in
+            localhost|127.*)
+                ${cmd} <&5 1>&6 2>&8
+                e=$?
+            ;;
+            *)
+                ssh -xTTT ${g_SSH_OPTS?}\
+                    -o ConnectionAttempts=${retries}\
+                    -o ConnectTimeout=${timeout}\
+                    -o PasswordAuthentication=no\
+                    -o PreferredAuthentications=publickey\
+                    -o StrictHostKeyChecking=no\
+                    -o BatchMode=yes\
+                    -o UserKnownHostsFile=/dev/null\
+                        "${hcs}" -- "${cmd}" <&5 1>&6 2>&8
+                e=$?
+            ;;
+        esac
         [ $e -ne 0 ] || break
         sleep 1.${RANDOM}
     done
