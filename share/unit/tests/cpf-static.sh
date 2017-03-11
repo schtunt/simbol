@@ -11,9 +11,16 @@ function cpfTearDown() {
 
 function testCoreCpfPublic() {
     local data
-    data="$(cpf "Hello World!")"
+    data="$(cpf "Hello World")"
     assertTrue 'cpf.cpf/1.1' $?
-    assertEquals "${data}" "Hello World!"
+    assertEquals "${data}" "Hello World"
+    if [ ${SIMBOL_IN_COLOR} -eq 1 ]; then
+        assertEquals "$(cpf "%{ul:%s}" "Hello World")" "$(echo -e "\E[4mHello World\E[24m")"
+    else
+        assertEquals "$(cpf "%{ul:%s}" "Hello World")" "$(echo -e "Hello World")"
+    fi
+    #data="$(cpf "%s" "foo" "bar" 2> /dev/null )"
+    #assertFalse 'cpf.cpf/1.2' $?
 }
 
 function testCoreCpfModule_is_modifiedPrivate() {
@@ -70,18 +77,28 @@ function testCoreCpfIs_fmtPrivate() {
 }
 
 function testCoreCpfThemePrivate() {
-    : noop
+    local out
+    out=$(::cpf:theme "@host" "%s")
+    assertTrue '::cpf:theme/1.1' $?
+    assertEquals '::cpf:theme/1.2' "${out}" "@ %{y:%s} %s"
+    assertEquals '::cpf:theme/1.3' "$(::cpf:theme "@netgroup" "%s")" "+ %{c:%s} %s"
 }
 
 function testCoreCpfIndentPublic() {
+    local out
     CPF_INDENT=0
+    out=$(cpfi foo)
+    assertTrue 'cpf:indent/1.1' $?
+    assertEquals 'cpf:indent/1.1' "${out}" "foo"
     -=[
-    assertEquals 'cpf:indent/1.1' 1 ${CPF_INDENT}
+    assertEquals 'cpf:indent/1.2' 1 ${CPF_INDENT}
+    out=$(cpfi foo)
+    assertEquals 'cpf:indent/1.2' "${out}" "$(printf "%$((CPF_INDENT * USER_CPF_INDENT_SIZE))s" "${USER_CPF_INDENT_STR}")foo"
     -=[
     -=[
     -=[
-    assertEquals 'cpf:indent/1.2' 4 ${CPF_INDENT}
+    assertEquals 'cpf:indent/1.3' 4 ${CPF_INDENT}
     ]=-
     ]=-
-    assertEquals 'cpf:indent/1.3' 2 ${CPF_INDENT}
+    assertEquals 'cpf:indent/1.4' 2 ${CPF_INDENT}
 }
