@@ -233,7 +233,7 @@ function ::cpf:theme() {
 
                 echo "${symbol}" "${fmt}" "${arg}"
             ;;
-            *) core:raise EXCEPTION_BAD_FN_CALL "What is ${op}?";;
+            *) core:raise EXCEPTION_BAD_FN_CALL "Unknown operator \`%s'" "${op}";;
         esac
     else
         core:raise EXCEPTION_BAD_FN_CALL "What is your problem?"
@@ -251,11 +251,9 @@ function cpf() {
     #. cpf "%{ul:%s}, %{r}%{bo:%s}, and %{st:%s}%{no}\n" underlined bold standard
     LC_ALL=C
 
-    #echo "XXX FUNC CALL with ${#}" >&${FD_STDERR}
-
     if [ $# -ge 1 ]; then
         local fmtstr="$1"; shift
-        local -a args=( "${@}" ) #. XXX "${@}" to preserve array size in tokens with spaces
+        local -a args=( "$@" )
 
         local -a prefix
         local fmtstr
@@ -276,15 +274,10 @@ function cpf() {
                         if [ ${SIMBOL_IN_COLOR?} -eq 1 ]; then
                             if ::cpf:is_fmt ${_fmt}; then
                                 prefix+=( "${_sym}" )
-                                #echo XXX _fmt $_fmt >&${FD_STDERR}
-                                #echo XXX _arg $_arg >&${FD_STDERR}
-                                #echo XXX _sym $_sym >&${FD_STDERR}
                                 replacement=$(cpf "${_fmt}" "$_arg")
-                                #echo XXX replacement is now \"${replacement}\" >&${FD_STDERR}
                             else
                                 replacement=${_fmt}
                             fi
-                            #echo XXX fmtstr="${fmtstr} minus ${arg} plus ${replacement}" >&${FD_STDERR}
                             fmtstr="${fmtstr//${arg}/${replacement}}"
                         else
                             replacement=${token}
@@ -296,16 +289,12 @@ function cpf() {
                     ;;
                     rv|bl|wh|r|g|y|b|m|c)
                         if [ ${SIMBOL_IN_COLOR?} -eq 1 ]; then
-                            #XXX echo xxxxxxxxxxxxx ${op} ${token} >&${FD_STDERR}
                             replacement="${COLORS[${op}]}${token}${COLORS[N]}"
                         fi
-                        #XXX echo xxxxxxxxxxxxx replacing $arg with $replacement >&${FD_STDERR}
                         if ::cpf:is_fmt "${replacement}"; then
                             prefix+=( "" )
                         fi
-                        #XXX echo yyyyyyyyyyyyy ${fmtstr} >&${FD_STDERR}
                         fmtstr="${fmtstr//${arg}/${replacement}}"
-                        #XXX echo zzzzzzzzzzzzz ${fmtstr} >&${FD_STDERR}
                     ;;
                     ul|st|bo)
                         if [ ${SIMBOL_IN_COLOR?} -eq 1 ]; then
@@ -327,39 +316,32 @@ function cpf() {
             fi
         done < <(echo "${fmtstr}"|grep -oE '%{[^}]+}')
 
-        #echo "XXX fmt >>> ${fmtstr} <<<" >&${FD_STDERR}
-        #echo "XXX arg ${#args[@]}: ${args[@]}" >&${FD_STDERR}
-        #echo "XXX sym ${#prefix[@]}: ${prefix[@]}" >&${FD_STDERR}
-        local -i substitutions=$(echo ${fmtstr}|sed -e 's/%{\([^}]*\)}/\1/g'|tr -c -d '%'|wc -c)
-            #echo "XXX [ ${substitutions} == ${#args[@]} ]" >&${FD_STDERR}
-            if [ ${substitutions} -eq ${#args[@]} ]; then
+        local -i substitutions=$(echo ${fmtstr}|sed -e 's/%%//' -e 's/%{\([^}]*\)}/\1/g'|tr -c -d '%'|wc -c)
+        if [ ${substitutions} -eq ${#args[@]} ]; then
             if ! echo "${fmtstr}"|grep -qE '%{'; then
                 local -i i
                 for ((i=0; i<${#args[@]}; i++)); do
-                    #echo "XXX pre-change arg $i  >>> ${args[$i]}" >&${FD_STDERR}
                     args[${i}]="${prefix[$i]}${args[${i}]}"
-                    #echo "XXX post-chance arg $i >>> ${args[$i]}" >&${FD_STDERR}
                 done
-                #. XXX
-                #echo format is "${fmtstr}" 2>&${FD_STDERR}
-                #echo args are "${args[@]}" 2>&${FD_STDERR}
                 printf "${fmtstr}" "${args[@]}"
             else
-                echo "CPF Failure - still have %{ in the fmtstr!: ${fmtstr}" >&${FD_STDERR}
+                echo "CPF Failure: still have %{ in the fmtstr!: ${fmtstr}" >&${FD_STDERR}
                 exit 99
             fi
         else
             echo "CPF Failure: mismatched arguments for given format string ( ${substitutions} in fmtstr, ${#args[@]} arguments supplied )" >&${FD_STDERR}
-            echo "Formatstr: \`${fmtstr}'" >&${FD_STDERR}
-            echo "Arguments:" >&${FD_STDERR}
-            printf " * \`%s'\n" "${args[@]}" >&${FD_STDERR}
-            #exit 99
+            echo " - Formatstr: \`${fmtstr}'" >&${FD_STDERR}
+            if [ ${#args[@]} -gt 0 ]; then
+                echo " - Arguments:" >&${FD_STDERR}
+                printf " * \`%s'\n" "${args[@]}" >&${FD_STDERR}
+            else
+                echo " - Arguments: None" >&${FD_STDERR}
+            fi
         fi
     else
         echo
     fi
 
-    #echo "XXX FUNC RETN" >&${FD_STDERR}
     [ ${g_DEBUG} -eq 0 ] || set -x
 }
 #. }=-
