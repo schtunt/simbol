@@ -1474,18 +1474,7 @@ declare -A RAISE=(
 )
 function core:raise() {
     : !!! CRITICAL FAILURE !!!
-    (
-        cpf " %{r:failed with exception} %{g:$e}; %{c:traceback}:\n"
-        local i=0
-        local -i frames=${#BASH_LINENO[@]}
-        #. ((frames-2)): skips main, the last one in arrays
-        for ((i=frames-2; i>=0; i--)); do
-            cpf "  File %{g:${BASH_SOURCE[i+1]}}, line %{g:${BASH_LINENO[i]}}, in %{r:${FUNCNAME[i+1]}()}\n"
-            # Grab the source code of the line
-            local code=$(sed -n "${BASH_LINENO[i]}{s/^ *//;p}" "${BASH_SOURCE[i+1]}")
-            cpf "    %{wh:>>>} %{c}${code}%{N}\n"
-        done
-    ) > ${SIMBOL_DEADMAN?}
+    : >${SIMBOL_DEADMAN?}
 
     local -i e=$1
 
@@ -1493,7 +1482,9 @@ function core:raise() {
         : !!! Exiting raise function early as we are being traced !!!
     else
         cpf "%{r}EXCEPTION%{+bo}[%s->%s]%{-bo}: %s%{N}:\n" "${e}" "$1" "${RAISE[$e]-[UNKNOWN EXCEPTION:$e]}" >&2
+        cpf "\n%{r}  !!! %{+bo}${2}%{N}\n\n" "${@:3}"
 
+        cpf "%{r}EXCEPTION%{+bo}[Traceback]%{N}:\n"
         if [ ${#module} -gt 0 ]; then
             if [ ${#fn} -gt 0 ]; then
                 cpf "Function %{c:${module}:${fn}()}" 1>&2
@@ -1514,7 +1505,7 @@ function core:raise() {
         for ((i=frames-2; i>=0; i--)); do
             cpf "  File %{g:${BASH_SOURCE[i+1]}}, line %{g:${BASH_LINENO[i]}}, in %{r:${FUNCNAME[i+1]}()}\n" 1>&2
             # Grab the source code of the line
-            local code=$(sed -n "${BASH_LINENO[i]}{s/^ *//;p}" "${BASH_SOURCE[i+1]}")
+            local code=$(sed -n "${BASH_LINENO[i]}{s/^ *//;s/%/%%/g;p}" "${BASH_SOURCE[i+1]}")
             cpf "    %{wh:>>>} %{c}${code}%{N}\n" 1>&2
         done
     fi
