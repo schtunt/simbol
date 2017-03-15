@@ -665,7 +665,7 @@ function ::remote:ssh_thread.ipc() {
         core:log DEBUG "Remote execution launched; attempt ${tries} of ${retries}; timeout of ${timeout}s"
         case ${hcs} in
             localhost|127.*)
-                ${cmd} <&5 1>&6 2>&8
+                eval "${cmd}" <&5 1>&6 2>&8
                 e=$?
             ;;
             *)
@@ -835,10 +835,9 @@ string  output    so,se,xc    "output"       o
 #boolean sudo      false       "run-as-root"  s
 }
 function remote:mon:usage() {
-    cat <<!
-[-h|--threads <threads>] <hgd:*> @$(echo ${!USER_MON_CMDGRPREMOTE[@]}|sed -e 's+ +|@+g')
-<hgd:*> -- <arbitrary-command>"
-!
+    printf "[-h|--threads <threads>] [-o so,se,xc] <hgd:*> "
+    printf "@%s|" "${!USER_MON_CMDGRPREMOTE[@]}"
+    printf -- "-- <arbitrary-command>\n"
 }
 function remote:mon() {
     local -i e=${CODE_DEFAULT?}
