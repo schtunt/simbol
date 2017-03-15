@@ -180,17 +180,17 @@ function ::hgd:explode() {
                     e=${CODE_FAILURE?}
                 fi
 
-                local -a khs=( ${HOME?}/.ssh/known_hosts )
+                local -a khs=( ${SSH_KNOWN_HOSTS:-${HOME?}/.ssh/known_hosts} )
                 if [ $e -ne ${CODE_FAILURE?} ]; then
-                    for kh in ${#khs[@]}; do
+                    for kh in ${khs[@]}; do
                         if [ -r "${kh}" ]; then
                             if [ ${hgdc} == '.' ]; then
                                 hosts+=(
-                                    $(awk -F'[, ]' '$1~/'${hgdn}'\>$/{print$1}' ${kh})
+                                    $(awk -F'[, ]' '$1~/'"${hgdn}"'\>$/{print$1}' "${kh}")
                                 )
                             elif [ ${hgdc} == ${hgdl} ]; then
                                 hosts+=(
-                                    $(awk -F'[, ]' '$1~'${hgd}'{print$1}' ${kh})
+                                    $(awk -F'[, ]' '$1~'"${hgd}"'{print$1}' "${kh}")
                                 )
                             fi
                         fi
@@ -205,6 +205,8 @@ function ::hgd:explode() {
             ;;
             *) e=${CODE_FAILURE?};;
         esac
+    else
+        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 2 expected"
     fi
 
     return $e
@@ -225,14 +227,14 @@ function ::hgd:resolve() {
         local tldid="$1"
         local eq="$2"
         local buf
-        buf=$(sets "${eq}")
+        buf="$(sets "${eq}")"
         if [ $? -eq 0 ]; then
             e=${CODE_SUCCESS?}
-            read -a hgds <<< "${buf}"
-            for hgd in ${hgds[@]}; do
-                buf="$(::hgd:explode ${tldid} ${hgd})"
+            read -a hgds <<< "${buf//\\/\\\\}"
+            for hgd in "${hgds[@]}"; do
+                buf="$(::hgd:explode ${tldid} "${hgd}")"
                 if [ $? -eq 0 ]; then
-                    buffers[${hgd}]="${buf}"
+                    buffers["${hgd}"]="${buf}"
                 else
                     core:log WARNING "Failed to resolve ${hgd}"
                     e=${CODE_FAILURE?}
@@ -240,11 +242,13 @@ function ::hgd:resolve() {
                 fi
             done
         fi
+    else
+        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 2 expected"
     fi
 
     if [ $e -eq ${CODE_SUCCESS?} ]; then
-        for hgd in ${!buffers[@]}; do
-            printf "%s\n" ${hgd}
+        for hgd in "${!buffers[@]}"; do
+            printf "%s\n" "${hgd}"
             printf "%s\n\n" "${buffers[${hgd}]}"
         done
     fi
@@ -263,7 +267,7 @@ function :hgd:resolve() {
             local eq="${2}"
 
             local buffer
-            buffer="$(::hgd:resolve ${tldid} ${eq})"
+            buffer="$(::hgd:resolve ${tldid} "${eq}")"
             if [ $? -eq ${CODE_SUCCESS?} -a -n "${buffer}" ]; then
                 echo -e "${buffer}" | sets "$eq"
                 e=$?
@@ -281,7 +285,7 @@ function :hgd:resolve() {
             fi
         else
             local eq="|(${2})"
-            :hgd:resolve ${tldid} ${eq}
+            :hgd:resolve ${tldid} "${eq}"
             e=$?
         fi
     else
@@ -353,9 +357,9 @@ function :hgd:save() {
         local session="$2"
         local hgd="$3"
 
-        :hgd:delete ${session}
+        :hgd:delete "${session}"
 
-        local -a hosts=( $(:hgd:resolve ${tldid} ${hgd}) )
+        local -a hosts=( $(:hgd:resolve ${tldid} "${hgd}") )
         echo -ne "${session}\t${tldid}\t${NOW?}\t${hgd}\t${hosts[@]}\n" >> ${g_HGD_CACHE?}
         [ ${#hosts[@]} -eq 0 ] || e=${CODE_SUCCESS?}
     else
