@@ -132,6 +132,51 @@ function testCoreGlobalAtomicity() {
     assertEquals "${FUNCNAME?}/1" 2600 $v
 }
 
+function testCoreBashenv() {
+    assertTrue "${FUNCNAME?}/0" '[ ${#SIMBOL_USER_BASHENV} -gt 0 ]'
+
+    local -i size
+
+    core:bashenv clear
+    assertTrue "${FUNCNAME?}/1.1" $?
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_BASHENV?}")
+    assertEquals "${FUNCNAME?}/1.2" 0 ${size}
+
+    core:bashenv set <<!
+        declare -A BATMAN=( [k1]="0xDEADBEEF" )
+!
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_BASHENV?}")
+    assertTrue "${FUNCNAME?}/2.1" '[ ${size} -gt 0 ]'
+    grep -q 'BATMAN' "${SIMBOL_USER_BASHENV?}"
+    assertTrue "${FUNCNAME?}/2.2.1" $?
+    grep -q 'JOKER' "${SIMBOL_USER_BASHENV?}"
+    assertFalse "${FUNCNAME?}/2.2.2" $?
+    grep -q '0xDEADBEEF' "${SIMBOL_USER_BASHENV?}"
+    assertTrue "${FUNCNAME?}/2.2.3" $?
+    size=$(cat "${SIMBOL_USER_BASHENV?}"|wc -l)
+    assertEquals "${FUNCNAME?}/2.2.4" 1 ${size}
+
+    core:bashenv append <<!
+        declare -A JOKER=( [k1]="0xDEADBEEF" )
+!
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_BASHENV?}")
+    assertTrue "${FUNCNAME?}/3.1" '[ ${size} -gt 0 ]'
+    grep -q 'BATMAN' "${SIMBOL_USER_BASHENV?}"
+    assertTrue "${FUNCNAME?}/3.2.1" $?
+    grep -q 'JOKER' "${SIMBOL_USER_BASHENV?}"
+    assertTrue "${FUNCNAME?}/3.2.2" $?
+    grep -q '0xDEADBEEF' "${SIMBOL_USER_BASHENV?}"
+    assertTrue "${FUNCNAME?}/3.2.3" $?
+    size=$(cat "${SIMBOL_USER_BASHENV?}"|wc -l)
+    assertEquals "${FUNCNAME?}/3.2.4" 2 ${size}
+
+    core:bashenv clear
+    assertTrue "${FUNCNAME?}/4.1" $?
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_BASHENV?}")
+    assertEquals "${FUNCNAME?}/4.2" 0 ${size}
+}
+
+
 function exitWith() {
   g_CACHE_OUT || {
     md5sum <<< "$(date +%N)" | cut -b 1-32

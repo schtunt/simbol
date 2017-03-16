@@ -39,6 +39,7 @@ export SIMBOL_USER_VAR_LIBPY=${SIMBOL_USER}/var/lib/libpy
 export SIMBOL_USER_VAR_LIBSH=${SIMBOL_USER}/var/lib/libsh
 export SIMBOL_USER_VAR_LOG=${SIMBOL_USER}/var/log/simbol.log
 export SIMBOL_USER_VAR_RUN=${SIMBOL_USER}/var/run
+export SIMBOL_USER_BASHENV=${SIMBOL_USER_VAR_RUN}/.bashenv
 export SIMBOL_USER_VAR_SCM=${SIMBOL_USER}/var/scm
 export SIMBOL_USER_VAR_TMP=${SIMBOL_USER}/var/tmp
 
@@ -113,7 +114,7 @@ declare -gA USER_TLDS
 declare -gA USER_MON_CMDGRPREMOTE
 declare -gA USER_MON_CMDGRPLOCAL
 declare -g  USER_LOG_LEVEL=INFO
-declare -gA USER_HGD_RESOLVERS
+[ -v USER_HGD_RESOLVERS[@] ] || declare -gA USER_HGD_RESOLVERS
 
 source ${SIMBOL_USER_ETC}/simbol.conf
 
@@ -1089,6 +1090,8 @@ $(for key in ${extra[@]}; do echo ${key}=${!key}; done)
 !
     fi
 
+    [ ! -r ${SIMBOL_USER_BASHENV?} ] || cat ${SIMBOL_USER_BASHENV?}
+
     return $e
 }
 
@@ -1379,6 +1382,17 @@ function :core:complete() {
     fi
 }
 
+function core:bashenv() {
+    case $#:${1:-=} in
+        1:clear)                        >${SIMBOL_USER_BASHENV?} ;;
+        1:set)    sed -e 's/^[ \t]*//'  >${SIMBOL_USER_BASHENV?} ;;
+        1:append) sed -e 's/^[ \t]*//' >>${SIMBOL_USER_BASHENV?} ;;
+        *:*)
+            core:raise EXCEPTION_BAD_FN_CALL "Takes \`clear', \`set', or \`append', not \`%s'" "$*"
+        ;;
+    esac
+}
+
 function core:wrapper() {
     if [ -e ${SIMBOL_DEADMAN?} ]; then
         theme HAS_FAILED "CRITICAL ERROR; ABORTING!" >&2
@@ -1394,11 +1408,8 @@ function core:wrapper() {
 
     eval "${setdata}" #. -={
     #. NOTE: This sets module, fn, $@, etc.
-    : ${module_22884db148f0ffb0d830ba431102b0b5?}
-    module=${module_22884db148f0ffb0d830ba431102b0b5}
-
-    : ${fn_4d9d6c17eeae2754c9b49171261b93bd?}
-    fn=${fn_4d9d6c17eeae2754c9b49171261b93bd}
+    module=${module_22884db148f0ffb0d830ba431102b0b5?}
+    fn=${fn_4d9d6c17eeae2754c9b49171261b93bd?}
     #. }=-
     core:log DEBUG "core:wrapper(module=${module}, fn=${fn}, argv=( $@ ))"
 
@@ -1530,9 +1541,9 @@ function core:raise() {
         : !!! Exiting raise function early as we are being traced !!!
     else
         cpf "%{r}EXCEPTION%{+bo}[%s->%s]%{-bo}: %s%{N}:\n" "${e}" "$1" "${RAISE[$e]-[UNKNOWN EXCEPTION:$e]}" >&2
-        cpf "\n%{r}  !!! %{+bo}${2}%{N}\n\n" "${@:3}"
+        cpf "\n%{r}  !!! %{+bo}${2}%{N}\n\n" "${@:3}" >&2
 
-        cpf "%{r}EXCEPTION%{+bo}[Traceback]%{N}:\n"
+        cpf "%{r}EXCEPTION%{+bo}[Traceback]%{N}:\n" >&2
         if [ ${#module} -gt 0 ]; then
             if [ ${#fn} -gt 0 ]; then
                 cpf "Function %{c:${module}:${fn}()}" 1>&2
