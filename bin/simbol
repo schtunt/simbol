@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
 let -i e=0
@@ -10,7 +10,9 @@ let -i e=0
 if [ ${#SIMBOL_SHELL} -gt 0 ]; then
     if [ -x "${SIMBOL_SHELL}" -a -f "${SIMBOL_SHELL}" ]; then
         if [ "${SIMBOL_SHELL}" != "${BASH}" ]; then
-            exec ${SIMBOL_SHELL} -$- "$0" "$@"
+            BASH_ENV=<(
+                declare -p | grep -E '\<USER_'
+            ) ${SIMBOL_SHELL} -$- "$0" "$@"
         fi
     else
         e=127
