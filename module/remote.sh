@@ -218,7 +218,7 @@ echo "$hs // ${data[mode_${hs}]}" >&2
                     e=$?
                 ;;
                 *:*)
-                    local tmp="${SIMBOL_USER_TMP?}/remote-copy.$$.tmp/${data[pth_src]}"
+                    local tmp="${SIMBOL_USER_VAR_TMP?}/remote-copy.$$.tmp/${data[pth_src]}"
                     rm -rf ${tmp}
                     mkdir -p $(dirname ${tmp})
                     eval "rsync -ae 'ssh ${ssh_options}' ${data[cmd_src]} ${tmp}"
@@ -461,7 +461,7 @@ function ::remote:tmux() {
                 local -i nodes=${#hosts[@]}
 
                 local -i zoning=12 #. Terminals per tab (tmux window)
-                local missconnects=${SIMBOL_USER_TMP?}/${session}.missconnects
+                local missconnects=${SIMBOL_USER_VAR_TMP?}/${session}.missconnects
                 > ${missconnects}
                 for ((pid=0; pid<nodes; pid++)); do
                     ((lpid=pid%zoning))

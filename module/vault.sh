@@ -12,7 +12,7 @@ core:requires shred
 g_VAULT=${SIMBOL_USER_ETC?}/simbol.vault
 
 function ::vault:getTempFile() {
-    echo "${SIMBOL_USER_TMP?}/${1//\//_}.${2}"
+    echo "${SIMBOL_USER_VAR_TMP?}/${1//\//_}.${2}"
 }
 
 #. vault:clean -={

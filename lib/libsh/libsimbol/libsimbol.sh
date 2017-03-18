@@ -12,37 +12,39 @@ export NOW=$(date --utc +%s)
 : ${SIMBOL_PROFILE?}
 export SIMBOL_BASENAME=$(basename -- $0)
 
-export SIMBOL_SCM=$(readlink ~/.simbol/.scm)
-
 export SIMBOL_CORE=$(readlink ~/.simbol/.scm)
-export SIMBOL_CORE_MOD=${SIMBOL_CORE}/module
-export SIMBOL_CORE_LIBEXEC=${SIMBOL_CORE}/libexec
 export SIMBOL_CORE_BIN=${SIMBOL_CORE}/bin
 export SIMBOL_CORE_LIB=${SIMBOL_CORE}/lib
-export SIMBOL_CORE_LIBPY=${SIMBOL_CORE}/lib/libpy
+export SIMBOL_CORE_LIBEXEC=${SIMBOL_CORE}/libexec
 export SIMBOL_CORE_LIBJS=${SIMBOL_CORE}/lib/libjs
+export SIMBOL_CORE_LIBPY=${SIMBOL_CORE}/lib/libpy
 export SIMBOL_CORE_LIBSH=${SIMBOL_CORE}/lib/libsh
+export SIMBOL_CORE_MOD=${SIMBOL_CORE}/module
+
+export SIMBOL_SCM=$(readlink ~/.simbol/.scm)
+
 export SIMBOL_UNIT=${SIMBOL_CORE}/share/unit
 export SIMBOL_UNIT_TESTS=${SIMBOL_CORE}/share/unit/tests
-export SIMBOL_UNIT_FILES=${SIMBOL_CORE}/share/unit/tests
 
 export SIMBOL_USER=${HOME}/.simbol
-export SIMBOL_USER_VAR=${SIMBOL_USER}/var
-export SIMBOL_USER_RUN=${SIMBOL_USER}/var/run
-export SIMBOL_USER_SCM=${SIMBOL_USER}/var/scm
-export SIMBOL_USER_CACHE=${SIMBOL_USER}/var/cache
 export SIMBOL_USER_ETC=${SIMBOL_USER}/etc
-export SIMBOL_USER_LOG=${SIMBOL_USER}/var/log/simbol.log
-export SIMBOL_USER_TMP=${SIMBOL_USER}/var/tmp
+export SIMBOL_USER_LIB=${SIMBOL_USER}/lib
+export SIMBOL_USER_LIBEXEC=${SIMBOL_USER}/libexec
 export SIMBOL_USER_MOD=${SIMBOL_USER}/module
-export SIMBOL_USER_LIB=${SIMBOL_USER}/var/lib
-export SIMBOL_USER_LIBSH=${SIMBOL_USER}/var/lib/libsh
-export SIMBOL_USER_LIBPY=${SIMBOL_USER}/var/lib/libpy
-export SIMBOL_USER_LIBEXEC=${SIMBOL_USER}/var/libexec
+export SIMBOL_USER_VAR=${SIMBOL_USER}/var
+export SIMBOL_USER_VAR_CACHE=${SIMBOL_USER}/var/cache
+export SIMBOL_USER_VAR_LIB=${SIMBOL_USER}/var/lib
+export SIMBOL_USER_VAR_LIBEXEC=${SIMBOL_USER}/var/libexec
+export SIMBOL_USER_VAR_LIBPY=${SIMBOL_USER}/var/lib/libpy
+export SIMBOL_USER_VAR_LIBSH=${SIMBOL_USER}/var/lib/libsh
+export SIMBOL_USER_VAR_LOG=${SIMBOL_USER}/var/log/simbol.log
+export SIMBOL_USER_VAR_RUN=${SIMBOL_USER}/var/run
+export SIMBOL_USER_VAR_SCM=${SIMBOL_USER}/var/scm
+export SIMBOL_USER_VAR_TMP=${SIMBOL_USER}/var/tmp
 
 #. Site's PATH
 PATH+=:${SIMBOL_CORE_LIBEXEC}
-PATH+=:${SIMBOL_USER_LIBEXEC}
+PATH+=:${SIMBOL_USER_VAR_LIBEXEC}
 export PATH
 
 export RBENV_VERSION=${RBENV_VERSION:-2.1.1}
@@ -55,7 +57,7 @@ export RBENV_ROOT RBENV_VERSION
 export PYENV_VERSION=${PYENV_VERSION:-3.4.0}
 #. Python -={
 PYTHONPATH+=:${SIMBOL_CORE_LIBPY}
-PYTHONPATH+=:${SIMBOL_USER_LIBPY}
+PYTHONPATH+=:${SIMBOL_USER_VAR_LIBPY}
 export PYTHONPATH
 
 #. pyenv
@@ -71,13 +73,13 @@ export PLENV_ROOT PLENV_VERSION
 #. }=-
 
 #. shunit2 and shflags
-export SHUNIT2=${SIMBOL_USER_LIBEXEC}/shunit2
-export SHFLAGS=${SIMBOL_USER_LIBSH}/shflags
+export SHUNIT2=${SIMBOL_USER_VAR_LIBEXEC}/shunit2
+export SHFLAGS=${SIMBOL_USER_VAR_LIBSH}/shflags
 source ${SHFLAGS?}
 #. }=-
 #. 1.3  Core Configuration -={
 unset  CDPATH
-export SIMBOL_DEADMAN=${SIMBOL_USER_CACHE}/deadman
+export SIMBOL_DEADMAN=${SIMBOL_USER_VAR_CACHE}/deadman
 export SIMBOL_IN_COLOR=1
 export SIMBOL_DATE_FORMAT="%x-%X"
 
@@ -226,10 +228,10 @@ function core:log() {
         declare ts=$(date +"${SIMBOL_DATE_FORMAT?}")
 
         declare msg=$(printf "%s; %5d; %8s[%24s];" "${ts}" "${$--1}" "${code}" "${caller}")
-        [ -e ${SIMBOL_USER_LOG?} ] || touch ${SIMBOL_USER_LOG?}
-        if [ -f ${SIMBOL_USER_LOG} ]; then
-            chmod 600 ${SIMBOL_USER_LOG?}
-            echo "${msg} ${*:2}" >> ${SIMBOL_USER_LOG?}
+        [ -e ${SIMBOL_USER_VAR_LOG?} ] || touch ${SIMBOL_USER_VAR_LOG?}
+        if [ -f ${SIMBOL_USER_VAR_LOG} ]; then
+            chmod 600 ${SIMBOL_USER_VAR_LOG?}
+            echo "${msg} ${*:2}" >> ${SIMBOL_USER_VAR_LOG?}
         fi
         #printf "%s; %5d; %8s[%24s]; $@\n" "${ts}" "$$" "${code}" "$(sed -e 's/ /<-/g' <<< ${FUNCNAME[@]})" >> ${WMII_LOG}
     fi
@@ -239,7 +241,7 @@ function core:log() {
 function validate_bash() {
     local -i e=${CODE_FAILURE?}
 
-    local vv="${SIMBOL_USER_TMP?}/.simbol-bash-${BASH_VERSION}.verified"
+    local vv="${SIMBOL_USER_VAR_TMP?}/.simbol-bash-${BASH_VERSION}.verified"
     if [ -e "${vv}" ]; then
         e=${CODE_SUCCESS?}
     else
@@ -293,7 +295,7 @@ function validate_bash() {
         # some of the tests in this functioa body itself:
         #   git grep -E '[a-zA-Z0-9]+\+=\( *\['
 
-        local buf="${SIMBOL_USER_TMP?}/.simbol-null-term-rw-test"
+        local buf="${SIMBOL_USER_VAR_TMP?}/.simbol-null-term-rw-test"
         local -a wstrs=( 11 'aa' 33 'stuff' ) #. TODO: \n, \r, etc.
 
         touch "${buf}"
@@ -331,7 +333,7 @@ function core:softimport() {
     if [ $# -eq 1 ]; then
         local module="$1"
         local modulepath="${1//.//}.sh"
-        local ouch="${SIMBOL_USER_TMP}/softimport.${module}.$$.ouch"
+        local ouch="${SIMBOL_USER_VAR_TMP}/softimport.${module}.$$.ouch"
         if [ -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
             if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
                 if [ -f ${SIMBOL_USER_MOD}/${modulepath} ]; then
@@ -668,11 +670,11 @@ function core:requires() {
 #. >0 indeicates TTL in seconds
 declare -g g_CACHE_TTL=0
 
-mkdir -p ${SIMBOL_USER_CACHE?}
-chmod 3770 ${SIMBOL_USER_CACHE?} 2>/dev/null
+mkdir -p ${SIMBOL_USER_VAR_CACHE?}
+chmod 3770 ${SIMBOL_USER_VAR_CACHE?} 2>/dev/null
 
 #. Keep track if cache was used globally
-declare g_CACHE_USED=${SIMBOL_USER_CACHE?}/.cache_used
+declare g_CACHE_USED=${SIMBOL_USER_VAR_CACHE?}/.cache_used
 rm -f ${g_CACHE_USED?}
 
 function core:return() { return $1; }
@@ -785,7 +787,7 @@ function :core:cachefile() {
 
     local effective_format=${g_FORMAT}
 
-    local cachefile=${SIMBOL_USER_CACHE}
+    local cachefile=${SIMBOL_USER_VAR_CACHE}
 
     if [ $# -eq 2 ]; then
         #. Automaticly named cachefile...
@@ -1423,7 +1425,7 @@ function core:wrapper() {
             e=${CODE_FAILURE}
         ;;
         ${CODE_IMPORT_ERROR?}/*/*)
-            theme HAS_FAILED "Module ${module} has errors; see ${SIMBOL_USER_LOG}"
+            theme HAS_FAILED "Module ${module} has errors; see ${SIMBOL_USER_VAR_LOG}"
             e=${CODE_FAILURE}
         ;;
         ${CODE_IMPORT_ADMIN?}/*/*)

@@ -468,7 +468,7 @@ function ::unit:test() {
                         export g_RUNTIME_PROFILE=${profile}
                         export g_RUNTIME_MODULEPATH=${modulepath}
                         export g_RUNTIME_MODULE=${module}
-                        export g_RUNTIME_SCRIPT=${SIMBOL_USER_CACHE?}/unittest-${module}.sh
+                        export g_RUNTIME_SCRIPT=${SIMBOL_USER_VAR_CACHE?}/unittest-${module}.sh
 
                         cat <<!SCRIPT > ${g_RUNTIME_SCRIPT?}
 #!${SIMBOL_SHELL:-${SHELL}}
@@ -498,7 +498,7 @@ function ::unit:test() {
 
                     g_MODE="execute"
                     cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?}} via %{b:%s} %{r:-=[}\n" "${BASH_VERSION?}";
-                    script=${SIMBOL_USER_CACHE?}/unittest-${module}.sh
+                    script=${SIMBOL_USER_VAR_CACHE?}/unittest-${module}.sh
                     local -i ee=-1
                     if [ -r "${script}" ]; then
                         (
