@@ -92,7 +92,7 @@ function citm:kcov() {
 
         1:report)
             echo "$ citm:kcov report codedov.io/bash"
-            bash <(curl -s https://codecov.io/bash) -s coverage
+            bash <(curl -s https://codecov.io/bash) -K
             e=$?
             echo "# citm:kcov report exit status: $e"
         ;;
