@@ -186,7 +186,7 @@ function testCoreVaultEncryptionInternal() {
     core:import vault
     assertTrue 0.0 $?
 
-    local secret="${SIMBOL_USER_TMP}/secret.txt"
+    local secret="${SIMBOL_USER_VAR_TMP}/secret.txt"
     rm -f "${secret}"
     echo "Secret" > "${secret}"
     chmod 600 "${secret}"
@@ -215,7 +215,7 @@ function test_1_CoreVaultEncryptPublic() {
     core:import vault
     assertTrue 1.0 $?
 
-    local secret="${SIMBOL_USER_TMP}/secret.txt"
+    local secret="${SIMBOL_USER_VAR_TMP}/secret.txt"
     rm -f "${secret}"
     echo "Secret" > "${secret}"
     chmod 600 "${secret}"
@@ -235,7 +235,7 @@ function test_2_CoreVaultDecryptPublic() {
     core:import vault
     assertTrue 2.0 $?
 
-    local secret="${SIMBOL_USER_TMP}/secret.txt"
+    local secret="${SIMBOL_USER_VAR_TMP}/secret.txt"
     [ -e "${secret}" ]
     assertTrue 2.1 $?
 

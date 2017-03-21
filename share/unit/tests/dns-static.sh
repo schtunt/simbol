@@ -94,8 +94,8 @@ function testCoreDnsSubdomainsPublic() {
     assertEquals 3.2 3 ${#data[@]}
 }
 #. }=-
-#. testCoreDnsInspectInternalCsv -={
-function testCoreDnsInspectInternal() {
+#. testCoreDnsInspectCsvInternal -={
+function testCoreDnsInspectCsvInternal() {
     core:import dns
 
     #:dns:inspect.csv 'trailer0dot.unit-tests.mgmt.simbol' >${stdoutF?} 2>${stderrF?}
@@ -139,8 +139,8 @@ function testCoreDnsInspectInternal() {
     assertEquals 5.4 "a,host-ca,shn,p,products,simbol.org,host-ca.products.simbol.org,127.2.12.10,7" "${data[1]}"
 }
 #. }=-
-#. testCoreDnsLookupInternalCsv -={
-function testCoreDnsLookupInternal() {
+#. testCoreDnsLookupCsvInternal -={
+function testCoreDnsLookupCsvInternal() {
     core:import dns
 
     local -a data

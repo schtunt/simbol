@@ -149,22 +149,26 @@ function :net:hosts() {
     #. output (a list of all hosts in the subnet)
     local -i e=${CODE_SUCCESS?}
 
-    [ "${1//[^.]/}" == '...' ] || e=${CODE_FAILURE?}
-    [ "${1//[^\/]/}" == '/' ] || [ "${1//[^\/]/}" == '' ] || e=${CODE_FAILURE?}
-    if [ $# -eq 1 -a $e -eq ${CODE_SUCCESS?} ]; then
-        IFS=/ read -r ips nmb <<< "$1"
-        local -r ipx=$(:net:s2h ${ips})
-        local -r nm=$(:net:b2nm ${nmb})
-        local -r hm=$(:net:b2hm ${nmb})
-        local hb nw ip i=0
-        while [ ${i} -lt $((${hm} - 1)) ]; do
-            ((i++))
-            ip=$(printf "0x%x" $(( ( ipx & nm ) + ${i})))
-            :net:h2s ${ip}
-            e=$?
-        done
+    if [ $# -eq 1 ]; then
+        [ "${1//[^.]/}" == '...' ] || e=${CODE_FAILURE?}
+        [ "${1//[^\/]/}" == '/' ] || [ "${1//[^\/]/}" == '' ] || e=${CODE_FAILURE?}
+        if [ $e -eq ${CODE_SUCCESS?} ]; then
+            IFS=/ read -r ips nmb <<< "$1"
+            local -r ipx=$(:net:s2h ${ips})
+            local -r nm=$(:net:b2nm ${nmb})
+            local -r hm=$(:net:b2hm ${nmb})
+            local hb nw ip i=0
+            while [ ${i} -lt $((${hm} - 1)) ]; do
+                ((i++))
+                ip=$(printf "0x%x" $(( ( ipx & nm ) + ${i})))
+                :net:h2s ${ip}
+                e=$?
+            done
+        else
+            core:raise EXCEPTION_BAD_FN_CALL "Invalid ip/subnet: \`%s'" "$1"
+        fi
     else
-        core:raise EXCEPTION_BAD_FN_CALL
+        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 2 expected"
     fi
 
     return $e

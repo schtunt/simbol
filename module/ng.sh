@@ -288,10 +288,10 @@ function ng:tree() {
                 if [ "${g_FORMAT?}" == "png" ]; then
                     cpf "Generating image..."
                     g_FORMAT=dot ::ng:tree_draw 0 ${g_ROOT:2} |
-                        sfdp -Gsize=67! -Goverlap=prism -Tpng > ${SIMBOL_USER_CACHE?}/${g_ROOT:2}.png
+                        sfdp -Gsize=67! -Goverlap=prism -Tpng > ${SIMBOL_USER_VAR_CACHE?}/${g_ROOT:2}.png
                     if [ $? -eq 0 ]; then
                         theme HAS_PASSED
-                        feh -q -. ${SIMBOL_USER_CACHE?}/${g_ROOT:2}.png
+                        feh -q -. ${SIMBOL_USER_VAR_CACHE?}/${g_ROOT:2}.png
                     else
                         theme HAS_FAILED
                     fi

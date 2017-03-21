@@ -12,7 +12,7 @@ core:import util
 core:requires ssh
 core:requires netstat
 
-: ${SIMBOL_USER_SSH_CONTROLPATH:=${SIMBOL_USER_RUN?}/simbol-ssh-mux@prd.proxy.sock}
+: ${SIMBOL_USER_SSH_CONTROLPATH:=${SIMBOL_USER_VAR_RUN?}/simbol-ssh-mux@prd.proxy.sock}
 
 #. tunnel:status -={
 function :tunnel:pid() {

@@ -218,8 +218,8 @@ function testCoverage() {
     local -i s=0
 
     local -A fnregexes=(
-        [private]='^function ::%s:[a-z0-9_]+(\.(json|csv|eval))?\(\)'
-        [internal]='^function :%s:[a-z0-9_]+(\.(json|csv|eval))?\(\)'
+        [private]='^function ::%s:[a-z0-9_]+(\.(csv|eval|ipc|json))?\(\)'
+        [internal]='^function :%s:[a-z0-9_]+(\.(csv|eval|ipc|json))?\(\)'
         [public]='^function %s:[a-z0-9_]+\(\)'
     )
 
@@ -243,10 +243,10 @@ function testCoverage() {
                 if [ $count -gt 0 ]; then
                     local -a fns=(
                         $(grep -oE "${regex}" ${modulepath} |
-                            sed -e "s/^function :\{0,2\}${module}:\([^.()]\+\)\(\.[a-z]\+\)\?()/\1/"
+                            sed -re "s/^function :{0,2}${module}:([^.()]+)(\.([a-z]+))?\(\)/\1\u\3/"
                         )
                     )
-                    for fn in ${fns[@]}; do
+                    for fn in "${fns[@]}"; do
                         local utf="test${profile^}${modulecaps}${fn^}${context^}"
                         utf=${utf/[:]/} #. Remove the colon for shunit2
                         utf=${utf/[.]/} #. Remove the dot if it exists
@@ -468,7 +468,7 @@ function ::unit:test() {
                         export g_RUNTIME_PROFILE=${profile}
                         export g_RUNTIME_MODULEPATH=${modulepath}
                         export g_RUNTIME_MODULE=${module}
-                        export g_RUNTIME_SCRIPT=${SIMBOL_USER_CACHE?}/unittest-${module}.sh
+                        export g_RUNTIME_SCRIPT=${SIMBOL_USER_VAR_CACHE?}/unittest-${module}.sh
 
                         cat <<!SCRIPT > ${g_RUNTIME_SCRIPT?}
 #!${SIMBOL_SHELL:-${SHELL}}
@@ -498,7 +498,7 @@ function ::unit:test() {
 
                     g_MODE="execute"
                     cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?}} via %{b:%s} %{r:-=[}\n" "${BASH_VERSION?}";
-                    script=${SIMBOL_USER_CACHE?}/unittest-${module}.sh
+                    script=${SIMBOL_USER_VAR_CACHE?}/unittest-${module}.sh
                     local -i ee=-1
                     if [ -r "${script}" ]; then
                         (

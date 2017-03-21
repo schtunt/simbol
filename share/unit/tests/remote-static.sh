@@ -65,20 +65,20 @@ function testCoreRemoteCopyPublic() {
     #. TODO: Split each section here into separate tests!
 
     #. Remote File to Directory
-    rm -f "${SIMBOL_USER_CACHE?}/hosts"
+    rm -f "${SIMBOL_USER_VAR_CACHE?}/hosts"
 
     # FIXME: This is broken -={
     #core:wrapper remote copy -T _\
     #    host-8c.unit-tests.mgmt.simbol:/etc/hosts\
-    #    ${SIMBOL_USER_CACHE?}
+    #    ${SIMBOL_USER_VAR_CACHE?}
     #FIXME: Enabled once fixed -={
     #/\
     #>${stdoutF?} 2>${stderrF?}
     #assertTrue 'remote:copy/1.1' $?
-    #[ -f ${SIMBOL_USER_CACHE?}/hosts ]
+    #[ -f ${SIMBOL_USER_VAR_CACHE?}/hosts ]
     #assertTrue 'remote:copy/1.2' $?
     #local -i same=$(
-    #    md5sum /etc/hosts ${SIMBOL_USER_CACHE?}/hosts |
+    #    md5sum /etc/hosts ${SIMBOL_USER_VAR_CACHE?}/hosts |
     #    awk '{print$1}' |
     #    sort -u |
     #    wc -l
@@ -88,14 +88,14 @@ function testCoreRemoteCopyPublic() {
     #. }=-
 
     #. Remote File to File
-    rm -f ${SIMBOL_USER_CACHE}/hosts.explicit
+    rm -f ${SIMBOL_USER_VAR_CACHE}/hosts.explicit
     core:wrapper remote copy -T _\
         host-8c.unit-tests.mgmt.simbol:/etc/hosts\
-        ${SIMBOL_USER_CACHE}/hosts.explicit\
+        ${SIMBOL_USER_VAR_CACHE}/hosts.explicit\
     >${stdoutF?} 2>${stderrF?}
     assertTrue "${FUNCNAME?}/2.1" $?
 
-    [ -f ${SIMBOL_USER_CACHE}/hosts.explicit ]
+    [ -f ${SIMBOL_USER_VAR_CACHE}/hosts.explicit ]
     assertTrue "${FUNCNAME?}/2.2" $?
 
     #. Remote File to Remote File
@@ -144,21 +144,18 @@ function testCoreRemoteSudoPublic() {
     assertEquals "${FUNCNAME?}/2" "root" "${who}"
 }
 #. }=-
-#. testCoreRemoteMonPublic -={
-function testCoreRemoteMonPublic() {
-    #. FIXME
-    #ssh host-8.simbol.org hostname
+#. testCoreRemoteMonIpcPublic -={
+function testCoreRemoteMonIpcPublic() {
+    local hostname="$(hostname)"
+    core:wrapper remote mon '|(#127.0.0.1)' -- hostname >${stdoutF?} 2>${stderrF?}
+    assertTrue "${FUNCNAME?}/1.1" $?
 
-    #simbol hgd save myhgd /host-8./
-    #assertTrue "${FUNCNAME?}/1" $?
-
-    #core:wrapper remote mon myhgd -- hostname
-    #assertTrue "${FUNCNAME?}/2" $?
-    return 0
+    grep -qFw "${hostname}" ${stdoutF?}
+    assertTrue "${FUNCNAME?}/1.2" $?
 }
 #. }=-
-#. testCoreRemoteSsh_threadPrivate -={
-function testCoreRemoteSsh_threadPrivate() {
+#. testCoreRemoteSsh_threadIpcPrivate -={
+function testCoreRemoteSsh_threadIpcPrivate() {
     local hn=$(hostname -f)
 
     ::remote:thread:setup
@@ -195,8 +192,7 @@ function testCoreRemoteSsh_threadPrivate() {
 #testCoreRemoteClusterPublic
 #testCoreRemoteTmuxPrivate
 #testCoreRemoteTmuxPublic
-#testCoreRemotePipewrapPrivate
-#testCoreRemotePipewrapPrivate
+#testCoreRemotePipewrapEvalPrivate
 #testCoreRemoteSerialmonPrivate
 #testCoreRemoteSerialmonInternal
 #testCoreRemoteMonInternal
