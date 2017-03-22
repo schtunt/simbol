@@ -11,4 +11,10 @@ core|hgd|load|internal||. ut-hgd-save|||0
 core|hgd|refresh|public||ut-hgd-save|||0
 core|hgd|refresh|internal||. ut-hgd-save|||0
 core|hgd|list|public||ut-hgd-save|^ut-hgd-save||0
+core|hgd|validate|private||&(a,b,c)|||0
+core|hgd|validate|private||&((a,b,c)|||1
+core|hgd|validate|private||&(a,b,c))|||2
+core|hgd|validate|private||&&(a,b,c))|||3
+core|hgd|validate|private||&(a,b,c),d|||4
+core|hgd|validate|private||&(a,b,c,d|||5
 #. }=-

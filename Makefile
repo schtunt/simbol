@@ -82,7 +82,7 @@ install: require sanity .install
 	@
 	@test -f ~/.simbolrc || touch .initialize
 	@test ! -f .initialize || printf "Installing default ~/.simbolrc..."
-	@test ! -f .initialize || cp share/examples/simbolrc.eg ${HOME}/.simbolrc
+	@test ! -f .initialize || cp share/examples/dot.simbolrc ${HOME}/.simbolrc
 	@test ! -f .initialize || echo "DONE"
 	@rm -f .initialize
 	@
@@ -103,6 +103,7 @@ uninstall: unsanity
 	-rm $(HOME)/.simbol/libexec
 	@
 	-rm $(HOME)/bin/simbol
+	-rm $(HOME)/bin/activate
 	-rm $(HOME)/.simbol/bin/simbol
 	-rm $(HOME)/.simbol/bin/ssm
 	-rm $(HOME)/.simbol/bin/ssp

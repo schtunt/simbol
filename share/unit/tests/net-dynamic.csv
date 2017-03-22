@@ -17,6 +17,7 @@ core|net|s2h|internal||255.0.255.0|0xff00ff00||0
 core|net|i2s|internal||lo|127.0.0.1||0
 core|net|fix|internal||10.0.0.123/24|10.0.0.0/24||0
 core|net|hosts|internal||10.1.2.3/29|8671846114c5b462c507ccd428776565||0
+#core|net|hosts|public
 core|net|firsthost|internal||10.1.3.3/23|10.1.2.1||0
 core|net|portping|internal||_ google-public-dns-a.google.com. 53|||0
 core|net|portping|public||google-public-dns-a.google.com. 53|||0

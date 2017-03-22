@@ -14,105 +14,20 @@ core:requires tmux
 core:requires socat
 core:requires netstat
 
-#.  :remote:sshproxy*() DEPRECATED -={
-#function :remote:sshproxystr() {
-#    core:raise EXCEPTION_DEPRECATED
-#
-#    local -i e=${CODE_FAILURE?}
-#
-#    if [ $# -eq 1 ]; then
-#        local tldid=$1
-#        local sshproxystr="${USER_SSH_PROXY[${tldid}]}"
-#        #. If the given tldid didn't checkout, try the wildcard tldid `_' - that
-#        #. is if it exists:
-#        if [ -z "${sshproxystr}" -a "${tldid}" != '_' ]; then
-#            sshproxystr="${USER_SSH_PROXY[_]}"
-#        fi
-#
-#        if [ -n "${sshproxystr}" ]; then
-#            e=${CODE_SUCCESS?}
-#
-#            echo "${sshproxystr}"
-#        fi
-#    else
-#        core:raise EXCEPTION_BAD_FN_CALL
-#    fi
-#
-#    return $e
-#}
+#.   remote:connect:passwordless -={
+function :remote:connect:passwordless() {
+    # Verify if we can connect to box with a certain connection string
+    local -i e=${CODE_SUCCESS?}
+    local extra_SSH_OPTS="-o PasswordAuthentication=no -o StrictHostKeyChecking=no"
+    local hcs="$1"
 
-#function :remote:sshproxycmd() {
-#    core:raise EXCEPTION_DEPRECATED
-#
-#    local -i e=${CODE_FAILURE?}
-#
-#    if [ $# -eq 1 ]; then
-#        local ssh_proxy_cmd
-#
-#        local tldid=$1
-#
-#        local sshproxystr
-#        sshproxystr=$(:remote:sshproxystr ${tldid})
-#        if [ $? -eq ${CODE_SUCCESS?} ]; then
-#            local ssh_proxy
-#            if [ "${sshproxystr//[^:]/}" == ':' ]; then
-#                local -i ssh_port
-#                IFS=: read ssh_proxy ssh_port <<< "${sshproxystr}"
-#                #ssh_proxy_cmd="ssh -p ${ssh_port} ${USER_USERNAME?}@${ssh_proxy} nc %h 22"
-#                ssh_proxy_cmd="/usr/bin/ssh -p ${ssh_port} ${USER_USERNAME?}@${ssh_proxy} -W %h:%p"
-#                e=${CODE_SUCCESS?}
-#            elif [ -z "${sshproxystr//[^:]/}" ]; then
-#                ssh_proxy=${sshproxystr}
-#                #ssh_proxy_cmd="ssh ${USER_USERNAME?}@${ssh_proxy} nc %h 22"
-#                ssh_proxy_cmd="/usr/bin/ssh ${USER_USERNAME?}@${ssh_proxy} -W %h:%p"
-#                e=${CODE_SUCCESS?}
-#            else
-#                core:log ERR "Invalid proxy string (${sshproxystr})!"
-#                e=${CODE_FAILURE?}
-#            fi
-#        fi
-#
-#        [ -z "${ssh_proxy_cmd}" ] || echo "${ssh_proxy_cmd}"
-#    else
-#        core:raise EXCEPTION_BAD_FN_CALL
-#    fi
-#
-#    return ${e}
-#}
+    local rv
+    rv=$(ssh ${g_SSH_OPTS?} ${extra_SSH_OPTS} ${hcs} -- echo -n "${NOW}" 2> /dev/null)
+    [ $? -eq ${CODE_SUCCESS?} -a "${rv}" = "${NOW}" ] || e=${CODE_FAILURE?}
 
-#function :remote:sshproxyopts() {
-#    core:raise EXCEPTION_DEPRECATED
-#
-#    local -i e=${CODE_FAILURE?}
-#
-#    if [ $# -eq 1 ]; then
-#        local ssh_options
-#
-#        local tldid=$1
-#
-#        local sshproxystr
-#        sshproxystr=$(:remote:sshproxystr ${tldid})
-#        if [ $? -eq ${CODE_SUCCESS?} ]; then
-#            local ssh_proxy_cmd
-#            if [ "${sshproxystr//[^:]/}" == ':' -o -z "${sshproxystr//[^:]/}" ]; then
-#                ssh_proxy_cmd=$(:remote:sshproxycmd ${tldid})
-#                ssh_options="-o Ciphers=arcfour -o ProxyCommand='${ssh_proxy_cmd}'"
-#                e=${CODE_SUCCESS?}
-#            else
-#                core:log ERR "Invalid proxy string (${sshproxystr})!"
-#                e=${CODE_FAILURE?}
-#            fi
-#        fi
-#
-#        [ -z "${ssh_options}" ] || echo "${ssh_options}"
-#    else
-#        core:raise EXCEPTION_BAD_FN_CALL
-#    fi
-#
-#    return ${e}
-#}
+    return $e
+}
 #. }=-
-
 #.   remote:connect() -={
 function :remote:connect() {
     local -i e=${CODE_FAILURE?}
@@ -121,27 +36,25 @@ function :remote:connect() {
         local tldid="$1"
         local hcs="$2"
 
-        local ssh_options
+        local ssh_options="${g_SSH_OPTS?}"
         if [ $# -eq 2 ]; then
             #. User wants to ssh into a shell
-            ssh_options="${g_SSH_OPTS?} -ttt"
+            ssh_options+=" -ttt"
         elif [ $# -ge 3 ]; then
             if [ "$3" == "sudo" ]; then
                 #. User wants to ssh and execute a command via sudo
-                ssh_options="${g_SSH_OPTS?} -T"
+                ssh_options+=" -T"
             else
                 #. User wants to ssh and execute a command
-                ssh_options="${g_SSH_OPTS?} -T"
+                ssh_options+=" -T"
             fi
         else
             #. User is confused, and so we will follow.
             core:raise EXCEPTION_BAD_FN_CALL
         fi
-#       #. DEPRECATED
-#       ssh_options+=" $(:remote:sshproxyopts ${tldid})"
 
         export TERM=vt100
-        eval "ssh ${ssh_options} ${hcs} ${*:3}"
+        ssh ${ssh_options} "${hcs}" "${@:3}"
         e=$?
     else
         core:raise EXCEPTION_BAD_FN_CALL
@@ -167,7 +80,7 @@ function remote:connect() {
 
         local hnh=${1##*@}
         local -i resolve=${FLAGS_resolve:-0}; ((resolve=~resolve+2)); unset FLAGS_resolve
-        [ "${hnh: -1}" != '.' ] || resolve=0
+        [ "${hnh:-1}" != '.' ] || resolve=0
 
         local hcs qdn qt hnh_ qual tldid_ usdn dn fqdn resolved qid
         [ ! -t 1 ] || cpf "Resolving %{@host:%s} in %{@tldid:%s}..." "${hnh}" "${tldid}"
@@ -224,58 +137,99 @@ function remote:connect() {
 }
 #. }=-
 #.   remote:copy() -={
-# TODO - if fqdn is sent, work out tldid backwards?
-function :remote:copy:cached() { echo 3600; }
-function :remote:copy:cachefile() { echo $4; }
-function :remote:copy() {
-  ${CACHE_OUT?}; {
-    #. Usage: :remote:copy m <fqdn> /etc/security/access.conf ${SIMBOL_USER_CACHE?}/${fqdn}-access.conf
-
-    local -i e=${CODE_FAILURE?}
-
-    if [ $# -eq 4 ]; then
-        local tldid=$1
-        local hcs=$2
-        local src=$3
-        local dst=$4
-
-        local ssh_options="${g_SSH_OPTS?}"
-#       #. DEPRECATED
-#       ssh_options+=" $(:remote:sshproxyopts ${tldid})"
-        eval "scp ${ssh_options} ${hcs}:${src} ${dst}"
-        e=$?
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
-
-    return $e
-  } | ${CACHE_IN?}; ${CACHE_EXIT?}
-}
-
-function remote:copy:usage() { echo "-T<tldid> <hnh> <src-path> <dst-path>"; }
+function remote:copy:usage() { echo "-T<tldid> [[<user>@]<dst-hnh>:]<src-path> [[<user>@]<dst-hnh>:]<dst-path>"; }
 function remote:copy() {
     local -i e=${CODE_DEFAULT?}
 
     local tldid=${g_TLDID?}
-    if [ $# -eq 3 ]; then
-        local -r hnh="$1"
-        local -r src="$2"
-        local -r dst="$3"
+    local -A data
+    if [ $# -eq 2 ]; then
+        e=${CODE_SUCCESS?}
 
-        local -a data
-        [ ! -t 1 ] || cpf "Resolving %{@host:%s} in %{@tldid:%s}..." "${hnh}" "${tldid}"
-        data=( $(:dns:lookup.csv ${tldid} a ${hnh}) )
+        local hs=src
+        local -a uri
 
-        local qt hnh_ qual tldid_ usdn dn fqdn resolved qid
-        if [ ${#data[@]} -eq 1 ]; then
-            IFS=, read qt hnh_ qual tldid_ usdn dn fqdn resolved qid <<< "${data[0]}"
+        for hstr in "$@"; do
+            if [[ ${hstr} =~ ^(([^@]+@)?[^:]+:)?[^:@]*$ ]]; then
+                IFS=':@' read -a uri <<< "${hstr}"
 
-            local qdn=${fqdn%.${dn}}
-            [ ! -t 1 ] || theme INFO "Copying from ${qdn}..."
-            :remote:copy "${tldid}" "${qdn}" "${src}" "${dst}"
+                ((data[mode_${hs}] = ${#uri[@]}))
+echo "$hs // ${data[mode_${hs}]}" >&2
+                case ${data[mode_${hs}]} in
+                    1)
+                        data[pth_${hs}]="${uri[0]}"
+                    ;;
+                    2)
+                        data[hnh_${hs}]="${uri[0]}"
+                        data[pth_${hs}]="${uri[1]}"
+                    ;;
+                    3)
+                        data[un_${hs}]="${uri[0]}"
+                        data[hnh_${hs}]="${uri[1]}"
+                        data[pth_${hs}]="${uri[2]}"
+                    ;;
+                esac
+
+                #. If a hostname is at all specified...
+                local hnh="${data[hnh_${hs}]}"
+                if [ ${#hnh} -gt 0 ]; then
+                    [ ! -t 1 ] || cpf "Resolving %{@host:%s} in %{@tldid:%s}..." "${hnh}" "${tldid}"
+
+                    local -a hdata=( $(:dns:lookup.csv ${tldid} a ${hnh}) )
+                    if [ ${#hdata[@]} -eq 1 ]; then
+                        local qt hnh_ qual tldid_ usdn dn fqdn resolved qid
+                        IFS=, read qt hnh_ qual tldid_ usdn dn fqdn resolved qid <<< "${hdata[0]}"
+
+                        data[qdn_${hs}]=${fqdn%.${dn}}
+                        data[fqdn_${hs}]=${fqdn}
+
+                        [ ! -t 1 ] || theme HAS_PASSED "${data[qdn_${hs}]}"
+                    else
+                        [ ! -t 1 ] || theme HAS_FAILED "${hdata[*]}"
+                        e=${CODE_FAILURE?}
+                    fi
+                fi
+            else
+                e=${CODE_DEFAULT?}
+            fi
+
+            case ${data[mode_${hs}]} in
+                1) data[cmd_${hs}]="${data[pth_${hs}]}";;
+                2) data[cmd_${hs}]="${data[fqdn_${hs}]}:${data[pth_${hs}]}";;
+                3) data[cmd_${hs}]="${data[un_${hs}]}@${data[fqdn_${hs}]}:${data[pth_${hs}]}";;
+            esac
+
+            hs=dst
+        done
+
+        if [ $e -eq ${CODE_SUCCESS?} ]; then
+            local ssh_options="${g_SSH_OPTS?}"
+
+            [ ! -t 1 ] || cpf "Copying from %{@path:%s} to %{@path:%s} [MODE:%{@int:%s}:%{@int:%s}]..."\
+                "${data[cmd_src]}" "${data[cmd_dst]}" ${data[mode_src]} ${data[mode_dst]}
+
+            case ${data[mode_src]}:${data[mode_dst]} in
+                1:1)
+                    cp -a "${data[pth_src]}" "${data[pth_dst]}"
+                    e=$?
+                ;;
+                [23]:1|1:[23])
+                    eval "rsync -ae 'ssh ${ssh_options}' '${data[cmd_src]}' '${data[cmd_dst]}'"
+                    e=$?
+                ;;
+                *:*)
+                    local tmp="${SIMBOL_USER_VAR_TMP?}/remote-copy.$$.tmp/${data[pth_src]}"
+                    rm -rf ${tmp}
+                    mkdir -p $(dirname ${tmp})
+                    eval "rsync -ae 'ssh ${ssh_options}' ${data[cmd_src]} ${tmp}"
+                    [ $? -ne 0 ] || eval "rsync -ae 'ssh ${ssh_options}' ${tmp} ${data[cmd_dst]}"
+                    e=$?
+                    rm -rf ${tmp}
+                ;;
+            esac
+            theme HAS_AUTOED $e
+
             e=$?
-        else
-            e=${CODE_FAILURE?}
         fi
     fi
 
@@ -283,7 +237,7 @@ function remote:copy() {
 }
 #. }=-
 #.   remote:sudo() -={
-function ::remote:pipewrap() {
+function ::remote:pipewrap.eval() {
     #. This function acts mostly as a transparent pipe; data in -> data out.
     #.
     #. There is just once case where it intervenes, and that is when it is used
@@ -322,7 +276,7 @@ function :remote:sudo() {
         passwd="$(:vault:read SUDO)"
         if [ $? -eq ${CODE_SUCCESS?} ]; then
             local prompt="$(printf "\r")"
-            eval ::remote:pipewrap '${passwd}' '${lckfile}' | (
+            eval ::remote:pipewrap.eval '${passwd}' '${lckfile}' | (
                 :remote:connect ${tldid} ${hcs} sudo -p "${prompt}" -S "${@:3}"
                 e=$?
                 rm -f ${lckfile}
@@ -412,21 +366,16 @@ function remote:cluster() {
     return $e
 }
 
-function ::remote:tmux.eval() {
+function ::remote:tmux_setup.eval() {
     if [ $# -eq 3 ]; then
         local session=$1
-        echo "#. session ${session}"
+        echo "#. Session ${session} -={"
 
         local -i panes=$2
-        echo "#. ${panes} panes in total"
+        echo "#. + ${panes} panes in total"
 
-        local pane_res=$3
-        IFS=x read x y <<< "${pane_res}"
-        echo "#. window pane resolution set to ${x}x${y}"
-
-        local -i ppw
-        ((ppw=x*y))
-        echo "#. ${ppw} panes per window"
+        local -i ppw=$3
+        echo "#. + ${ppw} panes per window"
 
         local -i leftovers
         ((leftovers=panes%ppw))
@@ -436,54 +385,69 @@ function ::remote:tmux.eval() {
 
         if [ ${leftovers} -gt 0 ]; then
             ((windows++))
-            echo "#. last-window has ${leftovers} panes"
+            echo "#.   + last-window has ${leftovers} panes"
         fi
-        echo "#. ${windows} windows"
+        echo "#. + ${windows} windows"
+        echo "#. }=-"
 
-        echo "#. session creation"
-        echo tmux new-session -d -s ${session}
+        echo "#. Session Creation"
+        echo "tmux new-session -d -s ${session}"
 
-        echo "#. window creation"
-        wid=0
-        wname=${session}:w${wid}
-        echo tmux rename-window -t ${session} ${session}:w0
-        for ((wid=1; wid<${WINDOWS?}; wid++)); do
+        echo "#. Window Creation"
+        local -i wid
+        local wname=${session}:w${wid}
+        echo "tmux rename-window -t ${session} ${session}:w1"
+        for ((wid=2; wid<windows+1; wid++)); do
             wname=${session}:w${wid}
-            echo tmux new-window -t ${session} -d -a -n ${wname}
+            echo "tmux new-window -d -n ${wname}"
         done
 
         echo "#. pane creation"
-        wid=0
-        wname=${session}:w${wid}
-        for ((pid=0; pid<PANES; pid++)); do
-            if ((pid%PPW == 0)); then
-                if ((pid>0)); then
-                    echo "tmux select-layout -t ${session}:${wname} tiled >/dev/null"
-                    wname=${session}:w$((pid/PPW))
-                    echo "tmux select-window -t ${session}:${wname} #. Pane $pid, Window ${wname}"
-                else
-                    echo "#. Pane $pid, Window ${wname}"
-                fi
-            elif ((pid%X == 0)); then
-                echo "tmux split-window -h #. Pane $pid, Row $(((pid / X) % Y))"
+        for ((pid=0; pid<panes; pid++)); do
+            if ((pid % ppw == 0)); then
+                wname=${session}:w$((pid/ppw+1))
                 echo "tmux select-layout -t ${session}:${wname} tiled >/dev/null"
+                echo "tmux select-window -t ${session}:${wname} #. Pane $pid, Window ${wname}"
             else
-                echo "tmux split-window -v #. Pane $pid"
+                echo "tmux split-window #. Pane $pid"
+                echo "tmux select-layout -t ${session}:${wname} tiled >/dev/null"
             fi
         done
 
-        echo "#. view preparation and session connection"
-        wid=0
+        echo "#. View Preparation and Session Connection"
+        wid=1
         wname=${session}:w${wid}
         echo "tmux select-window -t ${session}:${wname}"
-        echo tmux select-pane -t ${session}:${wname}.0
-        echo tmux attach-session -t ${session}
-
-        echo "#. cleanup"
-        echo tmux kill-session -t tmux
+        echo "tmux select-pane -t ${session}:${wname}.0"
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
+}
+
+function ::remote:tmux_attach() {
+    local -i e=${CODE_FAILURE?}
+
+    if [ $# -eq 1 ]; then
+        local session=$1
+
+        local -a windows=(
+            $(tmux list-windows -a -t ${session}| awk -F': ' '{print$1}')
+        )
+
+        local wid
+        for wid in $(tmux list-windows -t ${session}|awk -F: '{print$1}'|sort -r); do
+            tmux select-window -t "${wid}"
+            tmux select-pane   -t "${wid}.0"
+            tmux set synchronize-panes on >/dev/null
+        done
+
+        tmux attach-session -t ${session}
+        e=$?
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+
+    return $e
 }
 
 function ::remote:tmux() {
@@ -496,62 +460,45 @@ function ::remote:tmux() {
 
         local -a hosts=( $(:hgd:resolve ${tldid} ${hgd}) )
         if [ ${#hosts[@]} -gt 0 ]; then
-            local cmd="tmux new-session -d -s '${session}'"
-            eval ${cmd}
-            if [ $? -eq 0 ]; then
-                local tab
-                local -i pid
-                local -i lpid
-                local -i tid
-                local -i otid
-                local -i nodes=${#hosts[@]}
+            eval "$(::remote:tmux_setup.eval ${session} ${#hosts[@]} 12)"
 
-                local -i zoning=12 #. Terminals per tab (tmux window)
-                for ((pid=0; pid<nodes; pid++)); do
-                    ((lpid=pid%zoning))
-                    ((tid=pid/zoning))
-                    tab="tab-${tid}"
-                    if [ ${pid} -gt 0 ]; then
-                        if [ ${otid} -ne ${tid} ]; then
-                            tmux new-window -t "${session}" -a -n "${tab}"
-                            tmux select-window -t "${session}:${tab}"
-                        fi
-                    else
-                        tmux rename-window -t "${session}" "${tab}"
-                        tmux select-window -t "${session}:${tab}"
-                    fi
-                    ((otid=tid))
+            local -a panes=(
+                $(tmux list-panes -t ${session} -a | awk -F': ' '{print$1}')
+            )
 
-                    [ ${lpid} -eq 0 ] || tmux split-window -h
-                    cpf "Connection %{g:${tab}}:%{@int:${pid}} to %{@host:${hosts[${pid}]}}..."
-                    #if [[ ${hosts[${pid}]} =~ /
-                    tmux send-keys -t "${lpid}" "SIMBOL_USER_SSH_CONF=${SIMBOL_USER_SSH_CONF} SIRCA_ENV=${SIRCA_ENV} simbol remote connect '${hosts[${pid}]}'" C-m
-                    #tmux send-keys -t "${lpid}" "${SIMBOL_CORE_BIN?}/ssh ${hosts[${pid}]}" C-m
-                    #XXX tmux send-keys -t "${lpid}" "ss${tldid} ${hosts[${pid}]}" C-m
-                    tmux select-layout -t "${session}:${tab}" tiled >/dev/null
-                    theme HAS_PASSED "${tab}:${pid}"
-                done
+            local -A data
+            eval data=$(:util:zip.eval hosts panes)
 
-                for tid in $(tmux list-windows -t ${session}|awk -F: '{print$1}'); do
-                    tab="tab-${tid}"
-                    tmux select-window -t "${session}:${tid}"
-                    tmux set synchronize-panes on >/dev/null
-                    tmux select-pane   -t "${session}:${tab}.0"
-                done
+            local missconnects=${SIMBOL_USER_TMP?}/${session}.missconnects
+            > ${missconnects}
 
-                tid=0
-                pid=0
-                tab="tab-${tid}"
-                tmux select-window -t "${session}:${tab}"
-                tmux select-pane   -t "${session}:${tab}.0"
+            local host pane
+            local -i pid=1
+            for host in "${hosts[@]}"; do
+                pane="${data[${host}]}"
 
-                tmux attach-session -t "${session}"
-                [ $? -ne 0 ] || e=${CODE_SUCCESS?}
-            else
-                core:log WARN "Empty HGD resolution"
+                cpf "Connection %{g:${pane}}:%{@int:${pid}} to %{@host:${host}}..."
+                tmux send-keys -t "${pane}" "  clear" C-m
+                tmux send-keys -t "${pane}" "  simbol remote connect '${host}' || ( tput setab 1; clear; echo ${host} >> ${missconnects};echo 'ERROR: Could not connect to ${host}'; read -n1 ); exit" C-m
+                theme HAS_PASSED "${pane}:${pid}"
+
+                ((pid++))
+            done
+
+            ::remote:tmux_attach ${session}
+            [ $? -ne 0 ] || e=${CODE_SUCCESS?}
+
+            [ -s ${missconnects} ] || rm -f ${missconnects}
+            if [ -e ${missconnects} ]; then
+                cpf "%{r:ERROR}: Failed to connect to the following hosts...\n"
+                while read host; do
+                    cpf " ! %{@host:%s}\n" "${host}"
+                done < ${missconnects}
             fi
+
+            tmux kill-session -t ${session}
         else
-            core:log ERR "Failed to execute cmd \`${cmd}'"
+            core:log WARN "Empty HGD resolution"
         fi
     else
         core:raise EXCEPTION_BAD_FN_CALL
@@ -611,198 +558,416 @@ function remote:tmux() {
     return $e
 }
 #. }=-
-#.   remote:mon() -={
-#. Deprecated Mon Serial Execution
-function ::remote:serialmon() {
-    local -i e=${CODE_FAILURE?}
 
-    if [ $# -ge 2 ]; then
-        local tldid=${g_TLDID?}
-        local -a qdns=( $(:hgd:resolve ${tldid} $1) )
-        local -r rcmd=${@:2}
-
-        if [ ${#rcmd} -gt 0 ]; then
-            local qdn info postcmd
-            for qdn in ${qdns[@]}; do
-                info="$(:remote:connect ${tldid} ${qdn} ${rcmd}|tr -d '\r\n'; exit ${PIPESTATUS[0]})"
-                if [ $? -eq ${CODE_SUCCESS?} ]; then
-                    e=${CODE_SUCCESS?}
-                    echo "${info}"
-                fi
+declare -g -A STATES
+#. TODO: move this to util -={
+LOCKDIR="/tmp/lock.%d.sct"
+function lock() {
+    local -i lid=${2:0}
+    local lockdir="$(printf "${LOCKDIR}" ${lid})"
+    local action="${1}"
+    case ${action} in
+        on)
+            while ! mkdir "${lockdir}" &>/dev/null; do
+                sleep 0.1
             done
-        else
-            core:raise EXCEPTION_BAD_FN_CALL
-        fi
-    fi
+        ;;
+        off)
+            rmdir "${lockdir}"
+        ;;
+    esac
+}
+#. }=-
+
+#. ::remote:thread:cleanup() -={
+function ::remote:thread:cleanup() {
+    local -i e=${CODE_SUCCESS?}
+
+    rm -f "/tmp/${USER}.sct"
+    [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
+
+    rm -rf "/tmp/lock.*.sct"
+    [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
 
     return $e
 }
+#. }=-
+#. ::remote:thread:setup() -={
+function ::remote:thread:setup() {
+    local -i e
 
+    ::remote:thread:cleanup
+    e=$?
+
+    exec 3>/tmp/${USER}.sct
+    exec 4</tmp/${USER}.sct
+
+    return $e
+}
+#. }=-
+#. ::remote:thread:teardown() -={
+function ::remote:thread:teardown() {
+    local -i e=${CODE_FAILURE?}
+
+    exec 3>&-
+    exec 4>&-
+
+    ::remote:thread:cleanup
+    e=$?
+
+    return $e
+}
+#. }=-
+
+#. ::remote:ssh_thread.ipc() -={
+function ::remote:ssh_thread.ipc() {
+    # ::remote:ssh_thread.ipc                    | ::remote:mon.ipc
+    #                                            |
+    #                _____ [5<stdin]___/dev/null |
+    #               /                            |
+    #             [.....]                        |
+    #             [.....]                        |
+    #             [.....]                        |
+    #               \ \___ [6>stdout>7]___       |
+    #                \____ [8>stderr>9]__ \      |
+    #                                    \ \     |
+    #                                     \_\__ [3>user>4]___*
+    #                                            |
+
+    local -i e=-1
+
+    local -i retries=$1
+    local -i timeout=$2
+    local hcs="$3"
+    local cmd="${@:4}"
+
+    #. Maybe we want to read data one day, for now it's /dev/null
+    local stdin="/dev/null"
+    exec 5<"${stdin}"
+
+    #. Create a process-local read (7) and write (6) stdout file descriptor and
+    #. associated buffer file
+    local stdout="/tmp/stdout.${BASHPID}.sct"
+    exec 6>"${stdout}"
+    exec 7<"${stdout}"
+
+    #. Create a process-local read (9) and write (8) stderr file descriptor and
+    #. associated buffer file
+    local stderr="/tmp/stderr.${BASHPID}.sct"
+    exec 8>"${stderr}"
+    exec 9<"${stderr}"
+
+    #. Execute the command, reading stdin from file descriptor 5, writing stdout
+    #. to file descriptor 6, and writing stderr to file descriptor 8
+    local -i tries=0
+    while ((tries < retries)); do
+        ((tries++))
+        core:log DEBUG "Remote execution launched; attempt ${tries} of ${retries}; timeout of ${timeout}s"
+        case ${hcs} in
+            localhost|127.*)
+                eval "${cmd}" <&5 1>&6 2>&8
+                e=$?
+            ;;
+            *)
+                ssh -xTTT ${g_SSH_OPTS?}\
+                    -o ConnectionAttempts=${retries}\
+                    -o ConnectTimeout=${timeout}\
+                    -o PasswordAuthentication=no\
+                    -o PreferredAuthentications=publickey\
+                    -o StrictHostKeyChecking=no\
+                    -o BatchMode=yes\
+                    -o UserKnownHostsFile=/dev/null\
+                        "${hcs}" -- "${cmd}" <&5 1>&6 2>&8
+                e=$?
+            ;;
+        esac
+        [ $e -ne 0 ] || break
+        sleep 1.${RANDOM}
+    done
+
+    #. Close all write file descriptors
+    exec 6>&-
+    exec 8>&-
+
+    #. IPC/write -={
+    #. Get the mutex and write all data as null-terminated tokens in the
+    #. order of: <hcs>, <exit-code>, <stdout>, <stderr>; note that the latter
+    #. two can be 0 or more lines.
+    lock on
+    printf "%s\0" "${hcs}"   >&3 #. hcs
+    cat <&7 >&3; printf "\0" >&3 #. stdout
+    cat <&9 >&3; printf "\0" >&3 #. stderr
+    printf "%d\0" ${e}       >&3 #. ee
+    printf "%s=%d;"\
+        "tries" ${tries}\
+                             >&3 #. metadata
+    printf "\0"              >&3 #. metadata
+    lock off
+    #. }=-
+
+    #. Close all read file descriptors
+    exec 5>&-
+    exec 7>&-
+    exec 9>&-
+
+    #. Remove all buffer files
+    rm -f ${stdout}
+    rm -f ${stderr}
+
+    return $e
+}
+#. }=-
+#. ::remote:mon.ipc() -={
+function ::remote:mon.ipc() {
+    local -i e=${CODE_FAILURE?}
+
+    local -i threads=$1
+    local -i retries=$2
+    local -i timeout=$3
+
+    local delim="$4"
+
+    local -a hcss
+    IFS=, read -a hcss <<< "$5"
+
+    local cmd="${@:6}"
+
+    local -i ee
+    local -i incomplete=1
+    local -i success=0
+    local -i failure=0
+    local -i total=0
+
+    local -i hcsi=0
+    local -i active
+    local state
+
+    core:log DEBUG "Seting up the thread-pool"
+    ::remote:thread:setup
+
+    local hcs stdout stderr ee metadata_raw
+    while [ ${incomplete} -eq 1 ]; do
+        active=0
+        for state in "${STATES[@]}"; do
+            if [ "${state}" == "PENDING" ]; then
+                ((active++))
+            fi
+        done
+
+        while [ ${active} -lt ${threads} -a ${hcsi} -lt ${#hcss[@]} ]; do
+            core:log DEBUG "Launching remote execution on ${hcs}"
+            hcs=${hcss[${hcsi}]}
+            ((hcsi++))
+
+            STATES[${hcs}]='PENDING'
+            ( ::remote:ssh_thread.ipc ${retries} ${timeout} "${hcs}" "${cmd}" )&
+
+            ((active++))
+            core:log DEBUG "Active thread-count at ${active} (of ${threads})"
+        done
+
+        if [ ${active} -gt 0 ]; then
+            ee=-9
+            core:log DEBUG "Reading from thread IPC"
+            #. IPC/read -={
+            while ! read -u 4 -d $'\0' hcs; do sleep 0.1; done
+            while ! read -u 4 -d $'\0' stdout; do sleep 0.1; done
+            while ! read -u 4 -d $'\0' stderr; do sleep 0.1; done
+            while ! read -u 4 -d $'\0' ee; do sleep 0.1; done
+            while ! read -u 4 -d $'\0' metadata_raw; do sleep 0.1; done
+            #. }=-
+            core:log DEBUG "Creating payload for view layer"
+
+            printf "%s${delim}%s${delim}%s\n" xc "${hcs}" "${ee}"
+
+            local -a payload
+            while read line; do
+                payload=( so "${hcs}" "${line}" )
+                :util:join ${delim} payload
+                echo
+            done <<< "${stdout}"
+
+            while read line; do
+                payload=( se "${hcs}" "${line}" )
+                :util:join ${delim} payload
+                echo
+            done <<< "${stderr}"
+
+            IFS=';' read -a metadata <<< "${metadata_raw}"
+            for line in "${metadata[@]}"; do
+                payload=( md "${hcs}" "${line}" )
+                :util:join ${delim} payload
+                echo
+            done
+
+            STATES[${hcs}]=$ee
+            if [ $ee -eq 0 ]; then
+                ((success++))
+                ((total++))
+            else
+                ((failure++))
+                ((total++))
+                e=1
+            fi
+        else
+            core:log DEBUG "Work complete"
+            incomplete=0
+        fi
+    done
+
+    core:log DEBUG "Tearing down the thread-pool"
+    ::remote:thread:teardown
+
+    core:log INFO "Successfully complete ${success} of ${total} threads"
+    [ ${failure} -eq 0 ] || core:log ERR "Failures in ${failure} threads"
+
+    return $e
+}
+#. }=-
+#.   remote:mon() -={
 function remote:mon:shflags() {
     cat <<!
-integer timeout   8     "timeout"      t
-integer threads   32    "threads"      h
-integer attempts  3     "attempts"     a
-boolean sudo      false "run-as-root"  s
+integer timeout   8           "timeout"      t
+integer threads   8           "threads"      h
+integer retries   3           "retries"      a
+string  output    so,se,xc    "output"       o
 !
+#boolean sudo      false       "run-as-root"  s
 }
-function remote:mon:usage() { echo "<hgd:*> @$(echo ${!USER_MON_CMDGRPREMOTE[@]}|sed -e 's+ +|@+g') | <arbitrary-command>"; }
+function remote:mon:usage() {
+    printf "[-h|--threads <threads>] [-o so,se,xc] <hgd:*> "
+    printf "@%s|" "${!USER_MON_CMDGRPREMOTE[@]}"
+    printf -- "-- <arbitrary-command>\n"
+}
 function remote:mon() {
     local -i e=${CODE_DEFAULT?}
-
-    #core:requires PYTHON futures
-    #core:requires PYTHON paramiko
-
-    core:requires RUBY gpgme
-    core:requires RUBY parallel
-    core:requires RUBY net-ssh
-    core:requires RUBY net-ssh-multi
-    core:requires RUBY net-ssh-gateway
 
     if [ $# -ge 2 ]; then
         local -i timeout=${FLAGS_timeout:-8}; unset FLAGS_timeout
         local -i threads=${FLAGS_threads:-32}; unset FLAGS_threads
-        local -i attempts=${FLAGS_attempts:-3}; unset FLAGS_attempts
+        local -i retries=${FLAGS_retries:-3}; unset FLAGS_retries
         local -i sudo=${FLAGS_sudo:-0}; ((sudo=~sudo+2)); unset FLAGS_sudo
 
-        local -r hgd="$1"
-        local tldid=${g_TLDID?}
+        #. so:stdout, se:stdout, xc:exit-code, md:metadata
+        local output_raw="${FLAGS_output:-so,se,xc}"; unset FLAGS_output
 
-        local rcmd lcmd
-        if [ ${2:0:1} == '@' ]; then
-            rcmd="${USER_MON_CMDGRPREMOTE[${2:1}]}"
-            lcmd="${USER_MON_CMDGRPLOCAL[${2:1}]}"
+        #. Validate user parameters -={
+        e=${CODE_SUCCESS?}
+
+        [ ${threads} -gt 0 ] || e=${CODE_DEFAULT?}
+
+        local -A output=( [so]=0 [se]=0 [xc]=0 [md]=0 )
+
+        if [ ${g_VERBOSE?} -eq 1 ]; then
+            output[so]=1
+            output[se]=1
+            output[xc]=1
+            output[md]=1
         else
-            shift 1
-            rcmd=${@}
+            local token
+            local -a tokens
+            IFS=, read -a tokens <<< "${output_raw}"
+            for token in ${tokens[@]}; do
+                case ${token} in
+                    so) output[so]=1 ;;
+                    se) output[se]=1 ;;
+                    xc) output[xc]=1 ;;
+                    md) output[md]=1 ;;
+                esac
+            done
         fi
+        #. }=-
 
-        if [ ${#rcmd} -gt 0 ]; then
-            e=${CODE_FAILURE?}
+        if [ $e -eq ${CODE_SUCCESS?} ]; then
+            local -r hgd="$1"
+            local tldid=${g_TLDID?}
 
-            cpf "Processing..."
-            local qdn ip
-            local -a qdns
-            qdns=( $(:hgd:resolve ${tldid} ${hgd}) )
-            e=$?
-            if [ $e -eq 0 ]; then
-                cpf "(%{@int:${#qdns[@]}} hosts (max-threads=%{@int:%s})" ${threads}
-
-                if [ ${#qdns[@]} -gt ${threads} ]; then
-                    cpf "; this could take some time"
-                fi
-                cpf ")...\n"
-
-                local line
-                local csv_hosts=$(:util:join ',' qdns)
-
-                if [ ${threads} -gt 1 ]; then
-                    local script=
-
-                    ::xplm:loadvirtenv rb
-                    script="${SIMBOL_CORE_LIBEXEC?}/ssh.rb ${threads} 1 ${timeout} mod_hgd=${csv_hosts} ${rcmd}"
-                    #echo "#. DEBUG: ${script}" >&2
-
-#                   local sshproxystr=$(:remote:sshproxystr ${tldid})
-#                   local ssh_proxy_host=${sshproxystr%:*}
-#                   local ssh_proxy_port=22
-#                   [ "${sshproxystr//[^:]/}" != ':' ] || ssh_proxy_port=${sshproxystr#*:}
-#                   local data="$(
-#                       SSH_PROXY_HOST=${ssh_proxy_host}\
-#                       SSH_PROXY_PORT=${ssh_proxy_port}\
-#                       TLD=${USER_TLDS[${tldid}]} ${script}
-#                   )"
-
-                    local sid
-                    [ ${sudo} -eq 0 ] || sid=SUDO
-                    local data="$(SUDO=${sid} TLD=${USER_TLDS[${tldid}]} ${script})"
-                    eval "${data}"
-
-                    local qdn
-                    for qdn in ${qdns[@]}; do
-                        cpf "%{@host:%-32s}" ${qdn}
-
-                        sha1=$(echo -ne "${qdn}"|sha1sum|awk '{print$1}')
-                        local err=${mod_hgd[${sha1}]}
-                        if [ ${#err} -gt 0 ]; then
-                            if [ ${err} -eq 0 ]; then
-                                if [ -n "${mod_hgd_w[${sha1}]}" ]; then
-                                    theme HAS_WARNED "${mod_hgd_o[${sha1}]}"
-                                else
-                                    local info="${mod_hgd_o[${sha1}]}"
-                                    if [ ${#lcmd} -gt 0 ]; then
-                                        local postcmd
-                                        postcmd=$(printf "${lcmd}" "${info}");
-                                        info="$(${postcmd}; exit ${PIPESTATUS[0]})"
-                                        e=$?
-                                    fi
-                                    theme HAS_PASSED "${info}"
-                                fi
-                            else
-                                local chan
-                                local emsg="exit:${err}"
-
-                                chan="${mod_hgd_e[${sha1}]}"
-                                [ -z "${chan}" ] || emsg+=" / stderr(${chan})"
-
-                                chan="${mod_hgd_o[${sha1}]}"
-                                [ -z "${chan}" ] || emsg+=" / stdout(${chan})"
-
-                                theme HAS_FAILED "${emsg}"
-                            fi
-                        else
-                            theme HAS_WARNED "NO_DATA"
-                        fi
-                    done
-
-                    e=$?
-                elif [ ${threads} -eq 1 ]; then
-                    local rcmd lcmd
-                    if [ ${2:0:1} == '/' ]; then
-                        rcmd="${USER_MON_CMDGRPREMOTE[${2:1}]}"
-                        lcmd="${USER_MON_CMDGRPLOCAL[${2:1}]}"
-                    else
-                        rcmd=${@:2}
-                    fi
-
-                    if [ ${#rcmd} -gt 0 ]; then
-                        e=${CODE_SUCCESS?}
-                        cpf "(%{@int:${#qdns[@]}} hosts"
-                        for qdn in ${qdns[@]}; do
-                            cpf "%{@host:%-32s}" ${qdn}
-                            read record context query sdn ip <<< "$(:dns:lookup P a ${qdn})"
-                            if [ $? -eq 0 ]; then
-                                cpf "%{@ip:%-32s}" ${ip}
-                                socat -t1 -T1 -u TCP:${ip}:22,connect-timeout=1 STDOUT >/dev/null 2>&1
-                                e=$?
-                                if [ $e -eq 0 ]; then
-                                    info=$(::remote:serialmon ${qdn} ${rcmd}; exit ${PIPESTATUS[0]})
-                                    if [ $? -eq 0 ]; then
-                                        if [ ${#lcmd} -gt 0 ]; then
-                                            local postcmd
-                                            postcmd=$(printf "${lcmd}" "${info}");
-                                            info="$(${postcmd}; exit ${PIPESTATUS[0]})"
-                                            e=$?
-                                        fi
-                                        theme HAS_PASSED "${info}"
-                                        e=${CODE_SUCCESS?}
-                                    else
-                                        e=${CODE_FAILURE?}
-                                        theme HAS_FAILED "EXIT CODE:$e"
-                                    fi
-                                else
-                                    e=${CODE_FAILURE?}
-                                    theme HAS_FAILED "SSH_DOWN"
-                                fi
-                            else
-                                e=${CODE_FAILURE?}
-                                theme HAS_FAILED "NO_A_RECORD"
-                            fi
-                        done
-                    fi
-                fi
+            local rcmd lcmd
+            if [ ${2:0:1} == '@' ]; then
+                rcmd="${USER_MON_CMDGRPREMOTE[${2:1}]}"
+                lcmd="${USER_MON_CMDGRPLOCAL[${2:1}]}"
             else
-                theme HAS_FAILED "NO_SUCH_HGD"
+                shift 1
+                rcmd="${@}"
+            fi
+
+            if [ ${#rcmd} -gt 0 ]; then
+                e=${CODE_FAILURE?}
+
+                cpf "Processing..."
+                local qdn ip
+                local -a qdns
+                qdns=( $(:hgd:resolve ${tldid} ${hgd}) )
+                e=$?
+                if [ $e -eq 0 ]; then
+                    cpf "(%{@int:${#qdns[@]}} hosts (max-threads=%{@int:%s})" ${threads}
+
+                    if [ ${#qdns[@]} -gt ${threads} ]; then
+                        cpf "; this could take some time"
+                    fi
+                    cpf ")...\n"
+
+                    local line
+                    local csv_hosts=$(:util:join ',' qdns)
+
+                    if [ ${g_VERBOSE?} -eq 1 ]; then
+                        echo "#. Hosts:      ${#qdns[@]}"
+                        echo "#. Threads:    ${threads}"
+                        echo "#. Remote Cmd: ${rcmd}"
+                        echo "#.   Attempts: ${retries}"
+                        echo "#.   Timeout:  ${timeout}"
+                        echo "#. Local Cmd:  ${lcmd}"
+                    fi
+
+                    local delim='|'
+                    local line
+                    local otype
+                    local hcs
+                    local payload
+                    while read line; do
+                        IFS="${delim}" read otype hcs payload <<< "${line}"
+                        case ${otype}:${output[${otype}]}:${#payload} in
+                            xc:1:[1-9]*)
+                                case ${payload} in
+                                    0)
+                                        cpf "%{g:%8s}%{@host:%-48s}: "\
+                                            "excode" "${hcs}"
+                                        theme HAS_AUTOED ${payload}
+                                    ;;
+                                    *)
+                                        cpf "%{r:%8s}%{@host:%-48s}: "\
+                                            "excode" "${hcs}"
+                                        theme HAS_AUTOED ${payload}
+                                    ;;
+                                esac
+                            ;;
+                            so:1:[1-9]*)
+                                cpf "%{c:%8s}%{@host:%-48s}: %s\n"\
+                                    "stdout" "${hcs}" "${payload}"
+                            ;;
+                            se:1:[1-9]*)
+                                cpf "%{r:%8s}%{@host:%-48s}: %s\n"\
+                                    "stderr" "${hcs}" "${payload}"
+                            ;;
+                            md:1:[1-9]*)
+                                cpf "%{m:%8s}%{@host:%-48s}: %s\n"\
+                                    "metadata" "${hcs}" "${payload}"
+                            ;;
+                            so:0:*|so:1:0|se:0:*|se:1:0|md:0:*|xc:0:*)
+                                : pass
+                            ;;
+                            *:*:*)
+                                theme HAS_FAILED "Can't stomach \`${otype}:${output[${otype}]}:${#payload}'"
+                                core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+                            ;;
+                        esac
+                    done < <(::remote:mon.ipc\
+                        ${threads} ${retries} ${timeout}\
+                        "${delim}" "${csv_hosts}" "${rcmd}"
+                    )
+                else
+                    theme HAS_FAILED "NO_SUCH_HGD"
+                fi
             fi
         fi
     fi

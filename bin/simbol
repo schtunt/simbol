@@ -1,40 +1,51 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
-e=0
+let -i e=0
+
+#. Source user-overrides if any
 [ ! -f ${HOME}/.simbolrc ] || source ${HOME}/.simbolrc
+
+#. If the bash-shell override has been defined, exec into that first
 if [ ${#SIMBOL_SHELL} -gt 0 ]; then
-    if [ -x "${SIMBOL_SHELL}" ]; then
+    if [ -x "${SIMBOL_SHELL}" -a -f "${SIMBOL_SHELL}" ]; then
         if [ "${SIMBOL_SHELL}" != "${BASH}" ]; then
-            exec ${SIMBOL_SHELL} $0 $@
+            BASH_ENV=<(
+                declare -p | grep -E '\<USER_'
+            ) ${SIMBOL_SHELL} -$- "$0" "$@"
         fi
     else
-        echo "The request SIMBOL_SHELL is invalid:" ${SIMBOL_SHELL}
-        e=2
+        e=127
     fi
 fi
 
 if [ $e -eq 0 ]; then
-    maj=${BASH_VERSINFO[0]}
-    min=${BASH_VERSINFO[1]}
-
-    if [ ${maj} -ge 4 -a ${min} -ge 0 ]; then
-        SIMBOL_PROFILE=$(${HOME}/.simbol/bin/activate)
+    if [ ${BASH_VERSINFO[0]} -ge 4 -a ${BASH_VERSINFO[1]} -ge 1 ]; then
+        SIMBOL_PROFILE="$(${HOME}/.simbol/bin/activate)"
         e=$?
         if [ $e -eq 0 ]; then
             export SIMBOL_PROFILE
             source ~/.simbol/.scm/lib/libsh/libsimbol/libsimbol.sh
-            rm -f ${SIMBOL_DEADMAN?}
-
-            core:wrapper "$@"
+            validate_bash
             e=$?
+            case $e in
+                0)
+                    rm -f "${SIMBOL_DEADMAN?}"
+                    core:wrapper "$@"
+                    e=$?
+                ;;
+                *)
+                    echo "ERROR: Your version of BASH is not too old, but fails sanity checks."
+                ;;
+            esac
         else
-            echo "No simbol profiles active, either create a new one, or activate an existing one."
+            echo "ERROR: No simbol profiles active, either create a new one, or activate an existing one; [e:$e]."
         fi
     else
-        e=1
-        echo "Your version of BASH is too old; export SIMBOL_SHELL to override system bash."
+        echo "ERROR: Your version of BASH is too old; export SIMBOL_SHELL to override system bash; [e:$e]."
     fi
+else
+    echo "ERROR: The request SIMBOL_SHELL is invalid:" ${SIMBOL_SHELL}
 fi
 
 exit ${e}

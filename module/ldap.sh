@@ -661,7 +661,7 @@ BEGIN{
     return $e
 }
 
-function ldap:search:usage() { echo "user|group|netgroup <filters>/<show-fields>"; }
+function ldap:search:usage() { echo "host|subnet|user|group|netgroup [<filter:<attr>=<match>> [<filter>, [...]]] <attr> [<attr> [...]]"; }
 function ldap:search() {
     #. NOTE
     #. If any of the specified attributes are missing, every attribute will

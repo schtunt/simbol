@@ -306,22 +306,26 @@ function :xplm:install() {
 
     if [ $# -gt 1 ]; then
         local plid="${1}"
+        local virtenv="${plid}env"
         case ${plid} in
             py)
                 if ::xplm:loadvirtenv ${plid}; then
-                    pip install --upgrade -q "${@:2}"
+                    pip install --upgrade -q "${@:2}" \
+                        >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
                     e=$?
                 fi
             ;;
             rb)
                 if ::xplm:loadvirtenv ${plid}; then
-                    gem install -q "${@:2}"
+                    gem install -q "${@:2}" \
+                        >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
                     e=$?
                 fi
             ;;
             pl)
                 if ::xplm:loadvirtenv ${plid}; then
-                    cpanm ${@:2}
+                    cpanm ${@:2} \
+                        >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
                     e=$?
                 fi
             ;;
@@ -345,26 +349,26 @@ function :xplm:install() {
 
                     #. rbenv.git
                     local xplenv="git://github.com/sstephenson/rbenv.git"
-                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}.git ]; then
-                        git clone -q ${xplenv} ${SIMBOL_USER_SCM?}/${virtenv}.git
+                    if [ ! -e ${SIMBOL_USER_VAR_SCM?}/${virtenv}.git ]; then
+                        git clone -q ${xplenv} ${SIMBOL_USER_VAR_SCM?}/${virtenv}.git
                     fi
-                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}.git/bin/${virtenv}\
-                        ${SIMBOL_USER_LIBEXEC?}/${virtenv}
+                    ln -sf ${SIMBOL_USER_VAR_SCM?}/${virtenv}.git/bin/${virtenv}\
+                        ${SIMBOL_USER_VAR_LIBEXEC?}/${virtenv}
 
                     #. rbenv->build
                     mkdir -p ${RBENV_ROOT?}/plugins
                     local build="git://github.com/sstephenson/ruby-build.git"
-                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}-build.git ]; then
-                        git clone -q ${build} ${SIMBOL_USER_SCM?}/${virtenv}-build.git
+                    if [ ! -e ${SIMBOL_USER_VAR_SCM?}/${virtenv}-build.git ]; then
+                        git clone -q ${build} ${SIMBOL_USER_VAR_SCM?}/${virtenv}-build.git
                     fi
-                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}-build.git\
+                    ln -sf ${SIMBOL_USER_VAR_SCM?}/${virtenv}-build.git\
                         ${RBENV_ROOT?}/plugins/${virtenv}-build
 
                     local bundler="git://github.com/carsomyr/rbenv-bundler.git"
-                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}-bundler.git ]; then
-                        git clone -q ${build} ${SIMBOL_USER_SCM?}/${virtenv}-bundler.git
+                    if [ ! -e ${SIMBOL_USER_VAR_SCM?}/${virtenv}-bundler.git ]; then
+                        git clone -q ${build} ${SIMBOL_USER_VAR_SCM?}/${virtenv}-bundler.git
                     fi
-                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}-bundler.git\
+                    ln -sf ${SIMBOL_USER_VAR_SCM?}/${virtenv}-bundler.git\
                         ${RBENV_ROOT?}/plugins/${virtenv}-bundler
                 ;;
                 py)
@@ -374,23 +378,23 @@ function :xplm:install() {
 
                     #. pyenv.git
                     local xplenv="git://github.com/yyuu/pyenv.git"
-                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}.git ]; then
-                        git clone -q ${xplenv} ${SIMBOL_USER_SCM?}/${virtenv}.git
+                    if [ ! -e ${SIMBOL_USER_VAR_SCM?}/${virtenv}.git ]; then
+                        git clone -q ${xplenv} ${SIMBOL_USER_VAR_SCM?}/${virtenv}.git
                     fi
-                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}.git/bin/${virtenv}\
-                        ${SIMBOL_USER_LIBEXEC?}/${virtenv}
+                    ln -sf ${SIMBOL_USER_VAR_SCM?}/${virtenv}.git/bin/${virtenv}\
+                        ${SIMBOL_USER_VAR_LIBEXEC?}/${virtenv}
 
                     #. pyenv->build
                     mkdir -p ${PYENV_ROOT?}/plugins
-                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}.git/plugins/python-build\
+                    ln -sf ${SIMBOL_USER_VAR_SCM?}/${virtenv}.git/plugins/python-build\
                         ${PYENV_ROOT?}/plugins/${virtenv}-build
 
                     #. pyenv->virtualenv
                     local virtualenv="git://github.com/yyuu/pyenv-virtualenv.git"
-                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}-virtualenv.git ]; then
-                        git clone -q ${virtualenv} ${SIMBOL_USER_SCM?}/${virtenv}-virtualenv.git
+                    if [ ! -e ${SIMBOL_USER_VAR_SCM?}/${virtenv}-virtualenv.git ]; then
+                        git clone -q ${virtualenv} ${SIMBOL_USER_VAR_SCM?}/${virtenv}-virtualenv.git
                     fi
-                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}-virtualenv.git\
+                    ln -sf ${SIMBOL_USER_VAR_SCM?}/${virtenv}-virtualenv.git\
                         ${PYENV_ROOT?}/plugins/${virtenv}-virtualenv
                 ;;
                 pl)
@@ -400,19 +404,19 @@ function :xplm:install() {
 
                     #. plenv.git
                     local xplenv="git://github.com/tokuhirom/plenv.git"
-                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}.git ]; then
-                        git clone -q ${xplenv} ${SIMBOL_USER_SCM?}/${virtenv}.git
+                    if [ ! -e ${SIMBOL_USER_VAR_SCM?}/${virtenv}.git ]; then
+                        git clone -q ${xplenv} ${SIMBOL_USER_VAR_SCM?}/${virtenv}.git
                     fi
-                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}.git/bin/${virtenv}\
-                        ${SIMBOL_USER_LIBEXEC?}/${virtenv}
+                    ln -sf ${SIMBOL_USER_VAR_SCM?}/${virtenv}.git/bin/${virtenv}\
+                        ${SIMBOL_USER_VAR_LIBEXEC?}/${virtenv}
 
                     #. plenv->build
                     mkdir -p ${PLENV_ROOT?}/plugins
                     local build="git://github.com/tokuhirom/Perl-Build.git"
-                    if [ ! -e ${SIMBOL_USER_SCM?}/${virtenv}-build.git ]; then
-                        git clone -q ${build} ${SIMBOL_USER_SCM?}/${virtenv}-build.git
+                    if [ ! -e ${SIMBOL_USER_VAR_SCM?}/${virtenv}-build.git ]; then
+                        git clone -q ${build} ${SIMBOL_USER_VAR_SCM?}/${virtenv}-build.git
                     fi
-                    ln -sf ${SIMBOL_USER_SCM?}/${virtenv}-build.git\
+                    ln -sf ${SIMBOL_USER_VAR_SCM?}/${virtenv}-build.git\
                         ${PLENV_ROOT?}/plugins/${virtenv}-build
                 ;;
             esac
@@ -507,11 +511,11 @@ function :xplm:purge() {
         case ${plid} in
             rb|py|pl)
                 local virtenv="${plid}env"
-                rm -f ${SIMBOL_USER_LIBEXEC?}/${virtenv}
+                rm -f ${SIMBOL_USER_VAR_LIBEXEC?}/${virtenv}
                 rm -rf ${SIMBOL_USER_VAR}/${virtenv}
 
                 #. Unnecessary VCS purge...
-                rm -rf ${SIMBOL_USER_SCM}/${virtenv}*
+                rm -rf ${SIMBOL_USER_VAR_SCM}/${virtenv}*
 
                 e=${CODE_SUCCESS?}
             ;;

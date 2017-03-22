@@ -14,21 +14,16 @@
 #.
 #. See the short code below to figure out how those are used.
 
-function run() {
-    echo "$ ${@}"
-    "${@}"
-    return $e
-}
-
 declare -g -A PACKAGES=(
-    [ALL]=make,coreutils,bash,sed,gawk,git,haveged
-    [gpg,vault,remote]=gnupg2,pwgen,xclip
-    [net]=iproute,net-tools,netcat,socat
-    [dns,remote]=dnsutils
-    [remote]=tmux,socat
+    [ALL]='make,coreutils,bash,sed,gawk,git,haveged'
+    [KCOV]='libcurl4-openssl-dev,libelf-dev,libdw-dev,cmake'
+    [gpg,vault,remote]='gnupg2,pwgen,xclip'
+    [net]='iproute,net-tools,netcat,socat'
+    [dns,remote]='dnsutils'
+    [remote]='tmux,socat'
 )
 
-function apt_get_install_for() {
+function citm:apt_get_install_for() {
     local module="${1}"
 
     local mcsv
@@ -43,26 +38,88 @@ function apt_get_install_for() {
 
     local -a packages
     IFS=, read -a packages <<< "${pkgcsv}"
-    run sudo apt-get install ${packages[@]}
+    citm:run sudo apt-get install ${packages[@]}
+}
+
+function citm:run() {
+    local -i e=9
+
+    echo "$ ${@}"
+    "${@}"
+    e=$?
+    echo "# exit status: $e"
+
+    return $e
+}
+
+function citm:kcov() {
+    local -i e=9
+
+    case "$#:$1" in
+        1:install)
+            citm:apt_get_install_for KCOV
+            e=$?
+
+            if [ $e -eq 0 ]; then
+                echo "$ citm:kcov install"
+                wget -q https://github.com/SimonKagstrom/kcov/archive/master.tar.gz
+                tar xzf master.tar.gz
+                mkdir kcov-master/build
+                pushd kcov-master/build >/dev/null
+                cmake ..
+                make
+                sudo make install
+                e=$?
+                popd >/dev/null
+                rm -rf kcov-master master.tar.gz
+            fi
+
+            echo "# citm:kcov install exit status: $e"
+        ;;
+
+        *:run)
+            shift
+            echo "$ citm:kcov run ${*}"
+            mkdir coverage
+            if [ ${#TRAVIS_JOB_ID} -gt 0 ]; then
+                kcov coverage "$@"
+            else
+                kcov --coveralls-id=${TRAVIS_JOB_ID?} coverage "$@"
+            fi
+            e=$?
+            echo "# citm:kcov run exit status: $e"
+        ;;
+
+        1:report)
+            echo "$ citm:kcov report codedov.io/bash"
+            bash <(curl -s https://codecov.io/bash) -K
+            e=$?
+            echo "# citm:kcov report exit status: $e"
+        ;;
+    esac
+
+    return $e
 }
 
 declare -g EXIT=9
-echo "#. travis[$1].${CONTEXT?}(${MODULE?}) -=["
+echo "#. citm[$1].${CONTEXT?}(${MODULE?}) -=["
 if [ $# -eq 1 ]; then
     case $1 in
         before_install)
             EXIT=0
-            run sudo install -d /var/tmp -m 1777                   ;((EXIT|=$?))
-            run sudo install -m 0644\
+
+            citm:run sudo install -d /var/tmp -m 1777              ;((EXIT|=$?))
+            citm:run sudo install -m 0644\
                 share/unit/files/apt.conf\
                 /etc/apt/apt.conf.d/99SiteUnitTest                 ;((EXIT|=$?))
 
-            apt_get_install_for ${MODULE}                          ;((EXIT|=$?))
+            citm:apt_get_install_for ${MODULE}                     ;((EXIT|=$?))
         ;;
 
         install)
             EXIT=0
-            run make install                                       ;((EXIT|=$?))
+
+            citm:run make install                                  ;((EXIT|=$?))
         ;;
 
         before_script)
@@ -71,18 +128,42 @@ if [ $# -eq 1 ]; then
 
         script)
             EXIT=0
+
             case ${CONTEXT}:${MODULE} in
-                installer:-)
-                    run make uninstall                             ;((EXIT|=$?)) #. Test uninstall
-                    run make install                               ;((EXIT|=$?)) #. Test reinstall
-                    run make purge                                 ;((EXIT|=$?)) #. Test purge
-                    run make install                               ;((EXIT|=$?)) #. Test reinstall
+                coverage:*)
+                    citm:kcov install                              ;((EXIT|=$?)) #. Code Coverage installation
+                    echo
+
+                    if [ ${MODULE} == 'core' ]; then
+                        citm:kcov run simbol unit core             ;((EXIT|=$?))
+                    else
+                        citm:kcov run simbol unit test ${MODULE}   ;((EXIT|=$?))
+                    fi
+                    echo
+
+                    citm:kcov report                               ;((EXIT|=$?))
+                    echo
                 ;;
+
                 execute:*)
-                    run simbol unit test ${MODULE}                   ;((EXIT|=$?))
+                    if [ ${MODULE} == 'core' ]; then
+                        citm:run simbol unit core                  ;((EXIT|=$?))
+                    else
+                        citm:run simbol unit test ${MODULE}        ;((EXIT|=$?))
+                    fi
+                    echo
                 ;;
+
+                installer:-)
+                    citm:run make uninstall                        ;((EXIT|=$?)) #. Test uninstall
+                    citm:run make install                          ;((EXIT|=$?)) #. Test reinstall
+                    citm:run make purge                            ;((EXIT|=$?)) #. Test purge
+                    citm:run make install                          ;((EXIT|=$?)) #. Test reinstall
+                ;;
+
                 *:*)
-                    EXIT=1
+                    echo "ERR: No action for ${CONTEXT}:${MODULE}"
+                    EXIT=3
                 ;;
             esac
         ;;
@@ -93,12 +174,12 @@ if [ $# -eq 1 ]; then
 
         after_failure)
             EXIT=0
-            run cat ~/.simbol/var/log/simbol.log
+            citm:run cat ~/.simbol/var/log/simbol.log              ;((EXIT|=$?))
         ;;
 
         after_script)
             EXIT=0
-            run make uninstall                                     ;((EXIT|=$?))
+            citm:run make uninstall                                ;((EXIT|=$?))
         ;;
     esac
 fi

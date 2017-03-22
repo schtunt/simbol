@@ -1,49 +1,51 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
 #. Site Engine -={
-export SIMBOL_VERSION=v0.30
+export SIMBOL_VERSION=v0.30.1
+
 #. 1.1  Date/Time and Basics -={
 export NOW=$(date --utc +%s)
 #. FIXME: Mac OS X needs this instead:
 #. FIXME: export NOW=$(date -u +%s)
-
-export PS4=":\${BASH_SOURCE//\${SIMBOL_USER}/}:\${LINENO} -> "
 #. }=-
 #. 1.2  Paths -={
 : ${SIMBOL_PROFILE?}
-export SIMBOL_SIMBOL_BASENAME=$(basename $0)
+export SIMBOL_BASENAME=$(basename -- $0)
+
+export SIMBOL_CORE=$(readlink ~/.simbol/.scm)
+export SIMBOL_CORE_BIN=${SIMBOL_CORE}/bin
+export SIMBOL_CORE_LIB=${SIMBOL_CORE}/lib
+export SIMBOL_CORE_LIBEXEC=${SIMBOL_CORE}/libexec
+export SIMBOL_CORE_LIBJS=${SIMBOL_CORE}/lib/libjs
+export SIMBOL_CORE_LIBPY=${SIMBOL_CORE}/lib/libpy
+export SIMBOL_CORE_LIBSH=${SIMBOL_CORE}/lib/libsh
+export SIMBOL_CORE_MOD=${SIMBOL_CORE}/module
 
 export SIMBOL_SCM=$(readlink ~/.simbol/.scm)
 
-export SIMBOL_CORE=$(readlink ~/.simbol/.scm)
-export SIMBOL_CORE_MOD=${SIMBOL_CORE}/module
-export SIMBOL_CORE_LIBEXEC=${SIMBOL_CORE}/libexec
-export SIMBOL_CORE_BIN=${SIMBOL_CORE}/bin
-export SIMBOL_CORE_LIB=${SIMBOL_CORE}/lib
-export SIMBOL_CORE_LIBPY=${SIMBOL_CORE}/lib/libpy
-export SIMBOL_CORE_LIBJS=${SIMBOL_CORE}/lib/libjs
-export SIMBOL_CORE_LIBSH=${SIMBOL_CORE}/lib/libsh
 export SIMBOL_UNIT=${SIMBOL_CORE}/share/unit
 export SIMBOL_UNIT_TESTS=${SIMBOL_CORE}/share/unit/tests
-export SIMBOL_UNIT_FILES=${SIMBOL_CORE}/share/unit/tests
 
 export SIMBOL_USER=${HOME}/.simbol
-export SIMBOL_USER_VAR=${SIMBOL_USER}/var
-export SIMBOL_USER_RUN=${SIMBOL_USER}/var/run
-export SIMBOL_USER_SCM=${SIMBOL_USER}/var/scm
-export SIMBOL_USER_CACHE=${SIMBOL_USER}/var/cache
 export SIMBOL_USER_ETC=${SIMBOL_USER}/etc
-export SIMBOL_USER_LOG=${SIMBOL_USER}/var/log/simbol.log
-export SIMBOL_USER_TMP=${SIMBOL_USER}/var/tmp
+export SIMBOL_USER_LIB=${SIMBOL_USER}/lib
+export SIMBOL_USER_LIBEXEC=${SIMBOL_USER}/libexec
 export SIMBOL_USER_MOD=${SIMBOL_USER}/module
-export SIMBOL_USER_LIB=${SIMBOL_USER}/var/lib
-export SIMBOL_USER_LIBSH=${SIMBOL_USER}/var/lib/libsh
-export SIMBOL_USER_LIBPY=${SIMBOL_USER}/var/lib/libpy
-export SIMBOL_USER_LIBEXEC=${SIMBOL_USER}/var/libexec
+export SIMBOL_USER_VAR=${SIMBOL_USER}/var
+export SIMBOL_USER_VAR_CACHE=${SIMBOL_USER}/var/cache
+export SIMBOL_USER_VAR_LIB=${SIMBOL_USER}/var/lib
+export SIMBOL_USER_VAR_LIBEXEC=${SIMBOL_USER}/var/libexec
+export SIMBOL_USER_VAR_LIBPY=${SIMBOL_USER}/var/lib/libpy
+export SIMBOL_USER_VAR_LIBSH=${SIMBOL_USER}/var/lib/libsh
+export SIMBOL_USER_VAR_LOG=${SIMBOL_USER}/var/log/simbol.log
+export SIMBOL_USER_VAR_RUN=${SIMBOL_USER}/var/run
+export SIMBOL_USER_BASHENV=${SIMBOL_USER_VAR_RUN}/.bashenv
+export SIMBOL_USER_VAR_SCM=${SIMBOL_USER}/var/scm
+export SIMBOL_USER_VAR_TMP=${SIMBOL_USER}/var/tmp
 
 #. Site's PATH
 PATH+=:${SIMBOL_CORE_LIBEXEC}
-PATH+=:${SIMBOL_USER_LIBEXEC}
+PATH+=:${SIMBOL_USER_VAR_LIBEXEC}
 export PATH
 
 export RBENV_VERSION=${RBENV_VERSION:-2.1.1}
@@ -56,7 +58,7 @@ export RBENV_ROOT RBENV_VERSION
 export PYENV_VERSION=${PYENV_VERSION:-3.4.0}
 #. Python -={
 PYTHONPATH+=:${SIMBOL_CORE_LIBPY}
-PYTHONPATH+=:${SIMBOL_USER_LIBPY}
+PYTHONPATH+=:${SIMBOL_USER_VAR_LIBPY}
 export PYTHONPATH
 
 #. pyenv
@@ -72,29 +74,48 @@ export PLENV_ROOT PLENV_VERSION
 #. }=-
 
 #. shunit2 and shflags
-export SHUNIT2=${SIMBOL_USER_LIBEXEC}/shunit2
-export SHFLAGS=${SIMBOL_USER_LIBSH}/shflags
+export SHUNIT2=${SIMBOL_USER_VAR_LIBEXEC}/shunit2
+export SHFLAGS=${SIMBOL_USER_VAR_LIBSH}/shflags
 source ${SHFLAGS?}
 #. }=-
-#. 1.3  User/Profile Configuration -={
+#. 1.3  Core Configuration -={
+unset  CDPATH
+export SIMBOL_DEADMAN=${SIMBOL_USER_VAR_CACHE}/deadman
+export SIMBOL_IN_COLOR=1
+export SIMBOL_DATE_FORMAT="%x-%X"
 
+declare -gi FD_STDOUT=1
+declare -gi FD_STDERR=2
+
+declare -gi USER_CPF_INDENT_SIZE=4
+declare -g  USER_CPF_INDENT_STR='*'
+
+source ${SIMBOL_CORE_MOD?}/cpf.sh
+
+PS4+="${COLORS[r]}\${BASH_SOURCE}${COLORS[N]}"
+PS4+=":${COLORS[g]}\${LINENO}${COLORS[N]}"
+PS4+="/\${FUNCNAME}/ "
+#. }=-
+#. 1.4  User/Profile Configuration -={
 declare -g -A CORE_MODULES=(
-    [unit]=1       [util]=1      [help]=1      [tutorial]=0   [hgd]=1    [git]=1
+    [tutorial]=0   [help]=1
+    [unit]=1       [util]=1      [hgd]=1       [git]=1
     [dns]=1        [net]=1       [tunnel]=1    [remote]=1
     [xplm]=1       [rb]=1        [py]=1        [pl]=1
-    [gpg]=1        [vault]=1
-    [ng]=1         [ldap]=1      [mongo]=1
-    [softlayer]=1  [pagerduty]=1
+    [gpg]=1        [vault]=1     [cpf]=1
+    [ng]=0         [ldap]=0
 )
 
-declare -gA USER_MODULES=( )
+declare -gA USER_MODULES
 declare -gA USER_IFACE
 declare -ga USER_TLDIDS_REQUIRED
-declare -g  USER_TLDID_DEFAULT
+declare -g  USER_TLDID_DEFAULT='_'
 declare -gA USER_TLDS
 declare -gA USER_MON_CMDGRPREMOTE
 declare -gA USER_MON_CMDGRPLOCAL
 declare -g  USER_LOG_LEVEL=INFO
+[ -v USER_HGD_RESOLVERS[@] ] || declare -gA USER_HGD_RESOLVERS
+
 source ${SIMBOL_USER_ETC}/simbol.conf
 
 test ! -f ~/.simbolrc || source ~/.simbolrc
@@ -103,31 +124,29 @@ test ! -f ~/.simbolrc || source ~/.simbolrc
 : ${USER_USERNAME?}
 : ${USER_EMAIL?}
 
-#. GLOBAL_OPTS 1/4:
+#. GLOBAL_OPTS 1/4 -={
 declare -i g_HELP=0
 declare -i g_VERBOSE=0
+declare -i g_DEBUG=0
+declare -i g_CACHED=1
 declare -i g_LDAPHOST=-1
-declare -i g_CACHED=0
 declare g_FORMAT=ansi
+declare g_TLDID=${USER_TLDID_DEFAULT:-_}
 declare g_DUMP
 
-declare g_TLDID=${USER_TLDID_DEFAULT:-_}
-
-declare -g g_SSH_OPT
-g_SSH_OPTS="-q"
-g_SSH_CONF=${SIMBOL_USER_ETC?}/${SIMBOL_USER_SSH_CONF:-ssh.conf}
-if [ -e "${g_SSH_CONF}" ]; then
-    g_SSH_OPTS+=" -F ${g_SSH_CONF}"
+# -n breaks remote:copy (rsync via rsync)
+#declare -g g_SSH_OPTS="-n"
+declare -g g_SSH_OPTS=""
+if grep -qw -- -E <( ssh 2>&1 ); then
+    #. Log to file if supported
+    g_SSH_OPTS+=" -E ${SIMBOL_USER_VAR}/log/ssh.log"
 fi
+
+g_SSH_CONF=${SIMBOL_USER_ETC?}/ssh.conf
+[ ! -e "${g_SSH_CONF}" ] || g_SSH_OPTS+=" -F ${g_SSH_CONF}"
 #. }=-
-#. 1.4  Core Configuration -={
-unset  CDPATH
-export SIMBOL_DEADMAN=${SIMBOL_USER_CACHE}/deadman
-export SIMBOL_IN_COLOR=1
-export SIMBOL_DATE_FORMAT="%x-%X"
-source ${SIMBOL_CORE_MOD?}/cpf.sh
 #. }=-
-#. 1.7  Error Code Constants -={
+#. 1.5  Error Code Constants -={
 true
 TRUE=$?
 CODE_SUCCESS=${TRUE?}
@@ -170,7 +189,7 @@ export SIMBOL_DELOM=$(printf "\x08")
 
 CODE_DEFAULT=${CODE_USAGE_FN_LONG?}
 #. }=-
-#. 1.8  Logging -={
+#. 1.6  Logging -={
 declare -A SIMBOL_LOG_NAMES=(
     [EMERG]=0 [ALERT]=1 [CRIT]=2 [ERR]=3
     [WARNING]=4 [NOTICE]=5 [INFO]=6 [DEBUG]=7
@@ -210,13 +229,95 @@ function core:log() {
         declare ts=$(date +"${SIMBOL_DATE_FORMAT?}")
 
         declare msg=$(printf "%s; %5d; %8s[%24s];" "${ts}" "${$--1}" "${code}" "${caller}")
-        [ -e ${SIMBOL_USER_LOG?} ] || touch ${SIMBOL_USER_LOG?}
-        if [ -f ${SIMBOL_USER_LOG} ]; then
-            chmod 600 ${SIMBOL_USER_LOG?}
-            echo "${msg} ${*:2}" >> ${SIMBOL_USER_LOG?}
+        [ -e ${SIMBOL_USER_VAR_LOG?} ] || touch ${SIMBOL_USER_VAR_LOG?}
+        if [ -f ${SIMBOL_USER_VAR_LOG} ]; then
+            chmod 600 ${SIMBOL_USER_VAR_LOG?}
+            echo "${msg} ${*:2}" >> ${SIMBOL_USER_VAR_LOG?}
         fi
         #printf "%s; %5d; %8s[%24s]; $@\n" "${ts}" "$$" "${code}" "$(sed -e 's/ /<-/g' <<< ${FUNCNAME[@]})" >> ${WMII_LOG}
     fi
+}
+#. }=-
+#. 1.7  Sanity Checks / Validation -={
+function validate_bash() {
+    local -i e=${CODE_FAILURE?}
+
+    local vv="${SIMBOL_USER_VAR_TMP?}/.simbol-bash-${BASH_VERSION}.verified"
+    if [ -e "${vv}" ]; then
+        e=${CODE_SUCCESS?}
+    else
+        e=${CODE_SUCCESS?}
+
+        #. Associative Array Validation
+        local -A aa
+
+        #. Only supporting two style for updating associative array entries:
+        # 1. foo=( [key]+=value )
+        # 2. foo[key]=value
+        # 3. foo[key]+=value
+        aa[a]='A'
+        [ ${#aa[@]} -eq 1 ] && [ "${aa[a]}" == 'A' ] || {
+            e=2
+            core:log CRIT "ValidationFailure: error code $e"
+        }
+
+        #. Avoid this style - `aa+=( ... )' - unless you know what you're doing.
+        #
+        # Only use this if the life-span of the variable is local, otherwise
+        # if you do this on a variable that's controlled elsewhere, and the
+        # mentioned keys already exist, the outcome could be one of two
+        # things depending on the version of bash - the new assignment
+        # values may clobber the existing ones, or they may append to them.
+        aa+=( [b]='B' [c]='C' )
+        [ ${#aa[@]} -eq 3 ] && [ "${aa[b]}" == 'B' ] && [ "${aa[c]}" == 'C' ] || {
+            e=3
+            core:log CRIT "ValidationFailure: error code $e"
+        }
+
+        aa[a]+='A'
+        [ "${aa[a]}" == 'AA' ] || {
+            e=4
+            core:log CRIT "ValidationFailure: error code $e"
+        }
+
+        aa=( [w]='W' [x]='X' [y]='Y' [z]='Z' )
+        [ ${#aa[@]} -eq 4 ] || {
+            e=5
+            core:log CRIT "ValidationFailure: error code $e"
+        }
+
+        #. Do not use the following as different version of bash will do
+        # different things, and these are just ambiguous!
+        # 2a. foo+=( [key]=value )
+        # 2b. foo+=( [key]+=value )
+        # 2c. foo=( [key]+=value )
+        #
+        # The output of the following should not match anything other than
+        # some of the tests in this functioa body itself:
+        #   git grep -E '[a-zA-Z0-9]+\+=\( *\['
+
+        local buf="${SIMBOL_USER_VAR_TMP?}/.simbol-null-term-rw-test"
+        local -a wstrs=( 11 'aa' 33 'stuff' ) #. TODO: \n, \r, etc.
+
+        touch "${buf}"
+        printf '%s\0' "${wstrs[@]}" >> "${buf}"
+
+        local -a rstrs
+        while read -d $'\0' y; do
+            rstrs+=( "$y" )
+        done < "${buf}"
+        rm -f "${buf}"
+
+        if [ "${rstrs[*]}" != "${wstrs[*]}" -o "${#rstrs[@]}" -ne "${#wstrs[@]}" ]; then
+            e=6
+            core:log CRIT "ValidationFailure: error code $e"
+        fi
+    fi
+
+    #. Cache the Response
+    [ $e -ne ${CODE_SUCCESS?} ] || touch "${vv}"
+
+    return $e
 }
 #. }=-
 #. 1.9  Modules -={
@@ -231,27 +332,29 @@ function core:softimport() {
     local -i e=9
 
     if [ $# -eq 1 ]; then
-        local module=$1
+        local module="$1"
+        local modulepath="${1//.//}.sh"
+        local ouch="${SIMBOL_USER_VAR_TMP}/softimport.${module}.$$.ouch"
         if [ -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
             if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
-                if [ -f ${SIMBOL_USER_MOD}/${module}.sh ]; then
-                    if source ${SIMBOL_USER_MOD}/${module}.sh >/tmp/simbol.${module}.ouch 2>&1; then
+                if [ -f ${SIMBOL_USER_MOD}/${modulepath} ]; then
+                    if source ${SIMBOL_USER_MOD}/${modulepath} >${ouch} 2>&1; then
                         e=${CODE_IMPORT_GOOOD?}
                     else
                         e=${CODE_IMPORT_ERROR?}
                     fi
-                    rm -f /tmp/simbol.${module}.ouch
+                    rm -f ${ouch}
                 else
                     e=${CODE_IMPORT_UNDEF?}
                 fi
             elif [ ${CORE_MODULES[${module}]-9} -eq 1 ]; then
-                if [ -f ${SIMBOL_CORE_MOD}/${module}.sh ]; then
-                    if source ${SIMBOL_CORE_MOD}/${module}.sh >/tmp/simbol.${module}.ouch 2>&1; then
+                if [ -f ${SIMBOL_CORE_MOD}/${modulepath} ]; then
+                    if source ${SIMBOL_CORE_MOD}/${modulepath} >${ouch} 2>&1; then
                         e=${CODE_IMPORT_GOOOD?}
                     else
                         e=${CODE_IMPORT_ERROR?}
                     fi
-                    rm -f /tmp/simbol.${module}.ouch
+                    rm -f ${ouch}
                 else
                     e=${CODE_IMPORT_UNDEF?}
                 fi
@@ -275,6 +378,50 @@ function core:softimport() {
     return $e
 }
 
+function core:module_path() {
+    local -i e=${CODE_SUCCESS?}
+
+    local path
+    if [ $# -eq 1 ]; then
+        local module="$1"
+
+        if [ -e ${SIMBOL_CORE_MOD?}/${module//\./\/}.sh ]; then
+            path=${SIMBOL_SCM?}/module
+        elif [ -e ${SIMBOL_USER_MOD?}/${module//\./\/}.sh ]; then
+            path=${SIMBOL_USER_MOD?}
+        else
+            core:raise EXCEPTION_SHOULD_NOT_GET_HERE\
+                "No such module found: \`${module}'"
+        fi
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+
+    echo "${path}"
+    return $e
+}
+
+function core:module_enabled() {
+    local -i enabled=${FALSE?}
+
+    if [ $# -eq 1 ]; then
+        local module="$1"
+
+        if [ -e ${SIMBOL_CORE_MOD?}/${module//\./\/}.sh ]; then
+            [ ${CORE_MODULES[${module}]} -eq 0 ] || enabled=${TRUE?}
+        elif [ -e ${SIMBOL_USER_MOD?}/${module//\./\/}.sh ]; then
+            [ ${USER_MODULES[${module}]} -eq 0 ] || enabled=${TRUE?}
+        else
+            core:raise EXCEPTION_SHOULD_NOT_GET_HERE\
+                "No such module found: \`${module}'"
+        fi
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+
+    return ${enabled}
+}
+
 function core:import() {
     core:softimport $@
     local -i e=$?
@@ -288,7 +435,7 @@ function core:imported() {
     local -i e=${CODE_FAILURE}
 
     if [ $# -eq 1 ]; then
-        local module=${1}
+        local module=$1
         e=${g_SIMBOL_IMPORTED_EXIT[${module}]}
         [ ${#e} -gt 0 ] || e=-1
     else
@@ -298,27 +445,76 @@ function core:imported() {
     return ${e}
 }
 
+function core:modules() {
+    local -i e=${CODE_FAILURE}
+
+    if [ $# -eq 1 ]; then
+        local module=$1
+        local -i enabled=0
+        if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
+            enabled=2
+        elif [ ${CORE_MODULES[${module}]-9} -eq 1 ]; then
+            enabled=1
+        fi
+
+        if [ ${enabled} -eq 2 -a -f ${SIMBOL_USER_MOD}/${module//\./\/}.sh ]; then
+            echo ${module}
+            e=${CODE_SUCCESS?}
+        elif [ ${enabled} -eq 1 -a -f ${SIMBOL_CORE_MOD}/${module//\./\/}.sh ]; then
+            echo ${module}
+            e=${CODE_SUCCESS?}
+        fi
+
+        if [ ${module//./} == ${module} ]; then
+            #. It's a module with submodules
+            if [ ${enabled} -eq 2 -a -d ${SIMBOL_USER_MOD}/${module} ]; then
+                for submodule in $(find ${SIMBOL_USER_MOD}/${module} -type f -name '*.sh' -printf "%f\n" | cut -d. -f1); do
+                    submodule=${module}.${submodule}
+                    if [ ${USER_MODULES[${submodule}]-9} -eq 1 ]; then
+                        echo ${submodule}
+                    elif [ ${CORE_MODULES[${submodule}]-9} -eq 1 ]; then
+                        echo ${submodule}
+                    fi
+                done
+                e=${CODE_SUCCESS?}
+            elif [ ${enabled} -eq 1 -a -d ${SIMBOL_CORE_MOD}/${module} ]; then
+                for submodule in $(find ${SIMBOL_CORE_MOD}/${module} -type f -name '*.sh' -printf "%f\n" | cut -d. -f1); do
+                    submodule=${module}.${submodule}
+                    if [ ${USER_MODULES[${submodule}]-9} -eq 1 ]; then
+                        echo ${submodule}
+                    elif [ ${CORE_MODULES[${submodule}]-9} -eq 1 ]; then
+                        echo ${submodule}
+                    fi
+                done
+                e=${CODE_SUCCESS?}
+            fi
+        fi
+    fi
+
+    return $e
+}
+
 function core:docstring() {
     local -i e=${CODE_FAILURE}
 
     if [ $# -eq 1 ]; then
         local module=$1
+        local modulepath=${1//./\/}.sh
 
         e=2 #. No such module
         if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
-            if [ -f ${SIMBOL_USER_MOD}/${module}.sh ]; then
-                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_USER_MOD}/${module}.sh
+            if [ -f ${SIMBOL_USER_MOD}/${modulepath} ]; then
+                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_USER_MOD}/${modulepath}
                 e=$?
             fi
         elif [ ${CORE_MODULES[${module}]-9} -eq 1 ]; then
-            if [ -f ${SIMBOL_CORE_MOD}/${module}.sh ]; then
-                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_CORE_MOD}/${module}.sh
+            if [ -f ${SIMBOL_CORE_MOD}/${modulepath} ]; then
+                sed -ne '/^:<<\['${FUNCNAME}'\]/,/\['${FUNCNAME}'\]/{n;p;q}' ${SIMBOL_CORE_MOD}/${modulepath}
                 e=$?
             fi
         elif [ ${CORE_MODULES[${module}]-9} -eq 0 -o ${USER_MODULES[${module}]-9} -eq 0 ]; then
             e=${CODE_FAILURE} #. Disabled
         fi
-        g_SIMBOL_IMPORTED_EXIT[${module}]=$e
     fi
 
     return $e
@@ -393,10 +589,14 @@ function core:requires() {
             local plid=pl
             core:softimport xplm
             if [ $? -eq ${CODE_IMPORT_GOOOD?} ]; then
+                #cpf "Installing missing required %{@lang:perl} module %{@pkg:${required}}..."
                 for required in ${@:2}; do
                     if ! :xplm:requires ${plid} ${required}; then
                         core:log NOTICE "${caller} missing required perl module ${required}"
-                        e=${CODE_FAILURE?}
+                        if ! :xplm:install ${plid} ${required}; then
+                            core:log ERR "${caller} installation of perl module ${required} FAILED"
+                            e=${CODE_FAILURE?}
+                        fi
                     fi
                 done
             else
@@ -407,13 +607,14 @@ function core:requires() {
             local plid=py
             core:softimport xplm
             if [ $? -eq ${CODE_IMPORT_GOOOD?} ]; then
+                #cpf "Installing missing required %{@lang:python} module %{@pkg:${required}}..."
                 for required in ${@:2}; do
                     if ! :xplm:requires ${plid} ${required}; then
                         core:log NOTICE "${caller} installing required python module ${required}"
                         if ! :xplm:install ${plid} ${required}; then
                             core:log ERR "${caller} installation of python module ${required} FAILED"
+                            e=${CODE_FAILURE?}
                         fi
-                        e=${CODE_FAILURE?}
                     fi
                 done
             else
@@ -424,13 +625,14 @@ function core:requires() {
             local plid=rb
             core:softimport xplm
             if [ $? -eq ${CODE_IMPORT_GOOOD?} ]; then
+                #cpf "Installing missing required %{@lang:ruby} module %{@pkg:${required}}..."
                 for required in ${@:2}; do
                     if ! :xplm:requires ${plid} ${required}; then
                         core:log NOTICE "${caller} installing required ruby module ${required}"
                         if ! :xplm:install ${plid} ${required}; then
                             core:log ERR "${caller} installation of ruby module ${required} FAILED"
+                            e=${CODE_FAILURE?}
                         fi
-                        e=${CODE_FAILURE?}
                     fi
                 done
             else
@@ -469,28 +671,54 @@ function core:requires() {
 #. >0 indeicates TTL in seconds
 declare -g g_CACHE_TTL=0
 
-mkdir -p ${SIMBOL_USER_CACHE?}
-chmod 3770 ${SIMBOL_USER_CACHE?} 2>/dev/null
+mkdir -p ${SIMBOL_USER_VAR_CACHE?}
+chmod 3770 ${SIMBOL_USER_VAR_CACHE?} 2>/dev/null
 
 #. Keep track if cache was used globally
-declare g_CACHE_USED=${SIMBOL_USER_CACHE}/.cache_used
-rm -f ${g_CACHE_USED}
+declare g_CACHE_USED=${SIMBOL_USER_VAR_CACHE?}/.cache_used
+rm -f ${g_CACHE_USED?}
 
-CACHE_OUT='eval :core:cached "${*}" && return ${CODE_SUCCESS}'
-CACHE_IN='eval :core:cache "${*}"'
-CACHE_EXIT='eval return ${PIPESTATUS[0]}'
+function core:return() { return $1; }
+
+function g_CACHE_OUT() {
+    : ${l_CACHE_SIG:="${FUNCNAME[1]}"}
+    g_CACHE_FILE="$(:core:cachefile "${l_CACHE_SIG}" "$*")"
+    :core:cached "${g_CACHE_FILE}"
+    return $?
+}
+
+function g_CACHE_IN() {
+    local -i e=$?
+
+    sync
+
+    if [ $e -eq ${CODE_SUCCESS?} ]; then
+        cat ${g_CACHE_FILE?}
+    else
+        rm -f ${g_CACHE_FILE?}
+    fi
+
+    #:core:cache "${g_CACHE_FILE}"
+
+    return $e
+}
 :<<! USAGE:
 Any function (private or internal only, do not try and cache-enable public
 functions!) can be cache-enabled simply by insertin two lines; one right at
 the start of the function, and one right at the end:
 
 function <module>:<function>() {
+  #. Optional...
+  #local l_CACHE_SIG="optional-custom-sinature-hash:template:funk/$3";
+
   #. vvv 1. Use cache and return or continue
-  ${CACHE_OUT}; {
+  local -i l_CACHE_TTL=600; g_CACHE_OUT "$*" || (
+    local -i e=${CODE_DEFAULT?}
 
     ...
 
-  } | ${CACHE_IN}; ${CACHE_EXIT}
+    return $e
+  ) > ${g_CACHE_FILE}; g_CACHE_IN; return $?
   #. ^^^ 2. Update cache if previous did not return
 }
 function :<module>:<function>() { #. Same as above...; }
@@ -502,13 +730,6 @@ you please.
 
 Note that public functions that take local shflags will not allow caching,
 and will generate an error.
-
-Finally, the default cache time is g_CACHE_TTL minutes, but this can be
-modified for each function by creating the auxiliary function:
-
-function :[:]<module>:<function>:cached() { echo 3600; }
-
-The value echoed will be the replacement TTL.
 
 Don't use this all over the place, only on computationally expensive code
 or otherwise slow code (network latency) that is expected to also produce the
@@ -532,96 +753,133 @@ function :core:age() {
     return ${e}
 }
 
-function :core:cache:file() {
-    local -i e=${CODE_FAILURE}
+function core:global() {
+    #. Usage:
+    #.     core:global <context>.<key>                  (read value from store)
+    #.     core:global <context>.<key> <value>          (write value to store)
+    #.     core:global <context>.<key> <oper> <value>   (amend value in store)
+    #.
+    #. For the last case, the supported operators are math operators available
+    #. to use via `let', for instance:
+    #.
+    #.     core:global g.delta += 4
+    #.
+    #. Obviously the latter case only supports integer types.
 
-    local modfn="$1"
-    local cachefile
-    if [ "$(type -t ${modfn}:cachefile)" == "function" ]; then
-        #. File-Cached...
-        shift 1
-        cachefile=$(${modfn}:cachefile "${@}")
-    else
-        #. Output-Cached...
-        local effective_format=${g_FORMAT}
-        if [[ $1 =~ ^: ]] && [ ${g_FORMAT} == "ansi" ]; then
-            effective_format=text
+    [ $# -ge 1 -o $# -le 3 ] || core:raise EXCEPTION_BAD_FN_CALL
+
+    local -i e=${CODE_FAILURE?}
+
+    local context
+    local key
+    local globalstore
+
+    local lockfile=/tmp/.simbol.lockfile
+
+    while true; do
+        if ( set -o noclobber; echo "locked" > "$lockfile" ) 2>/dev/null; then
+            trap 'rm -f "$lockfile"; exit $?' INT TERM EXIT
+
+            case $# in
+                1)
+                    IFS='.' read context key <<< "${1}"
+                    globalstore="$(:core:cachefile "${context}" "${key}")"
+                    if [ $? -eq ${CODE_SUCCESS?} ]; then
+                        cat ${globalstore}
+                        e=$?
+                    fi
+                ;;
+                2)
+                    IFS='.' read context key <<< "${1}"
+                    local value="${2}"
+                    globalstore="$(:core:cachefile "${context}" "${key}")"
+                    printf "${value}" > ${globalstore}
+                    e=$?
+                ;;
+                3)
+                    IFS='.' read context key <<< "${1}"
+                    local oper="${2}"
+                    local -i amendment=$3
+                    if [ $? -eq ${CODE_SUCCESS?} ]; then
+                        globalstore="$(:core:cachefile "${context}" "${key}")"
+                        if [ $? -eq ${CODE_SUCCESS?} ]; then
+                            local -i current
+                            let -i current=$(cat ${globalstore})
+                            if [ $? -eq ${CODE_SUCCESS?} ]; then
+                                local -i amendment
+                                let -i amendment=${3}
+                                if [ $? -eq ${CODE_SUCCESS?} ]; then
+                                    ((current${oper}amendment))
+                                    echo ${current} > ${globalstore}
+                                    e=$?
+                                fi
+                            fi
+                        fi
+                    fi
+                ;;
+            esac
+
+            rm -f "$lockfile"
+            break
+        else
+            sleep 0.1
+        fi
+    done
+
+    return $e
+}
+
+function :core:cachefile() {
+    #. Constructs and prints a cachefile path
+    local effective_format="${g_FORMAT?}"
+
+    local cachefile=${SIMBOL_USER_VAR_CACHE?}
+
+    if [ $# -eq 2 ]; then
+        #. Automaticly named cachefile...
+        local modfn="$1"
+        local effective_format=${g_FORMAT?}
+        if [ ${g_FORMAT?} == "ansi" ] && [[ $1 =~ ^: ]] ; then
+            effective_format='text'
         fi
 
-        cachefile=${SIMBOL_USER_CACHE}/${1//:/=}
-        cachefile+=+${g_TLDID}
-        cachefile+=+${g_VERBOSE}
-        cachefile+=+$(echo -ne "${2}"|md5sum|awk '{print$1}')
-        cachefile+=.${effective_format}
+        cachefile+=/${1//:/=}
+        cachefile+=+${g_TLDID?}
+        cachefile+=+${g_VERBOSE?}
+        cachefile+=+$(md5sum <<< "$2"|cut -b -32);
+    elif [ $# -eq 1 ]; then
+        #. Hand-picked signature from caller...
+
+        cachefile+=/
+        cachefile+=+${g_TLDID?}
+        cachefile+=+${g_VERBOSE?}
+        cachefile+=+${1}
+        effective_format='sig'
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
     fi
 
+    cachefile+=".${effective_format}"
     echo "${cachefile}"
 
-    e=${CODE_SUCCESS}
-    return $e
-}
+    #. Return code is 0 if the files exists, and 1 otherwise
+    local -i e=${CODE_FAILURE?}
+    [ ! -r "${cachefile}" ] || e=${CODE_SUCCESS?}
 
-function :core:cache:age() {
-    local -i e=${CODE_FAILURE}
-
-    local cachefile=$(:core:cache:file "${@}")
-
-    :core:age "${cachefile}"
-    e=$?
-
-    return $e
-}
-
-function ::core:cache:cachetype() {
-    local -i e=${CODE_FAILURE}
-
-    if [ $# -eq 1 ]; then
-        local cachefile=$1
-        local cachetype=file
-
-        if [ "${cachefile:0:1}" == '/' ]; then
-            if [ "${cachefile//${SIMBOL_USER_CACHE}/}" != "${cachefile}" ]; then
-                cachetype=output
-            fi
-            e=${CODE_SUCCESS}
-        else
-            core:raise EXCEPTION_SHOULD_NOT_GET_HERE
-        fi
-    fi
-
-    echo "${cachetype}"
     return $e
 }
 
 function :core:cache() {
-    local -i e=${CODE_FAILURE}
+    local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 1 ]; then
-        local modfn=${FUNCNAME[1]}
-        local argv="$1"
-        local cachefile=$(:core:cache:file "${modfn}" "${argv}")
+        local cachefile="$1"
 
-        #. If it's a output-cached file..
-        case $(::core:cache:cachetype ${cachefile}) in
-            output)
-                :> ${cachefile}
-                chmod 600 ${cachefile}
-                while read line; do
-                    echo "$line" >> ${cachefile}
-                done
+        :> ${cachefile}
+        chmod 600 ${cachefile}
+        tee -a ${cachefile}
 
-                if [ -s ${cachefile} ]; then
-                    cat ${cachefile}
-                else
-                    rm -f ${cachefile}
-                fi
-            ;;
-            file)
-                : PASS
-            ;;
-        esac
-
-        local -i e=${CODE_SUCCESS}
+        e=${CODE_SUCCESS?}
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
@@ -630,45 +888,42 @@ function :core:cache() {
 }
 
 function :core:cached() {
-    #. TTL of 0 means cache forever
-    #. TTL > 0 means to cache for TTL seconds
-    local -i e=${CODE_FAILURE}
+    : ${g_CACHED?}
+    : ${g_CACHE_USED?}
+    local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 1 ]; then
-        if [ ${g_CACHED} -eq 1 ]; then
-            local modfn=${FUNCNAME[1]}
-            if [ "$(type -t ${modfn}:shflags)" != "function" ]; then
-                local -i ttl=0
-                [ "$(type -t ${modfn}:cache)" == "function" ] &&
-                    ttl=$(${modfn}:cache) ||
-                        ttl=${g_CACHE_TTL}
+    if [ ${g_CACHED} -eq 1 ]; then
+        #. TTL < 0 means don't cache
+        #. TTL of 0 means cache forever
+        #. TTL > 0 means to cache for TTL seconds
 
-                local argv="$1"
-                local cachefile=$(:core:cache:file "${modfn}" "${argv}")
+        if [ $# -eq 1 ]; then
+            local cachefile="$1"
+            local -i ttl=${l_CACHE_TTL:-${g_CACHE_TTL?}}
+            if [ ${ttl} -ge 0 ]; then
                 local -i age
                 age=$(:core:age ${cachefile})
-                if [ $? -eq ${CODE_SUCCESS} ]; then
+                if [ $? -eq ${CODE_SUCCESS?} ]; then
                     if [ ${ttl} -gt 0 -a ${age} -ge ${ttl} ]; then
+                        #. Cache Miss (Expiry)
                         rm -f ${cachefile}
+                        e=${CODE_FAILURE?}
+                        core:log DEBUG "Cache Miss: {ttl:${ttl}, age:${age}}"
                     else
-                        case $(::core:cache:cachetype ${cachefile}) in
-                            output)
-                                cat ${cachefile}
-                                echo ${cachefile} >> ${g_CACHE_USED}
-                                e=${CODE_SUCCESS}
-                            ;;
-                            file)
-                                e=${CODE_SUCCESS}
-                            ;;
-                        esac
+                        #. Cache Hit
+                        echo ${cachefile} >> ${g_CACHE_USED?}
+                        #cat ${cachefile}
+                        core:log DEBUG "Cache Hit: {ttl:${ttl}, age:${age}}"
+                        e=${CODE_SUCCESS?}
                     fi
+                else
+                    #. Cache Miss (No Cache)
+                    e=${CODE_FAILURE?}
                 fi
-            else
-                theme ERR "Caching functions that take local shflags not supported." >&2
             fi
+        else
+            core:raise EXCEPTION_BAD_FN_CALL
         fi
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
     fi
 
     return $e
@@ -742,13 +997,15 @@ function ::core:flags.eval() {
     done
     set -- "${argv[@]}"
 
-    #. GLOBAL_OPTS 2/4: Our generic and global optiones
+    #. GLOBAL_OPTS 2/4: Our generic and global options -={
     DEFINE_boolean help     false            "<help>"                   H
     DEFINE_boolean verbose  false            "<verbose>"                V
-    DEFINE_boolean cached   false            "<use-cache>"              C
-    DEFINE_string  format   "${g_FORMAT}"    "ansi|text|csv|html|email" F
+    DEFINE_boolean debug    false            "<debug>"                  D
+    DEFINE_boolean cached   true             "<use-cache>"              C
     DEFINE_integer ldaphost "${g_LDAPHOST}"  "<ldap-host-index>"        L
+    DEFINE_string  format   "${g_FORMAT}"    "ansi|text|csv|html|email" F
     DEFINE_string  tldid    "${g_TLDID}"     "<top-level-domain-id>"    T
+    #. }=-
 
     #. Out module/function-specific options
     local -a extra
@@ -765,24 +1022,41 @@ function ::core:flags.eval() {
             fi
         fi
         cat <<!
-declare -g module=${module:-}
-declare -g fn=${fn:-}
+declare -g module_22884db148f0ffb0d830ba431102b0b5=${module:-}
+declare -g fn_4d9d6c17eeae2754c9b49171261b93bd=${fn:-}
 !
     fi
 
     #. Process it all
     FLAGS "${@}" >/dev/null 2>&1
     if [ $? -eq 0 ]; then
-        #. GLOBAL_OPTS 3/4:
+        #. GLOBAL_OPTS 3/4 -={
         FLAGS_HELP="simbol ${module} ${fn} [<flags>]"
+
         #. Booleans get inverted:
         let g_HELP=~${FLAGS_help?}+2; unset FLAGS_help
         let g_VERBOSE=~${FLAGS_verbose?}+2; unset FLAGS_verbose
+        let g_DEBUG=~${FLAGS_debug?}+2; unset FLAGS_debug
+
+        if grep -qw -- -E <<< "${g_SSH_OPTS?}"; then
+            case ${g_DEBUG?}:${g_VERBOSE?} in
+                0:0) g_SSH_OPTS+=" -q";;
+                0:1) g_SSH_OPTS+=" -v";;
+                1:0) g_SSH_OPTS+=" -vv";;
+                1:1) g_SSH_OPTS+=" -vvv";;
+            esac
+        fi
+
+        #. Last amendment to g_SSH_OPTS
+        g_SSH_OPTS+=" ${USER_SSH_OPTS}"
+
         let g_CACHED=~${FLAGS_cached?}+2; unset FLAGS_cached
+
         #. Everything else is straight-forward:
-        g_FORMAT=${FLAGS_format?}; unset FLAGS_format
         g_LDAPHOST=${FLAGS_ldaphost?}; unset FLAGS_ldaphost
+        g_FORMAT=${FLAGS_format?}; unset FLAGS_format
         g_TLDID=${FLAGS_tldid?}; unset FLAGS_tldid
+        #. }=-
 
         if [[ ${#USER_IFACE[${g_TLDID}]} -eq 0 ]]; then
             core:log ERR "USER_IFACE[${g_TLDID}] has not been defined!"
@@ -790,13 +1064,16 @@ declare -g fn=${fn:-}
 
         if [[ ${#g_TLDID} -eq 0 || ${g_TLDID} == '_' || ${#USER_IFACE[${g_TLDID}]} -gt 0 ]]; then
             cat <<!
-#. GLOBAL_OPTS 4/4:
+#. GLOBAL_OPTS 4/4 -={
 declare g_HELP=${g_HELP?}
 declare g_VERBOSE=${g_VERBOSE?}
-declare g_FORMAT=${g_FORMAT?}
-declare g_LDAPHOST=${g_LDAPHOST?}
-declare g_TLDID=${g_TLDID?}
+declare g_DEBUG=${g_DEBUG?}
 declare g_CACHED=${g_CACHED?}
+declare g_LDAPHOST=${g_LDAPHOST?}
+declare g_FORMAT=${g_FORMAT?}
+declare g_TLDID=${g_TLDID?}
+declare g_SSH_OPTS="${g_SSH_OPTS?}"
+#. }=-
 set -- ${FLAGS_ARGV?}
 !
             e=${CODE_SUCCESS}
@@ -812,6 +1089,8 @@ g_DUMP="$(FLAGS "${@}" 2>&1|sed -e '1,2 d' -e 's/^/    /')"
 $(for key in ${extra[@]}; do echo ${key}=${!key}; done)
 !
     fi
+
+    [ ! -r ${SIMBOL_USER_BASHENV?} ] || cat ${SIMBOL_USER_BASHENV?}
 
     return $e
 }
@@ -912,7 +1191,6 @@ function ::core:dereference.eval() {
 
 function :core:functions() {
     local -i e=${CODE_FAILURE}
-
     if [ $# -eq 2 ]; then
         local fn_type=$1
         local module=$2
@@ -947,6 +1225,11 @@ function :core:functions() {
     return $e
 }
 function :core:usage() {
+#. FIXME: The caching here is unaware of -O|--options that are eaten up by
+#. FIXME: shflags before this function is called, and so caching becomes
+#. FIXME: destructive.  Additionally, it breaks the --long help which never
+#. FIXME: displays anymore once this is enabled.
+# g_CACHE_OUT "$*" || {
     local module=$1
     local fn=$2
     local mode=${3---short}
@@ -963,18 +1246,17 @@ function :core:usage() {
         printf "\n\n"
     fi
 
+    local usage_prefix="%{wh:Usage} for %{@user:${USER_USERNAME}}@%{g:${SIMBOL_PROFILE}}"
     if [ $# -eq 0 ]; then
         #. Usage for simbol
-        cpf "%{wh:usage}%{bl:4}%{@user:${USER_USERNAME}}%{bl:@}%{g:${SIMBOL_PROFILE}}\n"
-        #. FIXME
-        for profile in USER_MODULES USER_MODULES CORE_MODULES; do
+        cpf "${usage_prefix}\n"
+        for profile in USER_MODULES CORE_MODULES; do
+            cpf "  %{g:${profile}}...\n"
             eval $(::core:dereference.eval profile) #. Will create ${profile} array
             for module in ${!profile[@]}; do (
-                local docstring="{no-docstr}"
-                docstring=$(core:docstring ${module})
+                local docstring=$(core:docstring ${module})
                 core:softimport ${module}
                 local -i ie=$?
-                local -i ie=${CODE_IMPORT_GOOOD?}
                 if [ $ie -eq ${CODE_IMPORT_ADMIN?} ]; then
                     continue
                 elif [ $ie -eq ${CODE_IMPORT_GOOOD?} ]; then
@@ -989,35 +1271,40 @@ function :core:usage() {
                     cpf "%{r:!!! }"
                 fi
 
-                cpf "%{bl:%s} %{!module:%s}:%{+bo}%{@int:%s}%{-bo}/%{@int:%s}"\
-                    "${SIMBOL_BASENAME}" "${module}"\
-                    "${#fn_public[@]}" "${#fn_private[@]}"
+                cpf "%{bl:%s} %{!module:${module}}:%{+bo}%{@int:%s}%{-bo}/%{@int:%s}"\
+                    "${SIMBOL_BASENAME}" "${#fn_public[@]}" "${#fn_private[@]}"
 
                 if [ $ie -eq ${CODE_IMPORT_GOOOD?} ]; then
                     cpf "%{@comment:%s}\n" "${docstring:+; ${docstring}}"
                 else
-                    cpf "; %{@warn:This module has not been set-up for use}\n"
+                    cpf "; %{@err:Error loading module}\n"
                 fi
-            ); done
+            ); done | sort
         done
     elif [ $# -eq 1 ]; then
         core:softimport ${module}
         local -i ie=$?
         if [ $ie -eq ${CODE_IMPORT_GOOOD?} ]; then
             if [ ${g_ONCE_WHOAMI:-0} -eq 0 ]; then
-                cpf "%{wh:usage}%{bl:4}%{@user:${USER_USERNAME}}%{bl:@}%{g:${SIMBOL_PROFILE}} %{!module:${module}}\n"
+                cpf "${usage_prefix} %{!module:${module}}\n"
                 g_ONCE_WHOAMI=1
             fi
-
-            local -a fns=( $(:core:functions public ${module}) )
-            for fn in ${fns[@]}; do
-                local usage_fn="${module}:${fn}:usage"
-                local usagestr="{no-args}"
-                if [ "$(type -t ${usage_fn})" == "function" ]; then
-                    usagestr="$(${usage_fn})"
-                    cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{c:%s}\n" "${usagestr}"
-                else
-                    cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{bl:%s}\n" "${usagestr}"
+            for module in $(core:modules ${module}); do
+                core:softimport ${module}
+                if [ $? -eq ${CODE_SUCCESS?} ]; then
+                    local -a fns=( $(:core:functions public ${module}) )
+                    for fn in ${fns[@]}; do
+                        local usage_fn="${module}:${fn}:usage"
+                        local usagestr
+                        if [ "$(type -t ${usage_fn})" == "function" ]; then
+                            while read usagestr; do
+                                cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{c:%s}\n" "${usagestr}"
+                            done < <(${usage_fn})
+                        else
+                            usagestr="{no-args}"
+                            cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{bl:%s}\n" "${usagestr}"
+                        fi
+                    done
                 fi
             done
 
@@ -1035,14 +1322,15 @@ function :core:usage() {
             echo
         fi
     elif [ $# -ge 2 ]; then
-        cpf "%{wh:usage}%{bl:4}%{@user:${USER_USERNAME}}%{bl:@}%{g:${SIMBOL_PROFILE}} %{!function:${module}:${fn}}\n"
-        cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} "
+        cpf "${usage_prefix} %{!function:${module}:${fn}}\n"
 
-        local usage_s=${module}:${fn}:usage
-        if [ "$(type -t $usage_s)" == "function" ]; then
-            cpf "%{c:%s}\n" "$(${usage_s})"
+        local usage_fn=${module}:${fn}:usage
+        if [ "$(type -t $usage_fn)" == "function" ]; then
+            while read usagestr; do
+                cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{c:%s}\n" "${usagestr}"
+            done < <(${usage_fn})
         else
-            cpf "%{bl:%s}\n" "{no-args}"
+            cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{bl:%s}\n" "{no-args}"
         fi
 
         case ${mode} in
@@ -1068,28 +1356,41 @@ function :core:usage() {
             ;;
         esac
     fi
+# } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
 
 function :core:complete() {
-    local module=$1
+    local modulestr=$1
+    local prefix="AC_${modulestr//./_}_"
     local fn=$2
     if [ "${fn}" != '-' ]; then
         local hit
-        hit=$(declare -F ${module}:${fn})
+        hit=$(declare -F ${modulestr}:${fn})
         if [ $? -eq 0 ]; then
             echo ${fn}
         else
-            for afn in $(declare -F|awk -F'[ :]' '$3~/^'${module}'$/{print$4}'|sort -n); do
-                local AC_${module}_${afn//./_}=1
+            for afn in $(declare -F|awk -F'[ :]' '$3~/^'${modulestr}'$/{print$4}'|sort -n); do
+                local ${prefix}${afn//./_}=1
             done
-            local -a completed=( $(eval echo "\${!AC_${module}_${fn//./_}*}") )
-            if echo ${completed[@]} | grep -qE "\<AC_${module}_${fn//./_}\>"; then
+            local -a completed=( $(eval echo "\${!${prefix}${fn//./_}*}") )
+            if echo ${completed[@]} | grep -qE "\<${prefix}${fn//./_}\>"; then
                 echo ${fn}
             else
-                echo ${completed[@]//AC_${module}_/}
+                echo ${completed[@]//${prefix}/}
             fi
         fi
     fi
+}
+
+function core:bashenv() {
+    case $#:${1:-=} in
+        1:clear)                        >${SIMBOL_USER_BASHENV?} ;;
+        1:set)    sed -e 's/^[ \t]*//'  >${SIMBOL_USER_BASHENV?} ;;
+        1:append) sed -e 's/^[ \t]*//' >>${SIMBOL_USER_BASHENV?} ;;
+        *:*)
+            core:raise EXCEPTION_BAD_FN_CALL "Takes \`clear', \`set', or \`append', not \`%s'" "$*"
+        ;;
+    esac
 }
 
 function core:wrapper() {
@@ -1105,9 +1406,11 @@ function core:wrapper() {
     local -i e_flags=$?
     core:log DEBUG "core:flags.eval() returned ${e_flags}"
 
-    eval "${setdata}" #. NOTE: This sets module, fn, $@, etc.
-    : ${module?}
-    : ${fn?}
+    eval "${setdata}" #. -={
+    #. NOTE: This sets module, fn, $@, etc.
+    module=${module_22884db148f0ffb0d830ba431102b0b5?}
+    fn=${fn_4d9d6c17eeae2754c9b49171261b93bd?}
+    #. }=-
     core:log DEBUG "core:wrapper(module=${module}, fn=${fn}, argv=( $@ ))"
 
     local regex=':+[a-z0-9]+(:[a-z0-9]+) |*'
@@ -1146,8 +1449,10 @@ function core:wrapper() {
                         theme ERR_USAGE "That is not a supported format."
                         e=${CORE_FAILURE}
                     elif [ ${supported_formats[${g_FORMAT}]} -gt 0 ]; then
+                        [ ${g_DEBUG} -eq 0 ] || set -x
                         :core:execute ${module} ${completed} "${@}"
                         e=$?
+                        [ ${g_DEBUG} -eq 0 ] || set +x
                     else
                         theme ERR_USAGE "This function does not support that format."
                         e=${CORE_FAILURE}
@@ -1177,7 +1482,7 @@ function core:wrapper() {
             e=${CODE_FAILURE}
         ;;
         ${CODE_IMPORT_ERROR?}/*/*)
-            theme HAS_FAILED "Module ${module} has errors; see ${SIMBOL_USER_LOG}"
+            theme HAS_FAILED "Module ${module} has errors; see ${SIMBOL_USER_VAR_LOG}"
             e=${CODE_FAILURE}
         ;;
         ${CODE_IMPORT_ADMIN?}/*/*)
@@ -1228,18 +1533,7 @@ declare -A RAISE=(
 )
 function core:raise() {
     : !!! CRITICAL FAILURE !!!
-    (
-        cpf " %{r:failed with exception} %{g:$e}; %{c:traceback}:\n"
-        local i=0
-        local -i frames=${#BASH_LINENO[@]}
-        #. ((frames-2)): skips main, the last one in arrays
-        for ((i=frames-2; i>=0; i--)); do
-            cpf "  File %{g:${BASH_SOURCE[i+1]}}, line %{g:${BASH_LINENO[i]}}, in %{r:${FUNCNAME[i+1]}()}\n"
-            # Grab the source code of the line
-            local code=$(sed -n "${BASH_LINENO[i]}{s/^ *//;p}" "${BASH_SOURCE[i+1]}")
-            cpf "    %{wh:>>>} %{c}${code}%{N}\n"
-        done
-    ) > ${SIMBOL_DEADMAN?}
+    : >${SIMBOL_DEADMAN?}
 
     local -i e=$1
 
@@ -1247,7 +1541,9 @@ function core:raise() {
         : !!! Exiting raise function early as we are being traced !!!
     else
         cpf "%{r}EXCEPTION%{+bo}[%s->%s]%{-bo}: %s%{N}:\n" "${e}" "$1" "${RAISE[$e]-[UNKNOWN EXCEPTION:$e]}" >&2
+        cpf "\n%{r}  !!! %{+bo}${2}%{N}\n\n" "${@:3}" >&2
 
+        cpf "%{r}EXCEPTION%{+bo}[Traceback]%{N}:\n" >&2
         if [ ${#module} -gt 0 ]; then
             if [ ${#fn} -gt 0 ]; then
                 cpf "Function %{c:${module}:${fn}()}" 1>&2
@@ -1268,7 +1564,7 @@ function core:raise() {
         for ((i=frames-2; i>=0; i--)); do
             cpf "  File %{g:${BASH_SOURCE[i+1]}}, line %{g:${BASH_LINENO[i]}}, in %{r:${FUNCNAME[i+1]}()}\n" 1>&2
             # Grab the source code of the line
-            local code=$(sed -n "${BASH_LINENO[i]}{s/^ *//;p}" "${BASH_SOURCE[i+1]}")
+            local code=$(sed -n "${BASH_LINENO[i]}{s/^ *//;s/%/%%/g;p}" "${BASH_SOURCE[i+1]}")
             cpf "    %{wh:>>>} %{c}${code}%{N}\n" 1>&2
         done
     fi
