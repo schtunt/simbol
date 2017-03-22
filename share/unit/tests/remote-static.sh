@@ -144,6 +144,29 @@ function testCoreRemoteSudoPublic() {
     assertEquals "${FUNCNAME?}/2" "root" "${who}"
 }
 #. }=-
+#. testCoreRemoteTmuxPrivate -={
+function testCoreRemoteTmuxPrivate() {
+    core:mock tmux 'echo "$*"'
+    core:mock cpf ':'
+
+    core:wrapper remote ::tmux _ s '|(#10.0.0.0/29)' >${stdoutF?} 2>${stderrF?}
+
+    local -i count
+    count=$(grep -cE '10\.0\.0\.' ${stdoutF?})
+    assertEquals "${FUNCNAME?}/1.1" 6 ${count}
+
+    count=$(grep -cFw 'new-session' ${stdoutF?})
+    assertEquals "${FUNCNAME?}/1.2" 1 ${count}
+
+    count=$(grep -cFw 'attach-session' ${stdoutF?})
+    assertEquals "${FUNCNAME?}/1.3" 1 ${count}
+
+    count=$(grep -cFw 'kill-session' ${stdoutF?})
+    assertEquals "${FUNCNAME?}/1.4" 1 ${count}
+
+    core:unmock
+}
+#. }=-
 #. testCoreRemoteMonIpcPublic -={
 function testCoreRemoteMonIpcPublic() {
     local hostname="$(hostname)"
@@ -190,7 +213,6 @@ function testCoreRemoteSsh_threadIpcPrivate() {
 #. }=-
 
 #testCoreRemoteClusterPublic
-#testCoreRemoteTmuxPrivate
 #testCoreRemoteTmuxPublic
 #testCoreRemotePipewrapEvalPrivate
 #testCoreRemoteSerialmonPrivate
