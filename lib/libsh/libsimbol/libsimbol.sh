@@ -39,7 +39,7 @@ export SIMBOL_USER_VAR_LIBPY=${SIMBOL_USER}/var/lib/libpy
 export SIMBOL_USER_VAR_LIBSH=${SIMBOL_USER}/var/lib/libsh
 export SIMBOL_USER_VAR_LOG=${SIMBOL_USER}/var/log/simbol.log
 export SIMBOL_USER_VAR_RUN=${SIMBOL_USER}/var/run
-export SIMBOL_USER_BASHENV=${SIMBOL_USER_VAR_RUN}/.bashenv
+export SIMBOL_USER_MOCKENV=${SIMBOL_USER_VAR_RUN}/.mockenv
 export SIMBOL_USER_VAR_SCM=${SIMBOL_USER}/var/scm
 export SIMBOL_USER_VAR_TMP=${SIMBOL_USER}/var/tmp
 
@@ -1090,8 +1090,6 @@ $(for key in ${extra[@]}; do echo ${key}=${!key}; done)
 !
     fi
 
-    [ ! -r ${SIMBOL_USER_BASHENV?} ] || cat ${SIMBOL_USER_BASHENV?}
-
     return $e
 }
 
@@ -1382,17 +1380,6 @@ function :core:complete() {
     fi
 }
 
-function core:bashenv() {
-    case $#:${1:-=} in
-        1:clear)                        >${SIMBOL_USER_BASHENV?} ;;
-        1:set)    sed -e 's/^[ \t]*//'  >${SIMBOL_USER_BASHENV?} ;;
-        1:append) sed -e 's/^[ \t]*//' >>${SIMBOL_USER_BASHENV?} ;;
-        *:*)
-            core:raise EXCEPTION_BAD_FN_CALL "Takes \`clear', \`set', or \`append', not \`%s'" "$*"
-        ;;
-    esac
-}
-
 function core:wrapper() {
     if [ -e ${SIMBOL_DEADMAN?} ]; then
         theme HAS_FAILED "CRITICAL ERROR; ABORTING!" >&2
@@ -1402,7 +1389,7 @@ function core:wrapper() {
     local -i e=${CODE_USAGE_MODS}
 
     local setdata
-    setdata=$(::core:flags.eval "${@}")
+    setdata="$(::core:flags.eval "${@}")"
     local -i e_flags=$?
     core:log DEBUG "core:flags.eval() returned ${e_flags}"
 
@@ -1516,6 +1503,7 @@ EXCEPTION_DEPRECATED=72
 EXCEPTION_MISSING_PERL_MOD=80
 EXCEPTION_MISSING_PYTHON_MOD=81
 EXCEPTION_MISSING_USER=82
+EXCEPTION_USER_ERROR=83
 EXCEPTION_INVALID_FQDN=90
 EXCEPTION_SHOULD_NOT_GET_HERE=125
 EXCEPTION_NOT_IMPLEMENTED=126
@@ -1526,6 +1514,7 @@ declare -A RAISE=(
     [${EXCEPTION_MISSING_EXEC}]="Required executable not found"
     [${EXCEPTION_MISSING_USER}]="Required user environment not set, or set to nil"
     [${EXCEPTION_BAD_MODULE}]="Bad module"
+    [${EXCEPTION_USER_ERROR}]="User error"
     [${EXCEPTION_DEPRECATED}]="Deprecated function call"
     [${EXCEPTION_MISSING_PERL_MOD}]="Required perl module missing"
     [${EXCEPTION_MISSING_PYTHON_MOD}]="Required python module missing"
@@ -1570,6 +1559,172 @@ function core:raise() {
     fi
 
     exit $e
+}
+#. }=-
+#. 1.13 Mocking -={
+function ::core:mock_writer() {
+    case $#:${1:-=} in
+        1:clear)  truncate --size 0      ${SIMBOL_USER_MOCKENV?} ;;
+        1:set)    sed -e 's/^[ \t]*//'  >${SIMBOL_USER_MOCKENV?} ;;
+        1:append) sed -e 's/^[ \t]*//' >>${SIMBOL_USER_MOCKENV?} ;;
+        *:*)
+            core:raise EXCEPTION_BAD_FN_CALL "Takes \`clear', \`set', or \`append', not \`%s'" "$*"
+        ;;
+    esac
+}
+
+function core:mockery() {
+    local -i e=${CODE_FAILURE?}
+
+    case "$#:$1" in
+        1:start)
+            [ ! -r ${SIMBOL_USER_MOCKENV?} ] || source ${SIMBOL_USER_MOCKENV?}
+            e=$?
+        ;;
+        1:stop|1:clear)
+            core:unmock
+            e=$?
+        ;;
+    esac
+
+    return $e
+}
+
+function core:mock() {
+    # Supports functions and executables
+
+    local -i e=${CODE_FAILURE?}
+
+    if [ $# -ge 1 ]; then
+        local mocked="$1"
+        local statements="${@:2}"
+
+        local saved
+        local mode='undetected'
+
+        if [ "${mocked}" == "${mocked^^}" ]; then
+            local -a buf
+            buf=( $(declare -p "${mocked}" 2>/dev/null) )
+            e=$?
+
+            if [ $e -eq ${CODE_SUCCESS?} ]; then
+                case ${buf[1]} in
+                    --|-x)
+                        : "SCALAR ${buf[1]}"
+                        mode='env:scalar'
+                        saved="${mocked}=\"${!mocked}\""
+                    ;;
+                    -a|-A)
+                        : "ARRAY ${buf[1]}"
+                        mode='env:array'
+                        saved=$(declare -p "${mocked}" 2>/dev/null)
+                        saved="${saved/-/-gx}"
+                    ;;
+                    *)
+                        core:raise EXCEPTION_SHOULD_NOT_GET_HERE "Could not parse \`${buf[1]}'"
+                    ;;
+                esac
+            fi
+        else
+            local mocktype="$(type -t "${mocked}")"
+            case "${mocktype}" in
+                function)
+                    saved="$(declare -f "${mocked}" 2>/dev/null)"
+                    saved="${saved/-/-g}"
+                    saved="${saved//=*/=${statements[@]}}"
+                    e=$?
+                    mode='function'
+                ;;
+                file)
+                    saved="$(which "${mocked}" 2>/dev/null)"
+                    e=$?
+                    mode='executable'
+                ;;
+                alias)
+                    saved="$(alias "${mocked}" 2>/dev/null)"
+                    e=$?
+                    mode='alias'
+                ;;
+            esac
+        fi
+
+        if [ $e -eq ${CODE_SUCCESS?} ]; then
+            #. Mock (Now)
+            case "${mode}" in
+                executable|function|alias)
+                    ::core:mock_writer append <<MOCKERY
+function ${mocked}() {
+    $(for statement in "${statements[@]}"; do echo "    ${statement};"; done)
+}
+MOCKERY
+                ;;
+                env:array)
+                    ::core:mock_writer append <<MOCKERY
+eval ${mocked}=${statements[@]}
+MOCKERY
+                ;;
+                env:scalar)
+                    ::core:mock_writer append <<MOCKERY
+${mocked}="${statements[*]}"
+MOCKERY
+                ;;
+            esac
+
+            #. Unmock (Later)
+            case "${mode}" in
+                executable)
+                    ::core:mock_writer append <<MOCKERY
+function __unmock__${mocked}() {
+    unset ${mocked}
+    unset __unmock__${mocked}
+
+    : ${saved}
+}
+MOCKERY
+                ;;
+                function|alias)
+                    ::core:mock_writer append <<MOCKERY
+function __unmock__${mocked}() {
+    unset ${mocked}
+    unset __unmock__${mocked}
+
+    ${saved}
+}
+MOCKERY
+                ;;
+                env:array|env:scalar)
+                    ::core:mock_writer append <<MOCKERY
+function __unmock__${mocked}() {
+    unset __unmock__${mocked}
+
+    unset ${mocked}
+    ${saved}
+}
+MOCKERY
+                ;;
+                *:*)
+                    core:raise EXCEPTION_USER_ERROR "Can't save \`$1', no such function, executable, alias, or env; ($e:${mode})"
+                ;;
+            esac
+        else
+            core:raise EXCEPTION_BAD_FN_CALL "Takes the name of the mocked variable, and it's replacement code"
+        fi
+    fi
+}
+
+function core:unmock() {
+    local fn
+
+    if [ $# -eq 0 ]; then
+        while read fn; do
+            eval "${fn}"
+        done < <(declare -F | awk '$3~/^__unmock__/{print$3}')
+
+        ::core:mock_writer clear
+    else
+        fn="$1"
+        eval "__unmock__${fn}"
+    fi
 }
 #. }=-
 #. }=-
