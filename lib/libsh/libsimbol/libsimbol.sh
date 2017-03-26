@@ -92,9 +92,9 @@ declare -g  USER_CPF_INDENT_STR='*'
 
 source ${SIMBOL_CORE_MOD?}/cpf.sh
 
-PS4+="${COLORS[r]}\${BASH_SOURCE}${COLORS[N]}"
-PS4+=":${COLORS[g]}\${LINENO}${COLORS[N]}"
-PS4+="/\${FUNCNAME}/ "
+PS4+="${COLORS[r]}\${BASH_SOURCE}${COLORS[N]}:"
+PS4+="${COLORS[g]}\${LINENO}${COLORS[N]}/"
+PS4+="${COLORS[y]}\${FUNCNAME} "
 #. }=-
 #. 1.4  User/Profile Configuration -={
 declare -g -A CORE_MODULES=(
