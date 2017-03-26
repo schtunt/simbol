@@ -92,9 +92,15 @@ declare -g  USER_CPF_INDENT_STR='*'
 
 source ${SIMBOL_CORE_MOD?}/cpf.sh
 
-PS4+="${COLORS[r]}\${BASH_SOURCE}${COLORS[N]}:"
-PS4+="${COLORS[g]}\${LINENO}${COLORS[N]}/"
-PS4+="${COLORS[y]}\${FUNCNAME} "
+# Only change PS4 when we're not traced for coverage, since tracers such as kcov
+# rely on PS4 for calculating code coverage.  `CONTEXT' is set to `coverage' in
+# for coverage tests, so we will use that; see `.travis.yml'.
+if [ ${CONTEXT:-unset} != 'coverage' ]; then
+    PS4+="${COLORS[r]}\${BASH_SOURCE}${COLORS[N]}:"
+    PS4+="${COLORS[g]}\${LINENO}${COLORS[N]}/"
+    PS4+="${COLORS[y]}\${FUNCNAME} "
+    export PS4
+fi
 #. }=-
 #. 1.4  User/Profile Configuration -={
 declare -g -A CORE_MODULES=(
