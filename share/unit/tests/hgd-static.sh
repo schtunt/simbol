@@ -1,12 +1,12 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
 function hgdTearDown() {
-    core:bashenv clear
+    core:mockery clear
     assertTrue ${FUNCNAME?} $?
 }
 
 function hgdSetUp() {
-    core:bashenv clear
+    core:mockery clear
     assertTrue ${FUNCNAME?} $?
 }
 
@@ -83,9 +83,9 @@ function test_1_CoreHgdResolvePrivate() {
     core:import hgd
     local session="SessionA"
 
-    core:bashenv set <<!
-        declare -A USER_HGD_RESOLVERS=( [lower]="echo '%s' | tr 'A-Z' 'a-z'" )
-!
+    core:mock USER_HGD_RESOLVERS "( [lower]='echo \'%s\' | tr \'A-Z\' \'a-z\'' )"
+    core:mockery start
+
     core:wrapper hgd save -T _ ${session} '|(%lower=ABC,%lower=abc)' >${stdoutF?} 2>${stderrF?}
     assertTrue "${FUNCNAME?}/1.1" $?
 
@@ -97,6 +97,8 @@ function test_1_CoreHgdResolvePrivate() {
 
     grep -qE "\<${session}\>" ${SIMBOL_USER_ETC?}/hgd.conf
     assertTrue "${FUNCNAME?}/1.4" $?
+
+    core:mockery stop
 }
 function test_2_CoreHgdResolvePrivate() {
     core:import hgd
@@ -106,9 +108,9 @@ function test_2_CoreHgdResolvePrivate() {
 1.1.1.1 ssh-rsa AAAABCD
 1.2.3.4 ssh-rsa AAAACDE
 !
-    core:bashenv set <<!
-        SSH_KNOWN_HOSTS=/tmp/ssh_known_hosts
-!
+    core:mock SSH_KNOWN_HOSTS /tmp/ssh_known_hosts
+
+    core:mockery start
 
     core:wrapper hgd save -T _ ${session?} '/^1\.1\..*/' >${stdoutF?} 2>${stderrF?}
     assertTrue "${FUNCNAME?}/1.1" $?
@@ -121,6 +123,8 @@ function test_2_CoreHgdResolvePrivate() {
 
     grep -qFw "1.2.3.4" ${SIMBOL_USER_ETC?}/hgd.conf
     assertFalse "${FUNCNAME?}/1.4" $?
+
+    core:mockery stop
 
     core:wrapper hgd save -T _ ${session?} '/^1\..*/' >${stdoutF?} 2>${stderrF?}
     assertTrue "${FUNCNAME?}/2.1" $?
