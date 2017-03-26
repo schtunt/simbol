@@ -469,7 +469,7 @@ function ::remote:tmux() {
             local -A data
             eval data=$(:util:zip.eval hosts panes)
 
-            local missconnects=${SIMBOL_USER_TMP?}/${session}.missconnects
+            local missconnects=${SIMBOL_USER_VAR_TMP?}/${session}.missconnects
             > ${missconnects}
 
             local host pane
@@ -639,7 +639,13 @@ function ::remote:ssh_thread.ipc() {
     local -i retries=$1
     local -i timeout=$2
     local hcs="$3"
-    local cmd="${@:4}"
+
+    local -a argv
+    if [ "$4" != '--' ]; then
+        argv=( "${@:4}" )
+    else
+        argv=( "${@:5}" )
+    fi
 
     #. Maybe we want to read data one day, for now it's /dev/null
     local stdin="/dev/null"
@@ -665,7 +671,7 @@ function ::remote:ssh_thread.ipc() {
         core:log DEBUG "Remote execution launched; attempt ${tries} of ${retries}; timeout of ${timeout}s"
         case ${hcs} in
             localhost|127.*)
-                eval "${cmd}" <&5 1>&6 2>&8
+                eval -- "${argv[@]}" <&5 1>&6 2>&8
                 e=$?
             ;;
             *)
@@ -677,7 +683,7 @@ function ::remote:ssh_thread.ipc() {
                     -o StrictHostKeyChecking=no\
                     -o BatchMode=yes\
                     -o UserKnownHostsFile=/dev/null\
-                        "${hcs}" -- "${cmd}" <&5 1>&6 2>&8
+                        "${hcs}" -- "${argv[@]}" <&5 1>&6 2>&8
                 e=$?
             ;;
         esac
@@ -730,7 +736,7 @@ function ::remote:mon.ipc() {
     local -a hcss
     IFS=, read -a hcss <<< "$5"
 
-    local cmd="${@:6}"
+    local -a argv=( "${@:6}" )
 
     local -i ee
     local -i incomplete=1
@@ -760,7 +766,7 @@ function ::remote:mon.ipc() {
             ((hcsi++))
 
             STATES[${hcs}]='PENDING'
-            ( ::remote:ssh_thread.ipc ${retries} ${timeout} "${hcs}" "${cmd}" )&
+            ( ::remote:ssh_thread.ipc ${retries} ${timeout} "${hcs}" "${argv[@]}" )&
 
             ((active++))
             core:log DEBUG "Active thread-count at ${active} (of ${threads})"
@@ -882,16 +888,17 @@ function remote:mon() {
             local -r hgd="$1"
             local tldid=${g_TLDID?}
 
-            local rcmd lcmd
+            local -a rcmd
+            local lcmd
             if [ ${2:0:1} == '@' ]; then
-                rcmd="${USER_MON_CMDGRPREMOTE[${2:1}]}"
+                rcmd=( "${USER_MON_CMDGRPREMOTE[${2:1}]}" )
                 lcmd="${USER_MON_CMDGRPLOCAL[${2:1}]}"
             else
                 shift 1
-                rcmd="${@}"
+                rcmd=( "${@}" )
             fi
 
-            if [ ${#rcmd} -gt 0 ]; then
+            if [ ${#rcmd[0]} -gt 0 ]; then
                 e=${CODE_FAILURE?}
 
                 cpf "Processing..."
@@ -913,7 +920,7 @@ function remote:mon() {
                     if [ ${g_VERBOSE?} -eq 1 ]; then
                         echo "#. Hosts:      ${#qdns[@]}"
                         echo "#. Threads:    ${threads}"
-                        echo "#. Remote Cmd: ${rcmd}"
+                        echo "#. Remote Cmd: ${rcmd[*]}"
                         echo "#.   Attempts: ${retries}"
                         echo "#.   Timeout:  ${timeout}"
                         echo "#. Local Cmd:  ${lcmd}"
@@ -963,7 +970,7 @@ function remote:mon() {
                         esac
                     done < <(::remote:mon.ipc\
                         ${threads} ${retries} ${timeout}\
-                        "${delim}" "${csv_hosts}" "${rcmd}"
+                        "${delim}" "${csv_hosts}" "${rcmd[@]}"
                     )
                 else
                     theme HAS_FAILED "NO_SUCH_HGD"

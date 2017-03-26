@@ -12,7 +12,7 @@ if [ ${#SIMBOL_SHELL} -gt 0 ]; then
         if [ "${SIMBOL_SHELL}" != "${BASH}" ]; then
             BASH_ENV=<(
                 declare -p | grep -E '\<USER_'
-            ) ${SIMBOL_SHELL} -$- "$0" "$@"
+            ) exec ${SIMBOL_SHELL} -$- "$0" "$@"
         fi
     else
         e=127

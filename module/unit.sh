@@ -281,7 +281,11 @@ function testCoverage() {
                                         private)  ffn+=::;;
                                         internal) ffn+=:;;
                                     esac
-                                    ffn+=${prefix}${module}:${fn}
+                                    if grep -qE '(Csv|Eval|Ipc|Json)$' <<< "${fn}"; then
+                                        ffn+=${prefix}${module}:$(sed -re 's/(.*)(Csv|Eval|Ipc|Json)$/\1.\l\2/' <<< "${fn}")
+                                    else
+                                        ffn+=${prefix}${module}:${fn}
+                                    fi
                                     if [ "${context}" == "public" ]; then
                                         cat <<!SCRIPT >> ${script}
 #. Dynamic function ${i} for ${utf} {no-args} [ simbol:${profile}:${module}.${fn}() ] -={
@@ -335,7 +339,7 @@ function ${utf}Dyn${i}() {
         cpf
         core:softimport ${auto_module}
         if assertEquals "import ${auto_module}" ${CODE_SUCCESS?} \$?; then
-            if assertEquals "function" \$(type -t "${ffn}"); then
+            if assertEquals "function" "\$(type -t "${ffn}")"; then
                 local -i e
                 local argv='${auto_arguments}'
                 if [ "${auto_context}" == "public" ]; then

@@ -50,6 +50,8 @@ env:
     - CONTEXT=coverage  MODULE=xplm
 
 matrix:
+  fast_finish: true
+
   allow_failures:
     - env: CONTEXT=coverage  MODULE=git
     - env: CONTEXT=coverage  MODULE=hgd
@@ -81,3 +83,5 @@ after_failure:
 
 after_script:
   - share/unit/citm after_script
+
+# vim:sw=2:ts=2:et
