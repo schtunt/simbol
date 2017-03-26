@@ -469,7 +469,7 @@ function ::remote:tmux() {
             local -A data
             eval data=$(:util:zip.eval hosts panes)
 
-            local missconnects=${SIMBOL_USER_TMP?}/${session}.missconnects
+            local missconnects=${SIMBOL_USER_VAR_TMP?}/${session}.missconnects
             > ${missconnects}
 
             local host pane
