@@ -1562,169 +1562,57 @@ function core:raise() {
 }
 #. }=-
 #. 1.13 Mocking -={
-function ::core:mock_writer() {
-    case $#:${1:-=} in
-        1:clear)  truncate --size 0      ${SIMBOL_USER_MOCKENV?} ;;
-        1:set)    sed -e 's/^[ \t]*//'  >${SIMBOL_USER_MOCKENV?} ;;
-        1:append) sed -e 's/^[ \t]*//' >>${SIMBOL_USER_MOCKENV?} ;;
-        *:*)
-            core:raise EXCEPTION_BAD_FN_CALL "Takes \`clear', \`set', or \`append', not \`%s'" "$*"
-        ;;
-    esac
+function mock:write() {
+    if [ $# -le 1 ]; then
+        local context="${1:-default}"
+        cat >>${SIMBOL_USER_MOCKENV?}.${context}
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
 }
 
-function core:mockery() {
+function mock:clear() {
+    if [ $# -eq 0 ]; then
+        rm -f ${SIMBOL_USER_MOCKENV?}.*
+        mock:context
+    elif [ $# -eq 1 ]; then
+        local context="${1:-default}"
+        truncate --size 0 ${SIMBOL_USER_MOCKENV?}.${context}
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+}
+
+function mock:context() {
+    if [ $# -le 1 ]; then
+        local context="${1:-default}"
+        touch ${SIMBOL_USER_MOCKENV?}.${context}
+        ln -sf ${SIMBOL_USER_MOCKENV?}.${context} ${SIMBOL_USER_MOCKENV?}
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+}
+
+function mock:wrapper() {
     local -i e=${CODE_FAILURE?}
 
-    case "$#:$1" in
-        1:start)
-            [ ! -r ${SIMBOL_USER_MOCKENV?} ] || source ${SIMBOL_USER_MOCKENV?}
-            e=$?
-        ;;
-        1:stop|1:clear)
-            core:unmock
-            e=$?
-        ;;
-    esac
+    local closure
+    function closure() {
+        if [ ! -r ${SIMBOL_USER_MOCKENV?} ]; then
+            mock:context default
+        fi
+        if [ -r ${SIMBOL_USER_MOCKENV?} ]; then
+            source ${SIMBOL_USER_MOCKENV?}
+        fi
+        core:wrapper "${@}"
+        local -i _e=$?
+        unset closure
+        return $_e
+    }
+    echo "$(closure "${@}")"
+    e=$?
 
     return $e
-}
-
-function core:mock() {
-    # Supports functions and executables
-
-    local -i e=${CODE_FAILURE?}
-
-    if [ $# -ge 1 ]; then
-        local mocked="$1"
-        local statements="${@:2}"
-
-        local saved
-        local mode='undetected'
-
-        if [ "${mocked}" == "${mocked^^}" ]; then
-            local -a buf
-            buf=( $(declare -p "${mocked}" 2>/dev/null) )
-            e=$?
-
-            if [ $e -eq ${CODE_SUCCESS?} ]; then
-                case ${buf[1]} in
-                    --|-x)
-                        : "SCALAR ${buf[1]}"
-                        mode='env:scalar'
-                        saved="${mocked}=\"${!mocked}\""
-                    ;;
-                    -a|-A)
-                        : "ARRAY ${buf[1]}"
-                        mode='env:array'
-                        saved=$(declare -p "${mocked}" 2>/dev/null)
-                        saved="${saved/-/-gx}"
-                    ;;
-                    *)
-                        core:raise EXCEPTION_SHOULD_NOT_GET_HERE "Could not parse \`${buf[1]}'"
-                    ;;
-                esac
-            fi
-        else
-            local mocktype="$(type -t "${mocked}")"
-            case "${mocktype}" in
-                function)
-                    saved="$(declare -f "${mocked}" 2>/dev/null)"
-                    saved="${saved/-/-g}"
-                    saved="${saved//=*/=${statements[@]}}"
-                    e=$?
-                    mode='function'
-                ;;
-                file)
-                    saved="$(which "${mocked}" 2>/dev/null)"
-                    e=$?
-                    mode='executable'
-                ;;
-                alias)
-                    saved="$(alias "${mocked}" 2>/dev/null)"
-                    e=$?
-                    mode='alias'
-                ;;
-            esac
-        fi
-
-        if [ $e -eq ${CODE_SUCCESS?} ]; then
-            #. Mock (Now)
-            case "${mode}" in
-                executable|function|alias)
-                    ::core:mock_writer append <<MOCKERY
-function ${mocked}() {
-    $(for statement in "${statements[@]}"; do echo "    ${statement};"; done)
-}
-MOCKERY
-                ;;
-                env:array)
-                    ::core:mock_writer append <<MOCKERY
-eval ${mocked}=${statements[@]}
-MOCKERY
-                ;;
-                env:scalar)
-                    ::core:mock_writer append <<MOCKERY
-${mocked}="${statements[*]}"
-MOCKERY
-                ;;
-            esac
-
-            #. Unmock (Later)
-            case "${mode}" in
-                executable)
-                    ::core:mock_writer append <<MOCKERY
-function __unmock__${mocked}() {
-    unset ${mocked}
-    unset __unmock__${mocked}
-
-    : ${saved}
-}
-MOCKERY
-                ;;
-                function|alias)
-                    ::core:mock_writer append <<MOCKERY
-function __unmock__${mocked}() {
-    unset ${mocked}
-    unset __unmock__${mocked}
-
-    ${saved}
-}
-MOCKERY
-                ;;
-                env:array|env:scalar)
-                    ::core:mock_writer append <<MOCKERY
-function __unmock__${mocked}() {
-    unset __unmock__${mocked}
-
-    unset ${mocked}
-    ${saved}
-}
-MOCKERY
-                ;;
-                *:*)
-                    core:raise EXCEPTION_USER_ERROR "Can't save \`$1', no such function, executable, alias, or env; ($e:${mode})"
-                ;;
-            esac
-        else
-            core:raise EXCEPTION_BAD_FN_CALL "Takes the name of the mocked variable, and it's replacement code"
-        fi
-    fi
-}
-
-function core:unmock() {
-    local fn
-
-    if [ $# -eq 0 ]; then
-        while read fn; do
-            eval "${fn}"
-        done < <(declare -F | awk '$3~/^__unmock__/{print$3}')
-
-        ::core:mock_writer clear
-    else
-        fn="$1"
-        eval "__unmock__${fn}"
-    fi
 }
 #. }=-
 #. }=-

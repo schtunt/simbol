@@ -90,233 +90,92 @@ function testCoreGlobalAtomicity() {
 
 function testCoreMockEnv() {
     assertTrue "${FUNCNAME?}/0" '[ ${#SIMBOL_USER_MOCKENV} -gt 0 ]'
+}
 
-    local -i size
-
-    ::core:mock_writer clear
-    assertTrue "${FUNCNAME?}/1.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}")
-    assertEquals "${FUNCNAME?}/1.2" 0 ${size}
-
-    ::core:mock_writer set <<!
+function testCoreMockWrite() {
+    # Test creation of a mock context
+    mock:write <<!
         declare -A BATMAN=( [k1]="0xDEADBEEF" )
 !
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}")
+    local -i size
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default")
     assertTrue "${FUNCNAME?}/2.1" '[ ${size} -gt 0 ]'
-    grep -q 'BATMAN' "${SIMBOL_USER_MOCKENV?}"
+    grep -q 'BATMAN' "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/2.2.1" $?
-    grep -q 'JOKER' "${SIMBOL_USER_MOCKENV?}"
+    grep -q 'JOKER' "${SIMBOL_USER_MOCKENV?}.default"
     assertFalse "${FUNCNAME?}/2.2.2" $?
-    grep -q '0xDEADBEEF' "${SIMBOL_USER_MOCKENV?}"
+    grep -q '0xDEADBEEF' "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/2.2.3" $?
-    size=$(cat "${SIMBOL_USER_MOCKENV?}"|wc -l)
+    size=$(cat "${SIMBOL_USER_MOCKENV?}.default"|wc -l)
     assertEquals "${FUNCNAME?}/2.2.4" 1 ${size}
 
-    ::core:mock_writer append <<!
+    mock:write <<!
         declare -A JOKER=( [k1]="0xDEADBEEF" )
 !
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}")
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default")
     assertTrue "${FUNCNAME?}/3.1" '[ ${size} -gt 0 ]'
-    grep -q 'BATMAN' "${SIMBOL_USER_MOCKENV?}"
+    grep -q 'BATMAN' "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/3.2.1" $?
-    grep -q 'JOKER' "${SIMBOL_USER_MOCKENV?}"
+    grep -q 'JOKER' "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/3.2.2" $?
-    grep -q '0xDEADBEEF' "${SIMBOL_USER_MOCKENV?}"
+    grep -q '0xDEADBEEF' "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/3.2.3" $?
-    size=$(cat "${SIMBOL_USER_MOCKENV?}"|wc -l)
+    size=$(cat "${SIMBOL_USER_MOCKENV?}.default"|wc -l)
     assertEquals "${FUNCNAME?}/3.2.4" 2 ${size}
 
-    ::core:mock_writer clear
-    assertTrue "${FUNCNAME?}/4.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}")
-    assertEquals "${FUNCNAME?}/4.2" 0 ${size}
+    mock:clear
 }
 
-function testCoreMockWriter() {
-    assertTrue "${FUNCNAME?}/0" '[ ${#SIMBOL_USER_MOCKENV} -gt 0 ]'
-
+function testCoreMockDelete() {
     local -i size
 
-    ::core:mock_writer clear
+    # Test deletion for default context
+    echo : > ${SIMBOL_USER_MOCKENV?}.default
+
+    mock:clear default
+
+    test -e ${SIMBOL_USER_MOCKENV?}.default
     assertTrue "${FUNCNAME?}/1.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}")
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default" 2>/dev/null)
     assertEquals "${FUNCNAME?}/1.2" 0 ${size}
 
-    ::core:mock_writer set <<!
-        declare -A BATMAN=( [k1]="0xDEADBEEF" )
-!
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}")
-    assertTrue "${FUNCNAME?}/2.1" '[ ${size} -gt 0 ]'
-    grep -q 'BATMAN' "${SIMBOL_USER_MOCKENV?}"
+    # Test deletion for custom context
+    echo : > ${SIMBOL_USER_MOCKENV?}.a
+    echo : > ${SIMBOL_USER_MOCKENV?}.b
+    echo : > ${SIMBOL_USER_MOCKENV?}.custom
+
+    mock:clear custom
+
+    test -e ${SIMBOL_USER_MOCKENV?}.a
+    assertTrue "${FUNCNAME?}/2.1.1" $?
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.a" 2>/dev/null)
+    assertEquals "${FUNCNAME?}/2.1.2" 2 ${size}
+
+    test -e ${SIMBOL_USER_MOCKENV?}.b
     assertTrue "${FUNCNAME?}/2.2.1" $?
-    grep -q 'JOKER' "${SIMBOL_USER_MOCKENV?}"
-    assertFalse "${FUNCNAME?}/2.2.2" $?
-    grep -q '0xDEADBEEF' "${SIMBOL_USER_MOCKENV?}"
-    assertTrue "${FUNCNAME?}/2.2.3" $?
-    size=$(cat "${SIMBOL_USER_MOCKENV?}"|wc -l)
-    assertEquals "${FUNCNAME?}/2.2.4" 1 ${size}
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.b" 2>/dev/null)
+    assertEquals "${FUNCNAME?}/2.2.2" 2 ${size}
 
-    ::core:mock_writer append <<!
-        declare -A JOKER=( [k1]="0xDEADBEEF" )
-!
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}")
-    assertTrue "${FUNCNAME?}/3.1" '[ ${size} -gt 0 ]'
-    grep -q 'BATMAN' "${SIMBOL_USER_MOCKENV?}"
-    assertTrue "${FUNCNAME?}/3.2.1" $?
-    grep -q 'JOKER' "${SIMBOL_USER_MOCKENV?}"
-    assertTrue "${FUNCNAME?}/3.2.2" $?
-    grep -q '0xDEADBEEF' "${SIMBOL_USER_MOCKENV?}"
-    assertTrue "${FUNCNAME?}/3.2.3" $?
-    size=$(cat "${SIMBOL_USER_MOCKENV?}"|wc -l)
-    assertEquals "${FUNCNAME?}/3.2.4" 2 ${size}
+    test -e ${SIMBOL_USER_MOCKENV?}.custom
+    assertTrue "${FUNCNAME?}/2.3.1" $?
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.custom" 2>/dev/null)
+    assertEquals "${FUNCNAME?}/2.3.2" 0 ${size}
 
-    ::core:mock_writer clear
-    assertTrue "${FUNCNAME?}/4.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}")
-    assertEquals "${FUNCNAME?}/4.2" 0 ${size}
-}
+    # Test deletion of all mock contexts
+    echo : > ${SIMBOL_USER_MOCKENV?}.default
+    mock:clear
 
-function testCoreMockStartStop() {
-    rm -f ${SIMBOL_USER_MOCKENV?}
+    test -e ${SIMBOL_USER_MOCKENV?}.default
+    assertTrue "${FUNCNAME?}/3.1.1" $?
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default" 2>/dev/null)
+    assertEquals "${FUNCNAME?}/3.1.2" 0 ${size}
 
-    target_type="$(type -t whoami)"
-    assertEquals "${FUNCNAME?}/1.1" 'file' "${target_type}"
-    core:mock whoami 'echo "BATMAN"'
-
-    [ -e ${SIMBOL_USER_MOCKENV?} ]
-    assertTrue "${FUNCNAME?}/1.2" $?
-
-    grep -qFw BATMAN ${SIMBOL_USER_MOCKENV?}
-    assertTrue "${FUNCNAME?}/1.3" $?
-
-    target_type="$(type -t whoami)"
-    assertEquals "${FUNCNAME?}/1.4" 'file' "${target_type}"
-
-    core:mockery start
-
-    target_type="$(type -t whoami)"
-    assertEquals "${FUNCNAME?}/1.5" 'function' "${target_type}"
-
-    core:unmock whoami
-
-    target_type="$(type -t whoami)"
-    assertEquals "${FUNCNAME?}/1.6" 'file' "${target_type}"
-
-    [ -e ${SIMBOL_USER_MOCKENV?} ]
-    assertTrue "${FUNCNAME?}/1.7" $?
-
-    core:mockery stop
-    local -i size=$(stat --printf "%s" ${SIMBOL_USER_MOCKENV?})
-    assertEquals "${FUNCNAME?}/1.8" 0 ${size}
-}
-
-function testCoreMockExecutable() {
-    local target_type
-
-    target_type="$(type -t ls)"
-    assertEquals "${FUNCNAME?}/1.1" 'file' "${target_type}"
-    core:mock ls 'echo Boom!'
-
-    core:mockery start
-
-    target_type="$(type -t ls)"
-    assertEquals "${FUNCNAME?}/1.2" 'function' "${target_type}"
-
-    core:unmock ls
-
-    target_type="$(type -t ls)"
-    assertEquals "${FUNCNAME?}/1.3" 'file' "${target_type}"
-
-    core:mockery stop
-    assertEquals "${FUNCNAME?}/1.3" 'file' "${target_type}"
-}
-
-function testCoreMockEnvString() {
-    BATMAN='Unknown'
-
-    core:mock BATMAN 'Bruce Wayne'
-    assertEquals "${FUNCNAME?}/1" 'Unknown' "${BATMAN?}"
-
-    core:mockery start
-    assertEquals "${FUNCNAME?}/2" 'Bruce Wayne' "${BATMAN?}"
-
-    core:unmock BATMAN
-    assertEquals "${FUNCNAME?}/3" 'Unknown' "${BATMAN?}"
-
-    core:mockery stop
-    assertEquals "${FUNCNAME?}/3" 'Unknown' "${BATMAN?}"
-}
-
-function testCoreMockEnvArray() {
-    JOKER=( 'Unknown' )
-
-    core:mock JOKER "( 'Red' 'Hood' )"
-    assertEquals "${FUNCNAME?}/1.1" 1 "${#JOKER[@]}"
-    assertEquals "${FUNCNAME?}/1.2" 'Unknown' "${JOKER[0]}"
-
-    core:mockery start
-
-    assertEquals "${FUNCNAME?}/2.1" 2 "${#JOKER[@]}"
-    assertEquals "${FUNCNAME?}/2.2" 'Red' "${JOKER[0]}"
-    assertEquals "${FUNCNAME?}/2.3" 'Hood' "${JOKER[1]}"
-
-    core:unmock JOKER
-    assertEquals "${FUNCNAME?}/3.1" 1 "${#JOKER[@]}"
-    assertEquals "${FUNCNAME?}/3.2" 'Unknown' "${JOKER[0]}"
-
-    core:mockery stop
-    assertEquals "${FUNCNAME?}/4.1" 1 "${#JOKER[@]}"
-    assertEquals "${FUNCNAME?}/4.2" 'Unknown' "${JOKER[0]}"
-}
-
-
-function testCoreMockEnvArrayDeclared() {
-    declare -a BATMAN=( 'Unknown' )
-
-    core:mock BATMAN "( 'Bruce' 'Wayne' )"
-    assertEquals "${FUNCNAME?}/1.1" 1 "${#BATMAN[@]}"
-    assertEquals "${FUNCNAME?}/1.2" 'Unknown' "${BATMAN[0]}"
-
-    core:mockery start
-
-    assertEquals "${FUNCNAME?}/2.1" 2 "${#BATMAN[@]}"
-    assertEquals "${FUNCNAME?}/2.2" 'Bruce' "${BATMAN[0]}"
-    assertEquals "${FUNCNAME?}/2.3" 'Wayne' "${BATMAN[1]}"
-
-    core:unmock BATMAN
-    assertEquals "${FUNCNAME?}/3.1" 1 "${#BATMAN[@]}"
-    assertEquals "${FUNCNAME?}/3.2" 'Unknown' "${BATMAN[0]}"
-
-    core:mockery stop
-    assertEquals "${FUNCNAME?}/4.1" 1 "${#BATMAN[@]}"
-    assertEquals "${FUNCNAME?}/4.2" 'Unknown' "${BATMAN[0]}"
-}
-
-function testCoreMockEnvAssoc() {
-    declare -A FIGHTERS
-    FIGHTERS=( ['Ryu']='left' ['Ken']='right' )
-
-    core:mock FIGHTERS "( ['Vega']='left' ['Bison']='right' ['ShengLong']='top' )"
-    assertEquals "${FUNCNAME?}/1.1" 2 "${#FIGHTERS[@]}"
-    assertEquals "${FUNCNAME?}/1.2" 'left' "${FIGHTERS['Ryu']}"
-    assertEquals "${FUNCNAME?}/1.3" 'right' "${FIGHTERS['Ken']}"
-
-    core:mockery start
-
-    assertEquals "${FUNCNAME?}/2.1" 3 "${#FIGHTERS[@]}"
-    assertEquals "${FUNCNAME?}/2.2" 'left' "${FIGHTERS['Vega']}"
-    assertEquals "${FUNCNAME?}/2.3" 'right' "${FIGHTERS['Bison']}"
-    assertEquals "${FUNCNAME?}/2.4" 'top' "${FIGHTERS['ShengLong']}"
-
-    core:unmock FIGHTERS
-    assertEquals "${FUNCNAME?}/3.1" 2 "${#FIGHTERS[@]}"
-    assertEquals "${FUNCNAME?}/3.2" 'left' "${FIGHTERS['Ryu']}"
-    assertEquals "${FUNCNAME?}/3.3" 'right' "${FIGHTERS['Ken']}"
-
-    core:mockery stop
-    assertEquals "${FUNCNAME?}/4.1" 2 "${#FIGHTERS[@]}"
-    assertEquals "${FUNCNAME?}/4.2" 'left' "${FIGHTERS['Ryu']}"
-    assertEquals "${FUNCNAME?}/4.3" 'right' "${FIGHTERS['Ken']}"
+    test -e ${SIMBOL_USER_MOCKENV?}.a
+    assertFalse "${FUNCNAME?}/3.2" $?
+    test -e ${SIMBOL_USER_MOCKENV?}.b
+    assertFalse "${FUNCNAME?}/3.3" $?
+    test -e ${SIMBOL_USER_MOCKENV?}.custom
+    assertFalse "${FUNCNAME?}/3.4" $?
 }
 
 function exitWith() {
