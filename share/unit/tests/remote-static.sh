@@ -146,10 +146,12 @@ function testCoreRemoteSudoPublic() {
 #. }=-
 #. testCoreRemoteTmuxPrivate -={
 function testCoreRemoteTmuxPrivate() {
-    core:mock tmux 'echo "$*"'
-    core:mock cpf ':'
+    mock:write <<!
+function tmux() { echo "\$*"; }
+function cpf() { :; }
+!
 
-    core:wrapper remote ::tmux _ s '|(#10.0.0.0/29)' >${stdoutF?} 2>${stderrF?}
+    mock:wrapper remote ::tmux _ s '|(#10.0.0.0/29)' >${stdoutF?} 2>${stderrF?}
 
     local -i count
     count=$(grep -cE '10\.0\.0\.' ${stdoutF?})
@@ -164,7 +166,7 @@ function testCoreRemoteTmuxPrivate() {
     count=$(grep -cFw 'kill-session' ${stdoutF?})
     assertEquals "${FUNCNAME?}/1.4" 1 ${count}
 
-    core:unmock
+    mock:clear
 }
 #. }=-
 #. testCoreRemoteMonIpcPublic -={
