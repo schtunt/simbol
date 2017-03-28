@@ -778,7 +778,7 @@ function core:global() {
 
     while true; do
         if ( set -o noclobber; echo "locked" > "$lockfile" ) 2>/dev/null; then
-            trap 'rm -f "$lockfile"; exit $?' INT TERM EXIT
+            trap 'SIMBOL_TRAP_ECODE=$?; rm -f "$lockfile"; exit ${SIMBOL_TRAP_ECODE}' INT TERM EXIT
 
             case $# in
                 1)
