@@ -211,7 +211,7 @@ function core:log() {
         ;;
     esac
 
-    if [ ${#module} -gt 0 ]; then
+    if [ ${module:-NilOrNotSet} != 'NilOrNotSet' ]; then
         caller=${module}
         [ ${#fn} -eq 0 ] || caller+=":${fn}"
     else
@@ -436,8 +436,11 @@ function core:imported() {
 
     if [ $# -eq 1 ]; then
         local module=$1
-        e=${g_SIMBOL_IMPORTED_EXIT[${module}]}
-        [ ${#e} -gt 0 ] || e=-1
+        if [ ! -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
+            e=${g_SIMBOL_IMPORTED_EXIT[${module}]}
+        else
+            core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+        fi
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
@@ -709,16 +712,16 @@ the start of the function, and one right at the end:
 
 function <module>:<function>() {
   #. Optional...
-  #local l_CACHE_SIG="optional-custom-sinature-hash:template:funk/$3";
+  #local l_CACHE_SIG="optional-custom-sinature-hash:template:funk/\$3";
 
   #. vvv 1. Use cache and return or continue
-  local -i l_CACHE_TTL=600; g_CACHE_OUT "$*" || (
-    local -i e=${CODE_DEFAULT?}
+  local -i l_CACHE_TTL=600; g_CACHE_OUT "\$*" || (
+    local -i e=\${CODE_DEFAULT?}
 
     ...
 
-    return $e
-  ) > ${g_CACHE_FILE}; g_CACHE_IN; return $?
+    return \$e
+  ) > \${g_CACHE_FILE}; g_CACHE_IN; return \$?
   #. ^^^ 2. Update cache if previous did not return
 }
 function :<module>:<function>() { #. Same as above...; }
@@ -995,7 +998,7 @@ function ::core:flags.eval() {
             ((argc++))
         fi
     done
-    set -- "${argv[@]}"
+    set -- "${argv[@]+${argv[@]}}"
 
     #. GLOBAL_OPTS 2/4: Our generic and global options -={
     DEFINE_boolean help     false            "<help>"                   H
@@ -1048,7 +1051,7 @@ declare -g fn_4d9d6c17eeae2754c9b49171261b93bd=${fn:-}
         fi
 
         #. Last amendment to g_SSH_OPTS
-        g_SSH_OPTS+=" ${USER_SSH_OPTS}"
+        g_SSH_OPTS+=" ${USER_SSH_OPTS:-}"
 
         let g_CACHED=~${FLAGS_cached?}+2; unset FLAGS_cached
 
@@ -1228,8 +1231,8 @@ function :core:usage() {
 #. FIXME: destructive.  Additionally, it breaks the --long help which never
 #. FIXME: displays anymore once this is enabled.
 # g_CACHE_OUT "$*" || {
-    local module=$1
-    local fn=$2
+    local module=${1:-NilOrNotSet}
+    local fn=${2:-NilOrNotSet}
     local mode=${3---short}
     [ $# -eq 2 ] && mode=${3---long}
 
@@ -1346,7 +1349,7 @@ function :core:usage() {
                     done <<< "`${usage_l}`"
                 fi
 
-                if [ ${#g_DUMP} -gt 0 ]; then
+                if [ ${g_DUMP:-NilOrNotSet} != NilOrNotSet ]; then
                     cpf
                     cpf "%{c:%s}\n" "Flags:"
                     echo "${g_DUMP}"
