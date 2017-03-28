@@ -39,7 +39,7 @@ export SIMBOL_USER_VAR_LIBPY=${SIMBOL_USER}/var/lib/libpy
 export SIMBOL_USER_VAR_LIBSH=${SIMBOL_USER}/var/lib/libsh
 export SIMBOL_USER_VAR_LOG=${SIMBOL_USER}/var/log/simbol.log
 export SIMBOL_USER_VAR_RUN=${SIMBOL_USER}/var/run
-export SIMBOL_USER_BASHENV=${SIMBOL_USER_VAR_RUN}/.bashenv
+export SIMBOL_USER_MOCKENV=${SIMBOL_USER_VAR_RUN}/.mockenv
 export SIMBOL_USER_VAR_SCM=${SIMBOL_USER}/var/scm
 export SIMBOL_USER_VAR_TMP=${SIMBOL_USER}/var/tmp
 
@@ -778,7 +778,7 @@ function core:global() {
 
     while true; do
         if ( set -o noclobber; echo "locked" > "$lockfile" ) 2>/dev/null; then
-            trap 'rm -f "$lockfile"; exit $?' INT TERM EXIT
+            trap 'SIMBOL_TRAP_ECODE=$?; rm -f "$lockfile"; exit ${SIMBOL_TRAP_ECODE}' INT TERM EXIT
 
             case $# in
                 1)
@@ -1090,8 +1090,6 @@ $(for key in ${extra[@]}; do echo ${key}=${!key}; done)
 !
     fi
 
-    [ ! -r ${SIMBOL_USER_BASHENV?} ] || cat ${SIMBOL_USER_BASHENV?}
-
     return $e
 }
 
@@ -1382,17 +1380,6 @@ function :core:complete() {
     fi
 }
 
-function core:bashenv() {
-    case $#:${1:-=} in
-        1:clear)                        >${SIMBOL_USER_BASHENV?} ;;
-        1:set)    sed -e 's/^[ \t]*//'  >${SIMBOL_USER_BASHENV?} ;;
-        1:append) sed -e 's/^[ \t]*//' >>${SIMBOL_USER_BASHENV?} ;;
-        *:*)
-            core:raise EXCEPTION_BAD_FN_CALL "Takes \`clear', \`set', or \`append', not \`%s'" "$*"
-        ;;
-    esac
-}
-
 function core:wrapper() {
     if [ -e ${SIMBOL_DEADMAN?} ]; then
         theme HAS_FAILED "CRITICAL ERROR; ABORTING!" >&2
@@ -1402,7 +1389,7 @@ function core:wrapper() {
     local -i e=${CODE_USAGE_MODS}
 
     local setdata
-    setdata=$(::core:flags.eval "${@}")
+    setdata="$(::core:flags.eval "${@}")"
     local -i e_flags=$?
     core:log DEBUG "core:flags.eval() returned ${e_flags}"
 
@@ -1516,6 +1503,7 @@ EXCEPTION_DEPRECATED=72
 EXCEPTION_MISSING_PERL_MOD=80
 EXCEPTION_MISSING_PYTHON_MOD=81
 EXCEPTION_MISSING_USER=82
+EXCEPTION_USER_ERROR=83
 EXCEPTION_INVALID_FQDN=90
 EXCEPTION_SHOULD_NOT_GET_HERE=125
 EXCEPTION_NOT_IMPLEMENTED=126
@@ -1526,6 +1514,7 @@ declare -A RAISE=(
     [${EXCEPTION_MISSING_EXEC}]="Required executable not found"
     [${EXCEPTION_MISSING_USER}]="Required user environment not set, or set to nil"
     [${EXCEPTION_BAD_MODULE}]="Bad module"
+    [${EXCEPTION_USER_ERROR}]="User error"
     [${EXCEPTION_DEPRECATED}]="Deprecated function call"
     [${EXCEPTION_MISSING_PERL_MOD}]="Required perl module missing"
     [${EXCEPTION_MISSING_PYTHON_MOD}]="Required python module missing"
@@ -1570,6 +1559,60 @@ function core:raise() {
     fi
 
     exit $e
+}
+#. }=-
+#. 1.13 Mocking -={
+function mock:write() {
+    if [ $# -le 1 ]; then
+        local context="${1:-default}"
+        cat >>${SIMBOL_USER_MOCKENV?}.${context}
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+}
+
+function mock:clear() {
+    if [ $# -eq 0 ]; then
+        rm -f ${SIMBOL_USER_MOCKENV?}.*
+        mock:context
+    elif [ $# -eq 1 ]; then
+        local context="${1:-default}"
+        truncate --size 0 ${SIMBOL_USER_MOCKENV?}.${context}
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+}
+
+function mock:context() {
+    if [ $# -le 1 ]; then
+        local context="${1:-default}"
+        touch ${SIMBOL_USER_MOCKENV?}.${context}
+        ln -sf ${SIMBOL_USER_MOCKENV?}.${context} ${SIMBOL_USER_MOCKENV?}
+    else
+        core:raise EXCEPTION_BAD_FN_CALL
+    fi
+}
+
+function mock:wrapper() {
+    local -i e=${CODE_FAILURE?}
+
+    local closure
+    function closure() {
+        if [ ! -r ${SIMBOL_USER_MOCKENV?} ]; then
+            mock:context default
+        fi
+        if [ -r ${SIMBOL_USER_MOCKENV?} ]; then
+            source ${SIMBOL_USER_MOCKENV?}
+        fi
+        core:wrapper "${@}"
+        local -i _e=$?
+        unset closure
+        return $_e
+    }
+    echo "$(closure "${@}")"
+    e=$?
+
+    return $e
 }
 #. }=-
 #. }=-

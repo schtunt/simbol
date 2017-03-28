@@ -41,50 +41,6 @@ function testCoreUnsupportedAssociativeArrayAssignments() {
     assertEquals '0.0.1' '09a2684a0023bdd670ad455efbd74d8e' "${vetted%% *}"
 }
 
-function testCoreBashenv() {
-    assertTrue "${FUNCNAME?}/0" '[ ${#SIMBOL_USER_BASHENV} -gt 0 ]'
-
-    local -i size
-
-    core:bashenv clear
-    assertTrue "${FUNCNAME?}/1.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_BASHENV?}")
-    assertEquals "${FUNCNAME?}/1.2" 0 ${size}
-
-    core:bashenv set <<!
-        declare -A BATMAN=( [k1]="0xDEADBEEF" )
-!
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_BASHENV?}")
-    assertTrue "${FUNCNAME?}/2.1" '[ ${size} -gt 0 ]'
-    grep -q 'BATMAN' "${SIMBOL_USER_BASHENV?}"
-    assertTrue "${FUNCNAME?}/2.2.1" $?
-    grep -q 'JOKER' "${SIMBOL_USER_BASHENV?}"
-    assertFalse "${FUNCNAME?}/2.2.2" $?
-    grep -q '0xDEADBEEF' "${SIMBOL_USER_BASHENV?}"
-    assertTrue "${FUNCNAME?}/2.2.3" $?
-    size=$(cat "${SIMBOL_USER_BASHENV?}"|wc -l)
-    assertEquals "${FUNCNAME?}/2.2.4" 1 ${size}
-
-    core:bashenv append <<!
-        declare -A JOKER=( [k1]="0xDEADBEEF" )
-!
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_BASHENV?}")
-    assertTrue "${FUNCNAME?}/3.1" '[ ${size} -gt 0 ]'
-    grep -q 'BATMAN' "${SIMBOL_USER_BASHENV?}"
-    assertTrue "${FUNCNAME?}/3.2.1" $?
-    grep -q 'JOKER' "${SIMBOL_USER_BASHENV?}"
-    assertTrue "${FUNCNAME?}/3.2.2" $?
-    grep -q '0xDEADBEEF' "${SIMBOL_USER_BASHENV?}"
-    assertTrue "${FUNCNAME?}/3.2.3" $?
-    size=$(cat "${SIMBOL_USER_BASHENV?}"|wc -l)
-    assertEquals "${FUNCNAME?}/3.2.4" 2 ${size}
-
-    core:bashenv clear
-    assertTrue "${FUNCNAME?}/4.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_BASHENV?}")
-    assertEquals "${FUNCNAME?}/4.2" 0 ${size}
-}
-
 function testCoreGlobalArithmeticFailure() {
     core:global g.num 1024
     local -i v=$(core:global g.num)
@@ -132,50 +88,95 @@ function testCoreGlobalAtomicity() {
     assertEquals "${FUNCNAME?}/1" 2600 $v
 }
 
-function testCoreBashenv() {
-    assertTrue "${FUNCNAME?}/0" '[ ${#SIMBOL_USER_BASHENV} -gt 0 ]'
-
-    local -i size
-
-    core:bashenv clear
-    assertTrue "${FUNCNAME?}/1.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_BASHENV?}")
-    assertEquals "${FUNCNAME?}/1.2" 0 ${size}
-
-    core:bashenv set <<!
-        declare -A BATMAN=( [k1]="0xDEADBEEF" )
-!
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_BASHENV?}")
-    assertTrue "${FUNCNAME?}/2.1" '[ ${size} -gt 0 ]'
-    grep -q 'BATMAN' "${SIMBOL_USER_BASHENV?}"
-    assertTrue "${FUNCNAME?}/2.2.1" $?
-    grep -q 'JOKER' "${SIMBOL_USER_BASHENV?}"
-    assertFalse "${FUNCNAME?}/2.2.2" $?
-    grep -q '0xDEADBEEF' "${SIMBOL_USER_BASHENV?}"
-    assertTrue "${FUNCNAME?}/2.2.3" $?
-    size=$(cat "${SIMBOL_USER_BASHENV?}"|wc -l)
-    assertEquals "${FUNCNAME?}/2.2.4" 1 ${size}
-
-    core:bashenv append <<!
-        declare -A JOKER=( [k1]="0xDEADBEEF" )
-!
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_BASHENV?}")
-    assertTrue "${FUNCNAME?}/3.1" '[ ${size} -gt 0 ]'
-    grep -q 'BATMAN' "${SIMBOL_USER_BASHENV?}"
-    assertTrue "${FUNCNAME?}/3.2.1" $?
-    grep -q 'JOKER' "${SIMBOL_USER_BASHENV?}"
-    assertTrue "${FUNCNAME?}/3.2.2" $?
-    grep -q '0xDEADBEEF' "${SIMBOL_USER_BASHENV?}"
-    assertTrue "${FUNCNAME?}/3.2.3" $?
-    size=$(cat "${SIMBOL_USER_BASHENV?}"|wc -l)
-    assertEquals "${FUNCNAME?}/3.2.4" 2 ${size}
-
-    core:bashenv clear
-    assertTrue "${FUNCNAME?}/4.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_BASHENV?}")
-    assertEquals "${FUNCNAME?}/4.2" 0 ${size}
+function testCoreMockEnv() {
+    assertTrue "${FUNCNAME?}/0" '[ ${#SIMBOL_USER_MOCKENV} -gt 0 ]'
 }
 
+function testCoreMockWrite() {
+    # Test creation of a mock context
+    mock:write <<!
+        declare -A BATMAN=( [k1]="0xDEADBEEF" )
+!
+    local -i size
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default")
+    assertTrue "${FUNCNAME?}/2.1" '[ ${size} -gt 0 ]'
+    grep -q 'BATMAN' "${SIMBOL_USER_MOCKENV?}.default"
+    assertTrue "${FUNCNAME?}/2.2.1" $?
+    grep -q 'JOKER' "${SIMBOL_USER_MOCKENV?}.default"
+    assertFalse "${FUNCNAME?}/2.2.2" $?
+    grep -q '0xDEADBEEF' "${SIMBOL_USER_MOCKENV?}.default"
+    assertTrue "${FUNCNAME?}/2.2.3" $?
+    size=$(cat "${SIMBOL_USER_MOCKENV?}.default"|wc -l)
+    assertEquals "${FUNCNAME?}/2.2.4" 1 ${size}
+
+    mock:write <<!
+        declare -A JOKER=( [k1]="0xDEADBEEF" )
+!
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default")
+    assertTrue "${FUNCNAME?}/3.1" '[ ${size} -gt 0 ]'
+    grep -q 'BATMAN' "${SIMBOL_USER_MOCKENV?}.default"
+    assertTrue "${FUNCNAME?}/3.2.1" $?
+    grep -q 'JOKER' "${SIMBOL_USER_MOCKENV?}.default"
+    assertTrue "${FUNCNAME?}/3.2.2" $?
+    grep -q '0xDEADBEEF' "${SIMBOL_USER_MOCKENV?}.default"
+    assertTrue "${FUNCNAME?}/3.2.3" $?
+    size=$(cat "${SIMBOL_USER_MOCKENV?}.default"|wc -l)
+    assertEquals "${FUNCNAME?}/3.2.4" 2 ${size}
+
+    mock:clear
+}
+
+function testCoreMockDelete() {
+    local -i size
+
+    # Test deletion for default context
+    echo : > ${SIMBOL_USER_MOCKENV?}.default
+
+    mock:clear default
+
+    test -e ${SIMBOL_USER_MOCKENV?}.default
+    assertTrue "${FUNCNAME?}/1.1" $?
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default" 2>/dev/null)
+    assertEquals "${FUNCNAME?}/1.2" 0 ${size}
+
+    # Test deletion for custom context
+    echo : > ${SIMBOL_USER_MOCKENV?}.a
+    echo : > ${SIMBOL_USER_MOCKENV?}.b
+    echo : > ${SIMBOL_USER_MOCKENV?}.custom
+
+    mock:clear custom
+
+    test -e ${SIMBOL_USER_MOCKENV?}.a
+    assertTrue "${FUNCNAME?}/2.1.1" $?
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.a" 2>/dev/null)
+    assertEquals "${FUNCNAME?}/2.1.2" 2 ${size}
+
+    test -e ${SIMBOL_USER_MOCKENV?}.b
+    assertTrue "${FUNCNAME?}/2.2.1" $?
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.b" 2>/dev/null)
+    assertEquals "${FUNCNAME?}/2.2.2" 2 ${size}
+
+    test -e ${SIMBOL_USER_MOCKENV?}.custom
+    assertTrue "${FUNCNAME?}/2.3.1" $?
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.custom" 2>/dev/null)
+    assertEquals "${FUNCNAME?}/2.3.2" 0 ${size}
+
+    # Test deletion of all mock contexts
+    echo : > ${SIMBOL_USER_MOCKENV?}.default
+    mock:clear
+
+    test -e ${SIMBOL_USER_MOCKENV?}.default
+    assertTrue "${FUNCNAME?}/3.1.1" $?
+    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default" 2>/dev/null)
+    assertEquals "${FUNCNAME?}/3.1.2" 0 ${size}
+
+    test -e ${SIMBOL_USER_MOCKENV?}.a
+    assertFalse "${FUNCNAME?}/3.2" $?
+    test -e ${SIMBOL_USER_MOCKENV?}.b
+    assertFalse "${FUNCNAME?}/3.3" $?
+    test -e ${SIMBOL_USER_MOCKENV?}.custom
+    assertFalse "${FUNCNAME?}/3.4" $?
+}
 
 function exitWith() {
   g_CACHE_OUT || {
