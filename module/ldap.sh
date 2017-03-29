@@ -511,7 +511,7 @@ function :ldap:search.eval() {
                     while read line; do
                         local attr="$(echo $line|sed -e 's/^\(.*\): *\(.*\)$/\L\1/')"
                         local val="$(echo $line|sed -e 's/^\(.*\): *\(.*\)$/\2/')"
-                        if [ -z "${ldifdata[${attr}]}" ]; then
+                        if [ "${ldifdata[${attr}]:-NilOrNotSet}" == 'NilOrNotSet' ]; then
                             eval "local -a _ldap_${attr,,}=( \"${val}\" )"
                             ((ldifdata[${attr}]=1))
                         else

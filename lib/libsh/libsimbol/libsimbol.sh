@@ -335,7 +335,7 @@ function core:softimport() {
         local module="$1"
         local modulepath="${1//.//}.sh"
         local ouch="${SIMBOL_USER_VAR_TMP}/softimport.${module}.$$.ouch"
-        if [ -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
+        if [ "${g_SIMBOL_IMPORTED_EXIT[${module}]:-NilOrNotSet}" == 'NilOrNotSet' ]; then
             if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
                 if [ -f ${SIMBOL_USER_MOD}/${modulepath} ]; then
                     if source ${SIMBOL_USER_MOD}/${modulepath} >${ouch} 2>&1; then
@@ -655,7 +655,7 @@ function core:requires() {
         ;;
         *:ENV)
             for required in ${@:2}; do
-                if [ -z "${!required}" ]; then
+                if [ "${!required:-NilOrNotSet}" == 'NilOrNotSet' ]; then
                     core:log NOTICE "${caller} missing required environment variable ${required}"
                     e=${CODE_FAILURE}
                     break
@@ -1435,7 +1435,7 @@ function core:wrapper() {
                             grep --color -E "${regex}" |
                             ${SIMBOL_CORE_LIBEXEC}/ansi2html
                         e=${PIPESTATUS[2]}
-                    elif [ -z "${supported_formats[${g_FORMAT}]}" ]; then
+                    elif [ "${supported_formats[${g_FORMAT}]:-NilOrNotSet}" == 'NilOrNotSet' ]; then
                         theme ERR_USAGE "That is not a supported format."
                         e=${CORE_FAILURE}
                     elif [ ${supported_formats[${g_FORMAT}]} -gt 0 ]; then

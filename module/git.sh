@@ -84,7 +84,7 @@ function git:usage() {
                     else
                         cpf " %{@bad_path:%s}" "${path}"
                         in_pack_only=$(git log -- "${path}")
-                        if [ -z "${in_pack_only}" ]; then
+                        if [ "${in_pack_only:-NilOrNotSet}" == 'NilOrNotSet' ]; then
                             cpf " [%{@warn:PACK_ONLY}]"
                         fi
                     fi

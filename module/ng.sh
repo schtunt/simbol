@@ -25,10 +25,10 @@ function ::ng:tree_data() {
         local -a children
 
     #. if(!DEBUG) -={
-        [ -z "${g_PROCESSED_NETGROUP[${parent}]}" ] || return
+        [ "${g_PROCESSED_NETGROUP[${parent}]:-NilOrNotSet}" == 'NilOrNotSet' ] || return
         g_PROCESSED_NETGROUP[${parent}]=1
     #. } else {
-        #if [ -z "${g_PROCESSED_NETGROUP[${parent}]}" ]; then
+        #if [ "${g_PROCESSED_NETGROUP[${parent}]:-NilOrNotSet}" == 'NilOrNotSet' ]; then
         #    g_PROCESSED_NETGROUP[${parent}]=1
         #else
         #    g_PROCESSED_NETGROUP[${parent}]=$((${g_PROCESSED_NETGROUP[${parent}]}+1))
@@ -163,10 +163,10 @@ function ::ng:tree_draw() {
     local parent=$2
 
     #. if(!DEBUG) -={
-        [ -z "${g_PROCESSED_NETGROUP[${parent}]}" ] || return
+        [ "${g_PROCESSED_NETGROUP[${parent}]:-NilOrNotSet}" == 'NilOrNotSet' ] || return
         g_PROCESSED_NETGROUP[${parent}]=1
     #. } else {
-        #if [ -z "${g_PROCESSED_NETGROUP[${parent}]}" ]; then
+        #if [ "${g_PROCESSED_NETGROUP[${parent}]:-NilOrNotSet}" == 'NilOrNotSet' ]; then
         #    g_PROCESSED_NETGROUP[${parent}]=1
         #else
         #    g_PROCESSED_NETGROUP[${parent}]=$((${g_PROCESSED_NETGROUP[${parent}]}+1))

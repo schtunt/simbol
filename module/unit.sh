@@ -335,7 +335,7 @@ function ${utf}Dyn${i}() {
         [ ${auto_exitcode} -eq 0 ] && cpf "%{g:0}" || cpf "%{r:${auto_exitcode}}"
     cpf " %{r:]=-}"
 
-    if [ -z "${auto_simbol}" -o "${auto_simbol}" == "${SIMBOL_PROFILE?}" ]; then
+    if [ "${auto_simbol:-NilOrNotSet}" == 'NilOrNotSet' -o "${auto_simbol}" == "${SIMBOL_PROFILE?}" ]; then
         cpf
         core:softimport ${auto_module}
         if assertEquals "import ${auto_module}" ${CODE_SUCCESS?} \$?; then
@@ -343,7 +343,7 @@ function ${utf}Dyn${i}() {
                 local -i e
                 local argv='${auto_arguments}'
                 if [ "${auto_context}" == "public" ]; then
-                    if [ -z "\${regex_stdin}" ]; then
+                    if [ "\${regex_stdin:-NilOrNotSet}" == 'NilOrNotSet' ]; then
                         #. We go via the outer core wrapper to ensure user short
                         #. and long options are resovled properly for public functions.
                         core:wrapper ${auto_module} ${auto_fn} \${argv} >\${stdoutF?} 2>\${stderrF?}
@@ -352,7 +352,7 @@ function ${utf}Dyn${i}() {
                         e=\$?
                     fi
                 else
-                    if [ -z "\${regex_stdin}" ]; then
+                    if [ "\${regex_stdin:-NilOrNotSet}" == 'NilOrNotSet' ]; then
                         #. No need to worry about such -a|--argument style options
                         #. for non-public function calls as they do not support
                         #. this, only public functions do, so we can call the
