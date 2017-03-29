@@ -259,8 +259,9 @@ function core:global() {
                 3)
                     IFS='.' read context key <<< "${1}"
                     local oper="${2}"
-                    local -i amendment=$3
-                    if [ $? -eq ${CODE_SUCCESS?} ]; then
+                    local -i amendment
+                    set -u; let amendment=$3 2>/dev/null; e=$?; set +u
+                    if [ $e -eq ${CODE_SUCCESS?} ]; then
                         globalstore="$(:core:cachefile "${context}" "${key}")"
                         if [ $? -eq ${CODE_SUCCESS?} ]; then
                             local -i current
