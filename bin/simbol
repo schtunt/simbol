@@ -3,7 +3,7 @@
 
 set -u
 
-let -i e=0
+let e=0
 
 #. Source user-overrides if any
 [ ! -f ${HOME}/.simbolrc ] || source ${HOME}/.simbolrc

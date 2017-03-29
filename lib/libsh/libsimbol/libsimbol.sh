@@ -807,10 +807,10 @@ function core:global() {
                         globalstore="$(:core:cachefile "${context}" "${key}")"
                         if [ $? -eq ${CODE_SUCCESS?} ]; then
                             local -i current
-                            let -i current=$(cat ${globalstore})
+                            let current=$(cat ${globalstore})
                             if [ $? -eq ${CODE_SUCCESS?} ]; then
                                 local -i amendment
-                                let -i amendment=${3}
+                                let amendment=${3}
                                 if [ $? -eq ${CODE_SUCCESS?} ]; then
                                     ((current${oper}amendment))
                                     echo ${current} > ${globalstore}
