@@ -189,7 +189,109 @@ export SIMBOL_DELOM=$(printf "\x08")
 
 CODE_DEFAULT=${CODE_USAGE_FN_LONG?}
 #. }=-
-#. 1.6  Logging -={
+#. 1.6  Core Utilities -={
+function core:len() {
+    eval "local -a _$1=( \"\${$1[@]:+\${$1[@]}}\" ); echo \${#_$1[@]}"
+}
+
+function :core:age() {
+    local -i e=${CODE_FAILURE}
+
+    local filename="$1"
+    if [ -e ${filename} ]; then
+        local -i changed=$(stat -c %Y "${filename}")
+        local -i now=$(date +%s)
+        local -i elapsed
+        let elapsed=now-changed
+        echo ${elapsed}
+        e=${CODE_SUCCESS}
+    fi
+
+    return ${e}
+}
+
+function core:global() {
+    #. Usage:
+    #.     core:global <context>.<key>                  (read value from store)
+    #.     core:global <context>.<key> <value>          (write value to store)
+    #.     core:global <context>.<key> <oper> <value>   (amend value in store)
+    #.
+    #. For the last case, the supported operators are math operators available
+    #. to use via `let', for instance:
+    #.
+    #.     core:global g.delta += 4
+    #.
+    #. Obviously the latter case only supports integer types.
+
+    [ $# -ge 1 -o $# -le 3 ] || core:raise EXCEPTION_BAD_FN_CALL
+
+    local -i e=${CODE_FAILURE?}
+
+    local context
+    local key
+    local globalstore
+
+    local lockfile="${SIMBOL_USER_VAR_RUN?}/.core-global.lock.$$"
+    while true; do
+        if ( set -o noclobber; > "${lockfile}" ) 2>/dev/null; then
+            trap "\
+                SIMBOL_TRAP_ECODE=\$?;\
+                rm -f "${lockfile}";\
+                exit \${SIMBOL_TRAP_ECODE?};\
+            " INT TERM EXIT
+
+            case $# in
+                1)
+                    IFS='.' read context key <<< "${1}"
+                    globalstore="$(:core:cachefile "${context}" "${key}")"
+                    if [ $? -eq ${CODE_SUCCESS?} ]; then
+                        cat ${globalstore}
+                        e=$?
+                    fi
+                ;;
+                2)
+                    IFS='.' read context key <<< "${1}"
+                    local value="${2}"
+                    globalstore="$(:core:cachefile "${context}" "${key}")"
+                    printf "${value}" > ${globalstore}
+                    e=$?
+                ;;
+                3)
+                    IFS='.' read context key <<< "${1}"
+                    local oper="${2}"
+                    local -i amendment=$3
+                    if [ $? -eq ${CODE_SUCCESS?} ]; then
+                        globalstore="$(:core:cachefile "${context}" "${key}")"
+                        if [ $? -eq ${CODE_SUCCESS?} ]; then
+                            local -i current
+                            let current=$(cat ${globalstore})
+                            if [ $? -eq ${CODE_SUCCESS?} ]; then
+                                local -i amendment
+                                let amendment=${3} 2>/dev/null
+                                if [ $? -eq ${CODE_SUCCESS?} ]; then
+                                    ((current${oper}amendment))
+                                    echo ${current} > ${globalstore}
+                                    e=$?
+                                fi
+                            fi
+                        fi
+                    fi
+                ;;
+            esac
+
+            rm -f "$lockfile"
+            break
+        else
+            sleep 0.1
+        fi
+    done
+
+    return $e
+}
+
+
+#. }=-
+#. 1.7  Logging -={
 declare -A SIMBOL_LOG_NAMES=(
     [EMERG]=0 [ALERT]=1 [CRIT]=2 [ERR]=3
     [WARNING]=4 [NOTICE]=5 [INFO]=6 [DEBUG]=7
@@ -238,7 +340,7 @@ function core:log() {
     fi
 }
 #. }=-
-#. 1.7  Sanity Checks / Validation -={
+#. 1.8  Sanity Checks / Validation -={
 function validate_bash() {
     local -i e=${CODE_FAILURE?}
 
@@ -740,98 +842,6 @@ same result almost alll the time, for example dns might be a good candidate,
 whereas remote code execution is probably a bad candidate.
 !
 
-function :core:age() {
-    local -i e=${CODE_FAILURE}
-
-    local filename="$1"
-    if [ -e ${filename} ]; then
-        local -i changed=$(stat -c %Y "${filename}")
-        local -i now=$(date +%s)
-        local -i elapsed
-        let elapsed=now-changed
-        echo ${elapsed}
-        e=${CODE_SUCCESS}
-    fi
-
-    return ${e}
-}
-
-function core:global() {
-    #. Usage:
-    #.     core:global <context>.<key>                  (read value from store)
-    #.     core:global <context>.<key> <value>          (write value to store)
-    #.     core:global <context>.<key> <oper> <value>   (amend value in store)
-    #.
-    #. For the last case, the supported operators are math operators available
-    #. to use via `let', for instance:
-    #.
-    #.     core:global g.delta += 4
-    #.
-    #. Obviously the latter case only supports integer types.
-
-    [ $# -ge 1 -o $# -le 3 ] || core:raise EXCEPTION_BAD_FN_CALL
-
-    local -i e=${CODE_FAILURE?}
-
-    local context
-    local key
-    local globalstore
-
-    local lockfile=/tmp/.simbol.lockfile
-
-    while true; do
-        if ( set -o noclobber; echo "locked" > "$lockfile" ) 2>/dev/null; then
-            trap 'SIMBOL_TRAP_ECODE=$?; rm -f "$lockfile"; exit ${SIMBOL_TRAP_ECODE}' INT TERM EXIT
-
-            case $# in
-                1)
-                    IFS='.' read context key <<< "${1}"
-                    globalstore="$(:core:cachefile "${context}" "${key}")"
-                    if [ $? -eq ${CODE_SUCCESS?} ]; then
-                        cat ${globalstore}
-                        e=$?
-                    fi
-                ;;
-                2)
-                    IFS='.' read context key <<< "${1}"
-                    local value="${2}"
-                    globalstore="$(:core:cachefile "${context}" "${key}")"
-                    printf "${value}" > ${globalstore}
-                    e=$?
-                ;;
-                3)
-                    IFS='.' read context key <<< "${1}"
-                    local oper="${2}"
-                    local -i amendment=$3
-                    if [ $? -eq ${CODE_SUCCESS?} ]; then
-                        globalstore="$(:core:cachefile "${context}" "${key}")"
-                        if [ $? -eq ${CODE_SUCCESS?} ]; then
-                            local -i current
-                            let current=$(cat ${globalstore})
-                            if [ $? -eq ${CODE_SUCCESS?} ]; then
-                                local -i amendment
-                                let amendment=${3}
-                                if [ $? -eq ${CODE_SUCCESS?} ]; then
-                                    ((current${oper}amendment))
-                                    echo ${current} > ${globalstore}
-                                    e=$?
-                                fi
-                            fi
-                        fi
-                    fi
-                ;;
-            esac
-
-            rm -f "$lockfile"
-            break
-        else
-            sleep 0.1
-        fi
-    done
-
-    return $e
-}
-
 function :core:cachefile() {
     #. Constructs and prints a cachefile path
     local effective_format="${g_FORMAT?}"
@@ -1083,11 +1093,11 @@ set -- ${FLAGS_ARGV?}
         fi
     else
         cat <<!
-g_DUMP="$(FLAGS "${@}" 2>&1|sed -e '1,2 d' -e 's/^/    /')"
+g_DUMP="$(FLAGS "$@" 2>&1|sed -e '1,2 d' -e 's/^/    /')"
 !
     fi
 
-    if [ $e -eq ${CODE_SUCCESS} ]; then
+    if [ $e -eq ${CODE_SUCCESS} -a $(core:len extra) -gt 0 ]; then
         cat <<!
 $(for key in ${extra[@]}; do echo ${key}=${!key}; done)
 !

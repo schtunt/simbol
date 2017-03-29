@@ -319,11 +319,15 @@ function cpf() {
         local -i substitutions=$(echo ${fmtstr}|sed -e 's/%%//' -e 's/%{\([^}]*\)}/\1/g'|tr -c -d '%'|wc -c)
         if [ ${substitutions} -eq ${#args[@]} ]; then
             if ! echo "${fmtstr}"|grep -qE '%{'; then
-                local -i i
-                for ((i=0; i<${#args[@]}; i++)); do
-                    args[${i}]="${prefix[$i]}${args[${i}]}"
-                done
-                printf "${fmtstr}" "${args[@]}"
+                if [ $(core:len args) -gt 0 ]; then
+                    local -i i
+                    for ((i=0; i<${#args[@]}; i++)); do
+                        args[$i]="${prefix[$i]}${args[$i]}"
+                    done
+                    printf "${fmtstr}" "${args[@]}"
+                else
+                    printf "${fmtstr}"
+                fi
             else
                 echo "CPF Failure: still have %{ in the fmtstr!: ${fmtstr}" >&${FD_STDERR}
                 exit 99
