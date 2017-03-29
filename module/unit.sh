@@ -295,7 +295,7 @@ function ${utf}Dyn${i}NoArgs() {
     #. TODO: At the moment, no way to tell automatically if its CODE_DEFAULT or CODE_SUCCESS we expect
     #. TODO: so this either/or approach will have to do.
     core:softimport ${module}
-    cpf " %{@comment ___simbol} %{!function:${module}:${fn}} {no-args} "
+    cpf " %{@comment ___simbol} %{!function:${module}:${fn}} {no-args}\n"
     if assertEquals "import ${module}" ${CODE_SUCCESS?} \$?; then
         ${ffn} >/dev/null 2>&1
         ((e=\$? % ${CODE_DEFAULT?})) #. See why above

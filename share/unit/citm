@@ -81,7 +81,7 @@ function citm:kcov() {
             shift
             echo "$ citm:kcov run ${*}"
             mkdir coverage
-            if [ ${#TRAVIS_JOB_ID} -gt 0 ]; then
+            if [ ${#TRAVIS_JOB_ID} -eq 0 ]; then
                 kcov coverage "$@"
             else
                 kcov --coveralls-id=${TRAVIS_JOB_ID?} coverage "$@"

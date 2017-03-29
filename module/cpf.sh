@@ -154,7 +154,7 @@ function ::cpf:theme() {
                     module) ::cpf:module "${arg}";;
                     function)
                         IFS=: read -r module fn <<< "${arg}"
-                        ::cpf:function ${module} ${fn}
+                        ::cpf:function "${module}" "${fn}"
                     ;;
                     *) core:raise EXCEPTION_BAD_FN_CALL 2;;
                 esac
