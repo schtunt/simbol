@@ -271,7 +271,7 @@ function testCoverage() {
                             if [ -e ${dynamic} ]; then
                                 input="$(awk -F\| "\$1~/^${profile}$/&&\$2~/^${module}$/&&\$3~/^${fn}$/&&\$4~/^${context}$/{print\$0}" ${dynamic})"
                             fi
-                            if [ -n "${input}" ]; then
+                            if [ "${input:-NilOrNotSet}" != 'NilOrNotSet' ]; then
                                 local -i i=0
                                 local line
                                 while read line; do
@@ -465,6 +465,7 @@ function ::unit:test() {
                 module=${modulepath//\//.}
                 module=${module%.sh}
                 if [ ${#g_MODULES[@]} -eq 0 -o ${g_MODULES[${module}]--1} -eq 1 ]; then
+                    script=${SIMBOL_UNIT_TESTS?}/${module}-static.sh
                     g_MODE="prime"
                     cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?}} via %{b:%s} %{r:-=[}\n" "${BASH_VERSION?}";
                     (
@@ -482,7 +483,7 @@ function ::unit:test() {
 #. Module    : ${module}
 #. Generated : $(date)
 !SCRIPT
-                        script=${SIMBOL_UNIT_TESTS?}/${module}-static.sh
+                        script=${script}
                         if [ -r "${script}" ]; then
                             cat "${script}" > ${g_RUNTIME_SCRIPT?}
                         fi
@@ -593,7 +594,8 @@ function unit:core() {
     local -i e=${CODE_SUCCESS?}
 
     g_MODE="core"
-    local module="core"
+    local profile='core'
+    local module='core'
 
     cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?} -=[}\n";
     script=${SIMBOL_UNIT_TESTS?}/core.sh
