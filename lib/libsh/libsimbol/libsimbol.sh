@@ -1,7 +1,7 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
 #. Site Engine -={
-export SIMBOL_VERSION=v0.30.1
+export SIMBOL_VERSION=0.30.1
 
 #. 1.1  Date/Time and Basics -={
 export NOW=$(date --utc +%s)
@@ -81,20 +81,17 @@ source ${SHFLAGS?}
 #. 1.3  Core Configuration -={
 unset  CDPATH
 export SIMBOL_DEADMAN=${SIMBOL_USER_VAR_CACHE}/deadman
-export SIMBOL_IN_COLOR=1
-export SIMBOL_DATE_FORMAT="%x-%X"
 
 declare -gi FD_STDOUT=1
 declare -gi FD_STDERR=2
 
 declare -gi USER_CPF_INDENT_SIZE=4
 declare -g  USER_CPF_INDENT_STR='*'
-
 source ${SIMBOL_CORE_MOD?}/cpf.sh
+function cpf() { cpf:printf "$@"; return $?; }
 
-PS4+="${COLORS[r]}\${BASH_SOURCE}${COLORS[N]}"
-PS4+=":${COLORS[g]}\${LINENO}${COLORS[N]}"
-PS4+="/\${FUNCNAME}/ "
+export SIMBOL_DATE_FORMAT="%x-%X"
+
 #. }=-
 #. 1.4  User/Profile Configuration -={
 declare -g -A CORE_MODULES=(
@@ -155,11 +152,10 @@ false
 FALSE=$?
 CODE_FAILURE=${FALSE?}
 
-CODE_NOTIMPL=2
-
 #. 64..127 Internal
-CODE_USER_MAX=63
-CODE_DISABLED=64
+CODE_NOTIMPL=64
+CODE_USER_MAX=65
+CODE_DISABLED=66
 CODE_USAGE_SHORT=90
 CODE_USAGE_MODS=91
 CODE_USAGE_MOD=92
@@ -695,7 +691,7 @@ function core:requires() {
             local plid=pl
             core:softimport xplm
             if [ $? -eq ${CODE_IMPORT_GOOOD?} ]; then
-                #cpf "Installing missing required %{@lang:perl} module %{@pkg:${required}}..."
+                #cpf:printf "Installing missing required %{@lang:perl} module %{@pkg:${required}}..."
                 for required in ${@:2}; do
                     if ! :xplm:requires ${plid} ${required}; then
                         core:log NOTICE "${caller} missing required perl module ${required}"
@@ -713,7 +709,7 @@ function core:requires() {
             local plid=py
             core:softimport xplm
             if [ $? -eq ${CODE_IMPORT_GOOOD?} ]; then
-                #cpf "Installing missing required %{@lang:python} module %{@pkg:${required}}..."
+                #cpf:printf "Installing missing required %{@lang:python} module %{@pkg:${required}}..."
                 for required in ${@:2}; do
                     if ! :xplm:requires ${plid} ${required}; then
                         core:log NOTICE "${caller} installing required python module ${required}"
@@ -731,7 +727,7 @@ function core:requires() {
             local plid=rb
             core:softimport xplm
             if [ $? -eq ${CODE_IMPORT_GOOOD?} ]; then
-                #cpf "Installing missing required %{@lang:ruby} module %{@pkg:${required}}..."
+                #cpf:printf "Installing missing required %{@lang:ruby} module %{@pkg:${required}}..."
                 for required in ${@:2}; do
                     if ! :xplm:requires ${plid} ${required}; then
                         core:log NOTICE "${caller} installing required ruby module ${required}"
@@ -1110,6 +1106,8 @@ $(for key in ${extra[@]}; do echo ${key}=${!key}; done)
 function :core:execute() {
     local -i e=${CODE_USAGE_MODS}
 
+    local -i sic
+
     if [ $# -ge 1 ]; then
         e=${CODE_USAGE_MOD}
 
@@ -1121,59 +1119,55 @@ function :core:execute() {
 
             if [ "$(type -t ${module}:${fn})" == "function" ]; then
                 case ${g_FORMAT} in
-                    dot|text|png)    SIMBOL_IN_COLOR=0 ${module}:${fn} "${@:3}";;
-                    html|email)      SIMBOL_IN_COLOR=1 ${module}:${fn} "${@:3}";;
-                    ansi)
-                        if [ -t 1 ]; then
-                            SIMBOL_IN_COLOR=1 ${module}:${fn} "${@:3}"
-                        else
-                            SIMBOL_IN_COLOR=0 ${module}:${fn} "${@:3}"
-                        fi
-                    ;;
+                    html|email|ansi) [ -t 1 ]; sic=$((~$?+2)) ;;
+                    dot|text|png) sic=0 ;;
                     *) core:raise EXCEPTION_SHOULD_NOT_GET_HERE "Format checks should have already taken place!";;
                 esac
+                cpf:initialize ${sic}
+                ${module}:${fn} "${@:3}"
                 e=$?
 
-                if [ ${SIMBOL_IN_COLOR} -eq 1 ]; then
+                if [ ${sic} -eq 1 ]; then
                     if [ "$(type -t ${module}:${fn}:alert)" == "function" ]; then
-                        cpf "%{r:ALERTS}%{bl:@}%{g:${SIMBOL_PROFILE}} %{!function:${module} ${fn}}:\n"
-                        while read line; do
-                            set ${line}
-                            local alert=$1
-                            shift
-                            theme ${alert} "${*}"
+                        cpf:printf "%{r:ALERTS}%{@profile:%s} %{@module:%s}:%{@function:%s}:\n"\
+                            "${SIMBOL_PROFILE?}" "${module}" "${fn}"
+                        while read -a line; do
+                            local alert=${line[0]}
+                            theme ${alert} "${line:1}"
                         done < <(${module}:${fn}:alert)
-                        cpf
+                        cpf:printf
                     fi
 
                     if [ -f ${g_CACHE_USED?} -a ${g_VERBOSE?} -eq 1 ]; then
-                        cpf
+                        cpf:printf
                         local age
                         local cachefile
-                        cpf "%{@comment:#. Cached Data} %{r:%s}\n" "-=["
+                        cpf:printf "%{@comment:#. Cached Data} %{r:%s}\n" "-=["
                         while read cachefile; do
                             age=$(:core:age "${cachefile}")
 
                             case $(::core:cache:cachetype ${cachefile}) in
                                 output)
-                                    cpf "    %{b:%s} is %{@int:%ss} old..." "$(basename ${cachefile})" "${age}"
+                                    cpf:printf "    %{b:%s} is %{@int:%ss} old..." "$(basename ${cachefile})" "${age}"
                                 ;;
                                 file)
-                                    cpf "    %{@path:%s} is %{@int:%ss} old..." "${cachefile}" "${age}"
+                                    cpf:printf "    %{@path:%s} is %{@int:%ss} old..." "${cachefile}" "${age}"
                                 ;;
                             esac
                             theme WARN "CACHED"
                         done < ${g_CACHE_USED}
-                        cpf "%{@comment:#.} %{r:%s}\n" "]=-"
+                        cpf:printf "%{@comment:#.} %{r:%s}\n" "]=-"
                     fi
                 fi
             else
                 theme ERR_INTERNAL "Function ${module}:${fn} not defined!"
             fi
         fi
+    else
+        core:raise EXCEPTION_BAD_FN_CALL "Expected 1 or more arguments"
     fi
 
-    if [ ${SIMBOL_IN_COLOR} -eq 1 -a $e -eq 0 -a ${SECONDS} -ge 30 ]; then
+    if [ ${sic} -eq 1 -a $e -eq 0 -a ${SECONDS} -ge 30 ]; then
         theme INFO "Execution time was ${SECONDS} seconds"
     fi
 
@@ -1248,22 +1242,22 @@ function :core:usage() {
     [ $# -eq 2 ] && mode=${3---long}
 
     if [ ${#FUNCNAME[@]} -lt 4 ]; then
-        cpf "%{+bo}%{bl:simbol}%{-bo} %{@version:%s}, %{wh:bash framework}\n" ${SIMBOL_VERSION?}
-        cpf "Using %{@path:%s} %{@version:%s}" "${BASH}" "${BASH_VERSION}"
+        cpf:printf "%{+bo}%{n:simbol}%{-bo} %{@version:%s}, %{w:bash framework}\n" ${SIMBOL_VERSION?}
+        cpf:printf "Using %{@path:%s} %{@version:%s}" "${BASH}" "${BASH_VERSION}"
         if [ ${#SIMBOL_SHELL} -eq 0 ]; then
-            cpf " %{@comment:(export SIMBOL_SHELL to override)}"
+            cpf:printf " %{@comment:(export SIMBOL_SHELL to override)}"
         else
-            cpf " %{r:(SIMBOL_SHELL override active)}"
+            cpf:printf " %{r:(SIMBOL_SHELL override active)}"
         fi
         printf "\n\n"
     fi
 
-    local usage_prefix="%{wh:Usage} for %{@user:${USER_USERNAME}}@%{g:${SIMBOL_PROFILE}}"
+    local usage_prefix="%{w:Usage} for %{@user:${USER_USERNAME}}@%{g:${SIMBOL_PROFILE}}"
     if [ $# -eq 0 ]; then
         #. Usage for simbol
-        cpf "${usage_prefix}\n"
+        cpf:printf "${usage_prefix}\n"
         for profile in USER_MODULES CORE_MODULES; do
-            cpf "  %{g:${profile}}...\n"
+            cpf:printf "  %{g:${profile}}...\n"
             eval $(::core:dereference.eval profile) #. Will create ${profile} array
             for module in ${!profile[@]}; do (
                 local docstring=$(core:docstring ${module})
@@ -1275,21 +1269,22 @@ function :core:usage() {
                     local -a fn_public=( $(:core:functions public ${module}) )
                     local -a fn_private=( $(:core:functions private ${module}) )
                     if [ ${#fn_public[@]} -gt 0 ]; then
-                        cpf "    "
+                        cpf:printf "    "
                     else
-                        cpf "%{y:!   }"
+                        cpf:printf "%{y:!   }"
                     fi
                 else
-                    cpf "%{r:!!! }"
+                    cpf:printf "%{r:!!! }"
                 fi
 
-                cpf "%{bl:%s} %{!module:${module}}:%{+bo}%{@int:%s}%{-bo}/%{@int:%s}"\
-                    "${SIMBOL_BASENAME}" "${#fn_public[@]}" "${#fn_private[@]}"
+                cpf:printf "%{n:%s} %{@module:%s}:%{+bo}%{@int:%s}%{-bo}/%{@int:%s}"\
+                    "${SIMBOL_BASENAME?}" "${module}"\
+                    "$(core:len fn_public)" "$(core:len fn_private)"
 
                 if [ $ie -eq ${CODE_IMPORT_GOOOD?} ]; then
-                    cpf "%{@comment:%s}\n" "${docstring:+; ${docstring}}"
+                    cpf:printf "%{@comment:%s}\n" "${docstring:+; ${docstring}}"
                 else
-                    cpf "; %{@err:Error loading module}\n"
+                    cpf:printf "; %{@err:Error loading module}\n"
                 fi
             ); done | sort
         done
@@ -1298,7 +1293,7 @@ function :core:usage() {
         local -i ie=$?
         if [ $ie -eq ${CODE_IMPORT_GOOOD?} ]; then
             if [ ${g_ONCE_WHOAMI:-0} -eq 0 ]; then
-                cpf "${usage_prefix} %{!module:${module}}\n"
+                cpf:printf "${usage_prefix} %{@module:${module}}\n"
                 g_ONCE_WHOAMI=1
             fi
             for module in $(core:modules ${module}); do
@@ -1310,18 +1305,20 @@ function :core:usage() {
                         local usagestr
                         if [ "$(type -t ${usage_fn})" == "function" ]; then
                             while read usagestr; do
-                                cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{c:%s}\n" "${usagestr}"
-                            done < <(${usage_fn})
+                                cpf:printf "    %{n:%s} %{@module:%s}:%{@function:%s} %{c:%s}\n"\
+                                    "${SIMBOL_BASENAME?}" "${module}" "${fn}" "${usagestr}"
+                            done < <( ${usage_fn} )
                         else
                             usagestr="{no-args}"
-                            cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{bl:%s}\n" "${usagestr}"
+                            cpf:printf "    %{n:%s} %{@module:%s}:%{@function:%s} %{n:%s}\n"\
+                                "${SIMBOL_BASENAME?}" "${module}" "${fn}" "${usagestr}"
                         fi
                     done
                 fi
             done
 
             if [ ${g_VERBOSE?} -eq 1 -a ${#FUNCNAME[@]} -lt 4 ]; then
-                cpf "\n%{!module:${module}} %{g:changelog}\n"
+                cpf:printf "\n%{@module:${module}} %{g:changelog}\n"
                 local modfile=${SIMBOL_USER_MOD}/${module}
                 [ -f ${modfile} ] || modfile=${SIMBOL_CORE_MOD}/${module}
                 cd ${SIMBOL_CORE}
@@ -1334,35 +1331,38 @@ function :core:usage() {
             echo
         fi
     elif [ $# -ge 2 ]; then
-        cpf "${usage_prefix} %{!function:${module}:${fn}}\n"
+        cpf:printf "${usage_prefix} %{@module:%s}:%{@function:%s}\n"\
+            "${module}" "${fn}"
 
         local usage_fn=${module}:${fn}:usage
         if [ "$(type -t $usage_fn)" == "function" ]; then
             while read usagestr; do
-                cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{c:%s}\n" "${usagestr}"
+                cpf:printf "    %{n:%s} %{@module:%s}:%{@function:%s} %{c:%s}\n"\
+                    "${SIMBOL_BASENAME?}" "${module}" "${function}" "${usagestr}"
             done < <(${usage_fn})
         else
-            cpf "    %{bl:${SIMBOL_BASENAME}} %{!function:${module}:${fn}} %{bl:%s}\n" "{no-args}"
+            cpf:printf "    %{n:%s} %{@module:%s}:%{@function:%s} %{n:%s}\n"\
+                "${SIMBOL_BASENAME?}" "${module}" "${function}" "{no-args}"
         fi
 
         case ${mode} in
             --short) : pass ;;
             --long)
-                local usage_l=${module}:${fn}:help
+                local usage_l="${module}:${fn}:help"
                 local -i i=0
                 if [ "$(type -t $usage_l)" == "function" ]; then
-                    cpf
+                    cpf:printf
                     local indent=""
                     while read line; do
-                        cpf "%{c:%s}\n" "${indent}${line}"
+                        cpf:printf "%{c:%s}\n" "${indent}${line}"
                         [ $i -eq 0 ] && indent+="    "
                         ((i++))
                     done <<< "`${usage_l}`"
                 fi
 
-                if [ ${g_DUMP:-NilOrNotSet} != NilOrNotSet ]; then
-                    cpf
-                    cpf "%{c:%s}\n" "Flags:"
+                if [ "${g_DUMP:-NilOrNotSet}" != 'NilOrNotSet' ]; then
+                    cpf:printf
+                    cpf:printf "%{c:%s}\n" "Flags:"
                     echo "${g_DUMP}"
                 fi
             ;;
@@ -1384,12 +1384,14 @@ function :core:complete() {
             for afn in $(declare -F|awk -F'[ :]' '$3~/^'${modulestr}'$/{print$4}'|sort -n); do
                 local ${prefix}${afn//./_}=1
             done
+            set +u
             local -a completed=( $(eval echo "\${!${prefix}${fn//./_}*}") )
             if echo ${completed[@]} | grep -qE "\<${prefix}${fn//./_}\>"; then
                 echo ${fn}
             else
                 echo ${completed[@]//${prefix}/}
             fi
+            set -u
         fi
     fi
 }
@@ -1543,32 +1545,35 @@ function core:raise() {
     if [[ $- =~ x ]]; then
         : !!! Exiting raise function early as we are being traced !!!
     else
-        cpf "%{r}EXCEPTION%{+bo}[%s->%s]%{-bo}: %s%{N}:\n" "${e}" "$1" "${RAISE[$e]-[UNKNOWN EXCEPTION:$e]}" >&2
-        cpf "\n%{r}  !!! %{+bo}${2}%{N}\n\n" "${@:3}" >&2
+        cpf:printf "%{+r}EXCEPTION%{bo:[%s->%s]}: %s%{-r}:\n" "${e}" "$1" "${RAISE[$e]-[UNKNOWN EXCEPTION:$e]}" >&2
+        cpf:printf "\n%{+r}  !!! %{bo:%s}%{-r}\n\n" "${@:2}" >&2
 
-        cpf "%{r}EXCEPTION%{+bo}[Traceback]%{N}:\n" >&2
+        cpf:printf "%{+r}EXCEPTION%{bo:[Traceback]}%{-r}:\n" >&2
         if [ ${#module} -gt 0 ]; then
             if [ ${#fn} -gt 0 ]; then
-                cpf "Function %{c:${module}:${fn}()}" 1>&2
+                cpf:printf "Function %{c:${module}:${fn}()}" 1>&2
                 echo "Critical failure in function ${module}:${fn}()" >> ${SIMBOL_DEADMAN?}
             else
-                cpf "Module %{c:${module}}" 1>&2
+                cpf:printf "Module %{c:${module}}" 1>&2
                 echo "Critical failure in module ${module}" >> ${SIMBOL_DEADMAN?}
             fi
         else
-            cpf "File %{@path:$0}" 1>&2
+            cpf:printf "File %{@path:$0}" 1>&2
             echo "Critical failure in file ${0}" >> ${SIMBOL_DEADMAN?}
         fi
 
-        cpf " %{r:failed with exception} %{g:$e}; %{c:traceback}:\n" 1>&2
+        cpf:printf " %{r:failed with exception} %{g:$e}; %{c:traceback}:\n" 1>&2
         local i=0
+        local code
         local -i frames=${#BASH_LINENO[@]}
         #. ((frames-2)): skips main, the last one in arrays
         for ((i=frames-2; i>=0; i--)); do
-            cpf "  File %{g:${BASH_SOURCE[i+1]}}, line %{g:${BASH_LINENO[i]}}, in %{r:${FUNCNAME[i+1]}()}\n" 1>&2
+            cpf:printf "  File %{g:%s}, line %{g:%s}, in %{r:%s}\n" \
+                "${BASH_SOURCE[i+1]}" "${BASH_LINENO[i]}" "${FUNCNAME[i+1]}()" 1>&2
+
             # Grab the source code of the line
-            local code=$(sed -n "${BASH_LINENO[i]}{s/^ *//;s/%/%%/g;p}" "${BASH_SOURCE[i+1]}")
-            cpf "    %{wh:>>>} %{c}${code}%{N}\n" 1>&2
+            code=$(sed -n "${BASH_LINENO[i]}{s/^ *//;s/%/%%/g;p}" "${BASH_SOURCE[i+1]}")
+            cpf:printf "    %{w:>>>} %{c:%s}\n" "${code}" 1>&2
         done
     fi
 
@@ -1618,8 +1623,10 @@ function mock:wrapper() {
         if [ -r ${SIMBOL_USER_MOCKENV?} ]; then
             source ${SIMBOL_USER_MOCKENV?}
         fi
+
         core:wrapper "${@}"
         local -i _e=$?
+
         unset closure
         return $_e
     }

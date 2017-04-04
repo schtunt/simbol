@@ -114,7 +114,7 @@ function ::ng:treecpf() {
         [host_bad]=firebrick3
     )
 
-    local prefix=$(printf " %$((${indent}*4))s%%{wh:|___ }" ' ')
+    local prefix=$(printf " %$((${indent}*4))s%%{w:|___ }" ' ')
 
     if [ ${g_FORMAT?} != 'dot' ]; then
         cpf "${prefix}%{@${cpfid}:%s}\n" "${child}"

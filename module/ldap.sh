@@ -715,7 +715,7 @@ function ldap:search() {
                             e=${CODE_FAILURE?}
                         fi
                     done
-                    cpf
+                    echo
                 done <<< "${data}"
             else
                 theme HAS_FAILED "UNKNOWN ERROR"
@@ -756,7 +756,7 @@ function ldap:ngverify() {
                         hits=1
                     fi
                 done
-                [ ${hits} -eq 0 ] || cpf
+                [ ${hits} -eq 0 ] || echo
             done <<< "${data}"
         else
             theme HAS_FAILED "LDAP_CONNECT"
