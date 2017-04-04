@@ -25,7 +25,6 @@ Core HGD (Host-Group Directive) module
 #. HGD -={
 core:requires python
 
-core:import dns
 core:import net
 core:import util
 
@@ -132,8 +131,7 @@ function ::hgd:explode() {
                 fi
             ;;
             '@')
-                local host
-                host="$(:dns:get ${tldid} fqdn ${hgdn})"
+                local host=${hgdn}
                 if [ $? -eq ${CODE_SUCCESS?} ]; then
                     echo "${host}"
                 else
@@ -278,7 +276,7 @@ function :hgd:resolve() {
         elif [[ ${2:0:1} =~ ^[a-zA-Z0-9]$ ]]; then
             local session="$2"
             local -a buflist
-            buflist=( $(awk -F '\t' '$1~/^'${session}'$/&&$2~/^('${tldid}'|\_)$/{print$0}' ${g_HGD_CACHE?}) )
+            buflist=( $(awk -F '\t' '$1~/^'${session}'$/&&$2~/^('${tldid}'|\.)$/{print$0}' ${g_HGD_CACHE?}) )
             if [ $? -eq ${CODE_SUCCESS?} -a ${#buflist[@]} -gt 3 ]; then
                 e=${CODE_SUCCESS?}
                 echo ${buflist[@]:4}
@@ -334,7 +332,7 @@ function hgd:resolve() {
             e=$?
             if [ $e -eq ${CODE_SUCCESS?} ]; then
                 for token in ${resolved[@]}; do
-                    cpf '%{b:%s}\n' ${token}
+                    cpf '%{b:%s}\n' "${token}"
                 done | sort #| sort -n -t. -k1,1n -k2,2n -k3,3n -k4,4n -r
             else
                 theme ERR_USAGE "Bad formula or zero matches with equation \`${eq}' and TLDID ${tldid}"
@@ -395,6 +393,8 @@ function hgd:save() {
 #. }=-
 #. HGD List -={
 function :hgd:list() {
+    core:raise_bad_fn_call $# 0 1
+
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 0 ]; then
@@ -411,8 +411,6 @@ function :hgd:list() {
         else
             e=3
         fi
-    else
-        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 0 or 1 expected"
     fi
 
     return $e
@@ -421,6 +419,7 @@ function :hgd:list() {
 function hgd:list() {
     local -i e=${CODE_DEFAULT?}
 
+echo "$@"
     local data
     data=$(:hgd:list "$@")
     e=$?
@@ -428,7 +427,7 @@ function hgd:list() {
         0:${CODE_SUCCESS?}|1:${CODE_SUCCESS?})
             while read line; do
                 read -a data <<< "$line"
-                cpf '%{y:%-24s} %{@tldid:%s} %{@int:%3s} %{bl:%s} %{@hgd:%s}\n'\
+                cpf '%{y:%-24s} %{@tldid:%s} %{@int:%3s} %{n:%s} %{@hgd:%s}\n'\
                     "${data[0]}" "${data[1]}" "$((${#data[@]}-4))"\
                     "$(:util:date_i2s ${data[2]})" "${data[3]}"
             done <<< "${data}"
@@ -515,7 +514,6 @@ function hgd:refresh() {
     if [ $# -eq 1 ]; then
         local tldid=${g_TLDID?}
         local session="$1"
-        local hgd="$2"
         if :hgd:refresh "${tldid}" "${session}"; then
             e=${CODE_SUCCESS?}
         else

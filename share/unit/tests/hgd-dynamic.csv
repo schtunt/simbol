@@ -1,15 +1,15 @@
 #. format: profile|module|function|context|stdin|arguments|stdout|stderr|exitcode
 #. HGD (Host Group Directives) Module -={
-core|hgd|resolve|private||. &(#10.1.2.3/29)|300bd93c5aa2dca4df7515461048de08||0
-core|hgd|explode|private||. #10.1.2.3/29|8671846114c5b462c507ccd428776565||0
-core|hgd|resolve|internal||. &(#10.1.2.3/29)|10.1.2.6 10.1.2.4 10.1.2.5 10.1.2.2 10.1.2.3 10.1.2.1||0
+core|hgd|resolve|private||&(#10.1.2.3/29)|300bd93c5aa2dca4df7515461048de08||0
+core|hgd|explode|private||#10.1.2.3/29|8671846114c5b462c507ccd428776565||0
+core|hgd|resolve|internal||&(#10.1.2.3/29)|10.1.2.6 10.1.2.4 10.1.2.5 10.1.2.2 10.1.2.3 10.1.2.1||0
 core|hgd|resolve|public||#10.1.2.3/29|8671846114c5b462c507ccd428776565||0
-core|hgd|save|public||-T _ ut-hgd-save #10.1.2.3/29|||0
-core|hgd|save|internal||. ut-hgd-save #10.1.2.3/29|||0
-core|hgd|load|public||-T _ ut-hgd-save|||0
-core|hgd|load|internal||. ut-hgd-save|||0
+core|hgd|save|public||ut-hgd-save #10.1.2.3/29|||0
+core|hgd|save|internal||ut-hgd-save #10.1.2.3/29|||0
+core|hgd|load|public||ut-hgd-save|||0
+core|hgd|load|internal||ut-hgd-save|||0
 core|hgd|refresh|public||ut-hgd-save|||0
-core|hgd|refresh|internal||. ut-hgd-save|||0
+core|hgd|refresh|internal||ut-hgd-save|||0
 core|hgd|list|public||ut-hgd-save|^ut-hgd-save||0
 core|hgd|validate|private||&(a,b,c)|||0
 core|hgd|validate|private||&((a,b,c)|||1
