@@ -13,7 +13,7 @@ function :git:basedir() {
 
     if [ $# -eq 1 ]; then
         local cwd="$(pwd)"
-        local filename="${1}"
+        local filename="$(readlink -m "${1}")"
 
         [ "${filename:0:1}" == '/' ] || filename="${cwd}/${filename}"
 
@@ -49,12 +49,13 @@ function git:size() {
         local data
         data=$(:git:basedir ${1:-${cwd}})
         if [ $? -eq ${CODE_SUCCESS?} ]; then
-            read gitbasedir gitrelpath <<< "${data}"
-            cd ${gitbasedir}
-            git l|wc -l|tr '\n' ' '
-            du -sh .git|awk '{print $1}'
-            git count-objects -v
-            e=$?
+            read -r gitbasedir gitrelpath <<< "${data}"
+            if cd "${gitbasedir}"; then
+                git l|wc -l|tr '\n' ' '
+                du -sh .git|awk '{print $1}'
+                git count-objects -v
+                e=$?
+            fi
         else
             theme ERR_USAGE "Not a git repository:${1:-${cwd}}"
         fi
@@ -72,13 +73,12 @@ function git:usage() {
         e=${CODE_FAILURE?}
 
         local cwd=$(pwd)
-        read gitbasedir gitrelpath <<< $(:git:basedir ${1:-${cwd}})
+        read -r gitbasedir gitrelpath <<< "$(:git:basedir ${1:-${cwd}})"
         if [ $? -eq ${CODE_SUCCESS?} ]; then
-            cd ${gitbasedir}
-            if [ -d .git/objects/pack ]; then
-                while read sha1 obj size; do
+            if cd ${gitbasedir}; then
+                while read -r sha1 obj size; do
                     cpf "%{y:%-6s %8s} %{@hash:%s}" "${obj}" "${size}" "${sha1}"
-                    read sha1 path <<< $(git rev-list --objects --all | grep ${sha1})
+                    read -r sha1 path <<< "$(git rev-list --objects --all | grep ${sha1})"
                     if [ -e "${path}" ]; then
                         cpf " %{@path:%s}" "${path}"
                     else
@@ -90,8 +90,9 @@ function git:usage() {
                     fi
                     echo
                 done < <(
+                    #shellcheck disable=SC2026
                     git verify-pack -v .git/objects/pack/pack-*.idx\
-                        | grep -E '^[a-f0-9]{40}'\
+                        | grep -E "^[a-f0-9]{40}"\
                         | sort -k 3 -n\
                         | tail -n 64\
                         | awk '{print$1,$2,$3}'\
@@ -122,16 +123,16 @@ function git:rm() {
 
         local cwd=$(pwd)
         for filename in "${@}"; do
-            read gitbasedir gitrelpath <<< $(:git:basedir ${1})
+            read -r gitbasedir gitrelpath <<< "$(:git:basedir "${1}")"
             if [ $? -eq ${CODE_SUCCESS?} ]; then
-                cd ${gitbasedir}
+                if cd "${gitbasedir}"; then
+                    git filter-branch\
+                        --force\
+                        --index-filter "git rm -rf --cached --ignore-unmatch ${gitrelpath}"\
+                        --prune-empty --tag-name-filter cat -- --all
 
-                git filter-branch\
-                    --force\
-                    --index-filter "git rm -rf --cached --ignore-unmatch ${gitrelpath}" \
-                    --prune-empty --tag-name-filter cat -- --all
-
-                e=${CODE_SUCCESS?}
+                    e=$?
+                fi
             fi
         done
     fi
@@ -168,8 +169,7 @@ function git:file:usage() { echo "<path-glob>"; }
 function git:file() {
     local -i e=${CODE_DEFAULT?}
     if [ $# -eq 1 ]; then
-        read gitbasedir gitrelpath <<< $(:git:basedir ${PWD?})
-        if [ $? -eq 0 ]; then
+        if read -r gitbasedir gitrelpath <<< "$(:git:basedir "${PWD?}")"; then
             local sha1
             for sha1 in $(git log --pretty=format:'%h'); do
                 if git diff-tree --no-commit-id --name-only -r ${sha1} | grep -qE "${1}"; then
@@ -195,7 +195,7 @@ function git:rebasesearchstr() {
     if [ $# -eq 1 ]; then
         local file="$1"
         local -a sha1s=( $(git:file "${file}"|awk '{print$1}' ) )
-        local sha1search=$(echo ${sha1s[@]}|sed -e 's/ /\\\|/g')
+        local sha1search="$(sed -e 's/ /\\\|/g' <<< "${sha1s[*]}")"
         echo ":%s/^pick \\(${sha1search}\\)/f    \\1/"
         e=${CODE_SUCCESS?}
     fi
@@ -252,18 +252,18 @@ function git:commitall() {
     local -i e=${CODE_DEFAULT?}
 
     if [ $# -eq 0 -o $# -eq 1 ]; then
-        local repo=${1:-${PWD?}}
-        read gitbasedir gitrelpath <<< $(:git:basedir ${repo})
-        if [ $? -eq ${CODE_SUCCESS?} ]; then
-            cd ${gitbasedir}
-            local file
-            for file in $(git status --porcelain ${gitrelpath}|awk '{print$2}'); do
-                git add ${file}
-                git commit ${file} -m "... ${file}"
-            done
-            e=${CODE_SUCCESS?}
-        else
-            e=${CODE_FAILURE?}
+        e=${CODE_FAILURE?}
+
+        local repo="${1:-${PWD?}}"
+        if read -r gitbasedir gitrelpath <<< "$(:git:basedir "${repo}")"; then
+            if cd "${gitbasedir}"; then
+                local file
+                for file in $(git status --porcelain ${gitrelpath}|awk '{print$2}'); do
+                    git add "${file}"
+                    git commit "${file}" -m "... ${file}"
+                done
+                e=${CODE_SUCCESS?}
+            fi
         fi
     fi
 
@@ -279,8 +279,7 @@ function git:serve() {
     if [ $# -eq 1 -o $# -eq 2 ]; then
         local iface=$1
         local repo=${2:-${PWD?}}
-        read gitbasedir gitrelpath <<< $(:git:basedir ${repo})
-        if [ $? -eq 0 ]; then
+        if read -r gitbasedir gitrelpath <<< "$(:git:basedir "${repo}")"; then
             local ip=$(:net:i2s ${iface})
             theme INFO "Serving ${gitbasedir} on git://${ip}:9418/ (${iface})"
             git daemon --verbose --listen=${ip} --reuseaddr --export-all --base-path=${gitbasedir}/.git/
@@ -296,12 +295,12 @@ function git:serve() {
 #. }=-
 #. git:mkci -={
 function ::git:mkci() {
-    { git checkout -b $1 || git checkout $1; } 2>/dev/null
-    shift 1
-    for fN in $@; do
-        echo ${fN} > ${fN}
-        git add ${fN} >/dev/null
-        git commit -q ${fN} -m "Add ${fN}"
+    { git checkout -b "$1" || git checkout "$1"; } 2>/dev/null
+    local fN
+    for fN in "${@:2}"; do
+        echo "${fN}" > "${fN}"
+        git add "${fN}" >/dev/null
+        git commit -q "${fN}" -m "Add ${fN}"
         printf '.'
     done
 }
@@ -314,11 +313,9 @@ function git:playground() {
 
         if [ ! -d $1 ]; then
             cpf "Creating git playground %{@path:$1}..."
-            if mkdir -p $1 2>/dev/null; then
-                cd $1
-
+            if mkdir -p "$1" 2>/dev/null && cd "$1"; then
                 git init -q
-                echo $(basename ${1^^}) > .git/description
+                basename "${1^^})" > .git/description
                 ::git:mkci 'master'  m{A,B,C,D}
                 ::git:mkci 'topic-a' a{E,F}
                 ::git:mkci 'topic-b' b{G,H,I}
@@ -355,9 +352,7 @@ function git:gource() {
 
     if [ $# -eq 1 ] && [ -d $1 ] || [ $# -eq 0 ]; then
         gource --multi-sampling -s 3 --dont-stop ${1:-${SITE_CORE?}}
-        if [ $? -eq 0 ]; then
-            e=${CODE_SUCCESS?}
-        fi
+        e=$?
     fi
 
     return $e
