@@ -30,34 +30,26 @@ function :remote:connect:passwordless() {
 #.   remote:connect() -={
 function :remote:connect() {
     local -i e=${CODE_FAILURE?}
+    core:raise_bad_fn_call_compare $# ge 1
 
-    if [ $# -ge 2 ]; then
-        local tldid="$1"
-        local hcs="$2"
+    local hcs="$1"
 
-        local ssh_options="${g_SSH_OPTS?}"
-        if [ $# -eq 2 ]; then
-            #. User wants to ssh into a shell
-            ssh_options+=" -ttt"
-        elif [ $# -ge 3 ]; then
-            if [ "$3" == "sudo" ]; then
-                #. User wants to ssh and execute a command via sudo
-                ssh_options+=" -T"
-            else
-                #. User wants to ssh and execute a command
-                ssh_options+=" -T"
-            fi
+    local ssh_options="${g_SSH_OPTS?}"
+    if [ $# -eq 1 ]; then
+        #. User wants to ssh into a shell
+        ssh_options+=" -ttt"
+    elif [ $# -ge 2 ]; then
+        if [ "$3" == "sudo" ]; then
+            #. User wants to ssh and execute a command via sudo
+            ssh_options+=" -T"
         else
-            #. User is confused, and so we will follow.
-            core:raise EXCEPTION_BAD_FN_CALL
+            #. User wants to ssh and execute a command
+            ssh_options+=" -T"
         fi
-
-        export TERM=vt100
-        ssh ${ssh_options} "${hcs}" "${@:3}"
-        e=$?
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
     fi
+
+    ssh ${ssh_options} "${hcs}" "${@:3}"
+    e=$?
 
     return $e
 }
@@ -70,26 +62,23 @@ boolean resolve   false  "resolve-first"  r
 function remote:connect:usage() { echo "[<username>@]<hnh> [<cmd> [<args> [...]]]"; }
 function remote:connect() {
     local -i e=${CODE_DEFAULT?}
+    [ $# -ge 1 ] || return $e
 
-    if [ $# -ge 1 ]; then
-        local tldid=${g_TLDID?}
+    local username=
+    [ "${1//[^@]/}" != '@' ] || username="${1//@*}"
 
-        local username=
-        [ "${1//[^@]/}" != '@' ] || username="${1//@*}"
-
-        local hcs="${1##*@}"
-        [ ${#username} -eq 0 ] || hcs=${username}@${hcs}
-        if [ $# -eq 1 ]; then
-            :remote:connect ${tldid} ${hcs}
-            e=$?
-        else
-            :remote:connect ${tldid} ${hcs} "${@:2}"
-            e=$?
-            if [ $e -eq 255 ]; then
-                [ ! -t 1 ] || theme HAS_FAILED "Failed to connect to \`${hcs}'"
-            elif [ $e -ne ${CODE_SUCCESS?} ]; then
-                [ ! -t 1 ] || theme HAS_WARNED "Connection terminated with error code \`$e'"
-            fi
+    local hcs="${1##*@}"
+    [ ${#username} -eq 0 ] || hcs=${username}@${hcs}
+    if [ $# -eq 1 ]; then
+        :remote:connect ${hcs}
+        e=$?
+    else
+        :remote:connect ${hcs} "${@:2}"
+        e=$?
+        if [ $e -eq 255 ]; then
+            [ ! -t 1 ] || theme HAS_FAILED "Failed to connect to \`${hcs}'"
+        elif [ $e -ne ${CODE_SUCCESS?} ]; then
+            [ ! -t 1 ] || theme HAS_WARNED "Connection terminated with error code \`$e'"
         fi
     fi
 
@@ -97,12 +86,11 @@ function remote:connect() {
 }
 #. }=-
 #.   remote:copy() -={
-function remote:copy:usage() { echo "-T<tldid> [[<user>@]<dst-hnh>:]<src-path> [[<user>@]<dst-hnh>:]<dst-path>"; }
+function remote:copy:usage() { echo "[[<user>@]<dst-hnh>:]<src-path> [[<user>@]<dst-hnh>:]<dst-path>"; }
 function remote:copy() {
     local -i e=${CODE_DEFAULT?}
     [ $# -eq 2 ] || return $e
 
-    local tldid=${g_TLDID?}
     local -A data
     e=${CODE_SUCCESS?}
 
@@ -199,51 +187,46 @@ function ::remote:pipewrap.eval() {
 }
 
 function :remote:sudo() {
+    core:raise_bad_fn_call_compare $# ge 2
+
     local -i e=${CODE_FAILURE?}
 
     core:import vault
 
-    if [ $# -ge 3 ]; then
-        local tldid="$1"
-        local hcs="$2"
+    local hcs="$1"
 
-        local sudo_opts=
-        local lckfile=$(mktemp)
+    local sudo_opts=
+    local lckfile=$(mktemp)
 
-        local passwd
-        passwd="$(:vault:read SUDO)"
-        if [ $? -eq ${CODE_SUCCESS?} ]; then
-            local prompt="$(printf "\r")"
-            eval ::remote:pipewrap.eval '${passwd}' '${lckfile}' | (
-                :remote:connect ${tldid} ${hcs} sudo -p "${prompt}" -S "${@:3}"
-                e=$?
-                rm -f ${lckfile}
-                exit $e
-            )
+    local passwd
+    passwd="$(:vault:read SUDO)"
+    if [ $? -eq ${CODE_SUCCESS?} ]; then
+        local prompt="$(printf "\r")"
+        eval ::remote:pipewrap.eval '${passwd}' '${lckfile}' | (
+            :remote:connect ${hcs} sudo -p "${prompt}" -S "${@:2}"
             e=$?
-        else
-            :remote:connect ${tldid} ${hcs} sudo -S "${@:3}"
-            e=$?
-        fi
+            rm -f ${lckfile}
+            exit $e
+        )
+        e=$?
     else
-        core:raise EXCEPTION_BAD_FN_CALL
+        :remote:connect ${hcs} sudo -S "${@:2}"
+        e=$?
     fi
 
     return $e
 }
 
-function remote:sudo:usage() { echo "-T|--tldid <hnh> <cmd>"; }
+function remote:sudo:usage() { echo "<hnh> <cmd>"; }
 function remote:sudo() {
     local -i e=${CODE_DEFAULT?}
+    [ $# -ge 2 ] || return $e
 
-    if [ $# -ge 2 ]; then
-        local -r hcs="$1"
-        local -r tldid="${g_TLDID?}"
+    local -r hcs="$1"
 
-        [ ! -t 1 ] || theme INFO "SUDOing \`${*:2}'"
-        :remote:sudo ${tldid} ${hcs} "${@:2}"
-        e=$?
-    fi
+    [ ! -t 1 ] || theme INFO "SUDOing \`${*:2}'"
+    :remote:sudo ${hcs} "${@:2}"
+    e=$?
 
     return $e
 }
@@ -257,13 +240,12 @@ DEPR This function has been deprecated in favour of tmux.
 function remote:cluster:usage() { echo "<hnh> [<hnh> [...]]"; }
 function remote:cluster() {
     local -i e=${CODE_DEFAULT?}
-
-    local tldid=${g_TLDID?}
+    [ $# -gt 0 ] || return $e
 
     if [ $# -eq 1 ]; then
         local hgd=$1
         local -a hosts
-        hosts=( $(hgd:resolve ${tldid} ${hgd}) )
+        hosts=( $(hgd:resolve ${hgd}) )
         if [ $? -eq 0 -a ${#hosts[@]} -gt 0 ]; then
             cssh ${hosts[@]}
         else
@@ -365,57 +347,53 @@ function ::remote:tmux_attach() {
 }
 
 function ::remote:tmux() {
+    core:raise_bad_fn_call $# 2
     local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 3 ]; then
-        local tldid=$1
-        local session=$2
-        local hgd=$3
+    local session=$1
+    local hgd=$2
 
-        local -a hosts=( $(:hgd:resolve ${tldid} ${hgd}) )
-        if [ ${#hosts[@]} -gt 0 ]; then
-            eval "$(::remote:tmux_setup.eval ${session} ${#hosts[@]} 12)"
+    local -a hosts=( $(:hgd:resolve ${hgd}) )
+    if [ ${#hosts[@]} -gt 0 ]; then
+        eval "$(::remote:tmux_setup.eval ${session} ${#hosts[@]} 12)"
 
-            local -a panes=(
-                $(tmux list-panes -t ${session} -a | awk -F': ' '{print$1}')
-            )
+        local -a panes=(
+            $(tmux list-panes -t ${session} -a | awk -F': ' '{print$1}')
+        )
 
-            local -A data
-            eval data=$(:util:zip.eval hosts panes)
+        local -A data
+        eval data=$(:util:zip.eval hosts panes)
 
-            local missconnects=${SIMBOL_USER_VAR_TMP?}/${session}.missconnects
-            > ${missconnects}
+        local missconnects=${SIMBOL_USER_VAR_TMP?}/${session}.missconnects
+        > ${missconnects}
 
-            local host pane
-            local -i pid=1
-            for host in "${hosts[@]}"; do
-                pane="${data[${host}]}"
+        local host pane
+        local -i pid=1
+        for host in "${hosts[@]}"; do
+            pane="${data[${host}]}"
 
-                cpf "Connection %{g:${pane}}:%{@int:${pid}} to %{@host:${host}}..."
-                tmux send-keys -t "${pane}" "  clear" C-m
-                tmux send-keys -t "${pane}" "  simbol remote connect '${host}' || ( tput setab 1; clear; echo ${host} >> ${missconnects};echo 'ERROR: Could not connect to ${host}'; read -n1 ); exit" C-m
-                theme HAS_PASSED "${pane}:${pid}"
+            cpf "Connection %{g:${pane}}:%{@int:${pid}} to %{@host:${host}}..."
+            tmux send-keys -t "${pane}" "  clear" C-m
+            tmux send-keys -t "${pane}" "  simbol remote connect '${host}' || ( tput setab 1; clear; echo ${host} >> ${missconnects};echo 'ERROR: Could not connect to ${host}'; read -n1 ); exit" C-m
+            theme HAS_PASSED "${pane}:${pid}"
 
-                ((pid++))
-            done
+            ((pid++))
+        done
 
-            ::remote:tmux_attach ${session}
-            [ $? -ne 0 ] || e=${CODE_SUCCESS?}
+        ::remote:tmux_attach ${session}
+        [ $? -ne 0 ] || e=${CODE_SUCCESS?}
 
-            [ -s ${missconnects} ] || rm -f ${missconnects}
-            if [ -e ${missconnects} ]; then
-                cpf "%{r:ERROR}: Failed to connect to the following hosts...\n"
-                while read host; do
-                    cpf " ! %{@host:%s}\n" "${host}"
-                done < ${missconnects}
-            fi
-
-            tmux kill-session -t ${session}
-        else
-            core:log WARN "Empty HGD resolution"
+        [ -s ${missconnects} ] || rm -f ${missconnects}
+        if [ -e ${missconnects} ]; then
+            cpf "%{r:ERROR}: Failed to connect to the following hosts...\n"
+            while read host; do
+                cpf " ! %{@host:%s}\n" "${host}"
+            done < ${missconnects}
         fi
+
+        tmux kill-session -t ${session}
     else
-        core:raise EXCEPTION_BAD_FN_CALL
+        core:log WARN "Empty HGD resolution"
     fi
 
     return $e
@@ -444,7 +422,6 @@ function remote:tmux() {
 
     core:requires tmux
 
-    local tldid=${g_TLDID?}
     local session=$1
     local hgd=${2:-${session}}
 
@@ -453,7 +430,7 @@ function remote:tmux() {
         e=$?
         if [ $e -ne 0 ]; then
             if :hgd:list ${hgd} >/dev/null; then
-                ::remote:tmux "${tldid}" "${hgd}" "${hgd}"
+                ::remote:tmux "${hgd}" "${hgd}"
                 e=$?
             else
                 theme ERR_USAGE "There is no hgd or tmux session by that name."
@@ -461,7 +438,7 @@ function remote:tmux() {
         fi
     elif [ $# -eq 2 ]; then
         if ! tmux has-session -t "${session}" 2>/dev/null; then
-            ::remote:tmux "${tldid}" "${session}" "${hgd}"
+            ::remote:tmux "${session}" "${hgd}"
             e=$?
         else
             theme ERR_USAGE "That session already exists."
@@ -800,7 +777,6 @@ function remote:mon() {
 
         if [ $e -eq ${CODE_SUCCESS?} ]; then
             local -r hgd="$1"
-            local tldid=${g_TLDID?}
 
             local -a rcmd
             local lcmd
@@ -818,7 +794,7 @@ function remote:mon() {
                 cpf "Processing..."
                 local qdn ip
                 local -a qdns
-                qdns=( $(:hgd:resolve ${tldid} ${hgd}) )
+                qdns=( $(:hgd:resolve ${hgd}) )
                 e=$?
                 if [ $e -eq 0 ]; then
                     cpf "(%{@int:${#qdns[@]}} hosts (max-threads=%{@int:%s})" ${threads}

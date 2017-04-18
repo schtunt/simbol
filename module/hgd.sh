@@ -30,7 +30,7 @@ core:import util
 
 core:softimport ng
 
-declare -g g_HGD_CACHE=${SIMBOL_USER_ETC?}/hgd.conf
+[ -v g_HGD_CACHE ] || declare -g g_HGD_CACHE=${SIMBOL_USER_ETC?}/hgd.conf
 [ -e ${g_HGD_CACHE?} ] || touch ${g_HGD_CACHE?}
 
 #. HGD Resolvers -={
@@ -86,131 +86,128 @@ function ::hgd:validate() {
 }
 
 function ::hgd:explode() {
+    core:raise_bad_fn_call $# 1
+
     # FIXME: This method is poorly named
 
     # This method takes a `hgrp' and expands it either into a set of hosts,
     # or a set of IP addresses - depending on the expansion definition associated
     # with the `hgrp' (based on the first character in the `hgrp'.
 
-    local -i e=${CODE_FAILURE?}
+    local -i e=${CODE_SUCCESS?}
 
-    if [ $# -eq 2 ]; then
-        e=${CODE_SUCCESS?}
+    local hgd="${1}"
+    local hgdc="${hgd:0:1}"         #. First character
+    local hgdn="${hgd:1:${#hgd}}"   #. All after first character
+    local hgdl="${hgd:${#hgd}-1:1}" #. Last character
 
-        local tldid="${1}"
-        local hgd="${2}"
-        local hgdc="${hgd:0:1}"         #. First character
-        local hgdn="${hgd:1:${#hgd}}"   #. All after first character
-        local hgdl="${hgd:${#hgd}-1:1}" #. Last character
-
-        case ${hgdc} in
-            '+')
-                if core:imported ng; then
-                    local hosts
-                    hosts="$(:ng:resolve ${tldid} ${hgdn})"
-                    if [ $? -eq ${CODE_SUCCESS?} ]; then
-                        echo "${hosts}"
-                    else
-                        e=${CODE_FAILURE?}
-                    fi
-                else
-                    e=${CODE_FAILURE?}
-                fi
-            ;;
-            '=')
-                if core:imported ng; then
-                    local hosts
-                    hosts="$(:ng:resolve ${tldid} ${hgdn})"
-                    if [ $? -eq ${CODE_SUCCESS?} ]; then
-                        echo "${hosts}"
-                    else
-                        e=${CODE_FAILURE?}
-                    fi
-                else
-                    e=${CODE_FAILURE?}
-                fi
-            ;;
-            '@')
-                local host=${hgdn}
+    case ${hgdc} in
+        '+')
+            if core:imported ng; then
+                local hosts
+                hosts="$(:ng:resolve ${hgdn})"
                 if [ $? -eq ${CODE_SUCCESS?} ]; then
-                    echo "${host}"
+                    echo "${hosts}"
                 else
                     e=${CODE_FAILURE?}
                 fi
-            ;;
-            '%')
-                if [ ${#USER_HGD_RESOLVERS[@]} -gt 0 ]; then
-                    # Try reading in key-value pair from %<key>=<value>
-                    IFS='=' read -a kvp <<< "${hgdn}"
-                    if [ ${#kvp[@]} -eq 2 -a ${#USER_HGD_RESOLVERS[${kvp}]} -gt 0 ]; then
-                        local -a v
-                        IFS='+' read -a v <<< "${kvp[1]}"
-                        ${SIMBOL_SHELL:-${SHELL}} -c "$(printf "${USER_HGD_RESOLVERS[${kvp[0]}]}" "${v[@]}")"
-                    else
-                        e=${CODE_FAILURE?}
-                    fi
+            else
+                e=${CODE_FAILURE?}
+            fi
+        ;;
+        '=')
+            if core:imported ng; then
+                local hosts
+                hosts="$(:ng:resolve ${hgdn})"
+                if [ $? -eq ${CODE_SUCCESS?} ]; then
+                    echo "${hosts}"
                 else
                     e=${CODE_FAILURE?}
                 fi
-            ;;
-            '#')
-                if [ "${hgdn//[^\/]/}" == "/" ]; then
-                    IFS=/ read subnet netmask <<< "${hgdn}"
-                    if [ -n "${subnet}" -a -n "${netmask}" ]; then
-                        :net:hosts ${subnet}/${netmask}
-                        e=${PIPESTATUS[0]}
-                    fi
-                elif [ "${hgdn//[^\/]/}" == "" ]; then
-                    echo ${hgdn}
-                fi
-            ;;
-            .|/)
-                local -a hosts
-                if [ ${hgdc} == '.' ]; then
-                    hosts=(
-                        $(awk -F'[ ]+' '$2~/'${hgdn}'\>$/{print$2}' <(getent hosts))
-                    )
-                elif [ ${hgdc} == ${hgdl} ]; then
-                    hosts=(
-                        $(awk -F'[ ]+' '$2~'${hgd}'{print$2}' <(getent hosts))
-                    )
+            else
+                e=${CODE_FAILURE?}
+            fi
+        ;;
+        '@')
+            local host=${hgdn}
+            if [ $? -eq ${CODE_SUCCESS?} ]; then
+                echo "${host}"
+            else
+                e=${CODE_FAILURE?}
+            fi
+        ;;
+        '%')
+            if [ ${#USER_HGD_RESOLVERS[@]} -gt 0 ]; then
+                # Try reading in key-value pair from %<key>=<value>
+                IFS='=' read -a kvp <<< "${hgdn}"
+                if [ ${#kvp[@]} -eq 2 -a ${#USER_HGD_RESOLVERS[${kvp}]} -gt 0 ]; then
+                    local -a v
+                    IFS='+' read -a v <<< "${kvp[1]}"
+                    ${SIMBOL_SHELL:-${SHELL}} -c "$(printf "${USER_HGD_RESOLVERS[${kvp[0]}]}" "${v[@]}")"
                 else
                     e=${CODE_FAILURE?}
                 fi
+            else
+                e=${CODE_FAILURE?}
+            fi
+        ;;
+        '#')
+            if [ "${hgdn//[^\/]/}" == "/" ]; then
+                IFS=/ read subnet netmask <<< "${hgdn}"
+                if [ -n "${subnet}" -a -n "${netmask}" ]; then
+                    :net:hosts ${subnet}/${netmask}
+                    e=${PIPESTATUS[0]}
+                fi
+            elif [ "${hgdn//[^\/]/}" == "" ]; then
+                echo ${hgdn}
+            fi
+        ;;
+        .|/)
+            local -a hosts
+            if [ ${hgdc} == '.' ]; then
+                hosts=(
+                    $(awk -F'[ ]+' '$2~/'${hgdn}'\>$/{print$2}' <(getent hosts))
+                )
+            elif [ ${hgdc} == ${hgdl} ]; then
+                hosts=(
+                    $(awk -F'[ ]+' '$2~'${hgd}'{print$2}' <(getent hosts))
+                )
+            else
+                e=${CODE_FAILURE?}
+            fi
 
-                local -a khs=( ${SSH_KNOWN_HOSTS:-${HOME?}/.ssh/known_hosts} )
-                if [ $e -ne ${CODE_FAILURE?} ]; then
-                    for kh in ${khs[@]}; do
-                        if [ -r "${kh}" ]; then
-                            if [ ${hgdc} == '.' ]; then
-                                hosts+=(
-                                    $(awk -F'[, ]' '$1~/'"${hgdn}"'\>$/{print$1}' "${kh}")
-                                )
-                            elif [ ${hgdc} == ${hgdl} ]; then
-                                hosts+=(
-                                    $(awk -F'[, ]' '$1~'"${hgd}"'{print$1}' "${kh}")
-                                )
-                            fi
+            local -a khs=( ${SSH_KNOWN_HOSTS:-${HOME?}/.ssh/known_hosts} )
+            if [ $e -ne ${CODE_FAILURE?} ]; then
+                for kh in ${khs[@]}; do
+                    if [ -r "${kh}" ]; then
+                        if [ ${hgdc} == '.' ]; then
+                            hosts+=(
+                                $(awk -F'[, ]' '$1~/'"${hgdn}"'\>$/{print$1}' "${kh}")
+                            )
+                        elif [ ${hgdc} == ${hgdl} ]; then
+                            hosts+=(
+                                $(awk -F'[, ]' '$1~'"${hgd}"'{print$1}' "${kh}")
+                            )
                         fi
-                    done
-
-                    if [ ${#hosts[@]} -gt 0 ]; then
-                        printf "%s\n" ${hosts[@]} | sort -u
-                    else
-                        e=${CODE_FAILURE?}
                     fi
+                done
+
+                if [ ${#hosts[@]} -gt 0 ]; then
+                    printf "%s\n" ${hosts[@]} | sort -u
+                else
+                    e=${CODE_FAILURE?}
                 fi
-            ;;
-            *) e=${CODE_FAILURE?};;
-        esac
-    else
-        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 2 expected"
-    fi
+            fi
+        ;;
+        *) e=${CODE_FAILURE?};;
+    esac
 
     return $e
 }
 
 function ::hgd:resolve() {
+    core:raise_bad_fn_call $# 1
+
     # FIXME: This method is poorly named
 
     # This method takes a `formula' and resolves it into its constituent
@@ -221,27 +218,22 @@ function ::hgd:resolve() {
     local hgd
     local -A buffers
 
-    if [ $# -eq 2 ]; then
-        local tldid="$1"
-        local eq="$2"
-        local buf
-        buf="$(sets "${eq}")"
-        if [ $? -eq 0 ]; then
-            e=${CODE_SUCCESS?}
-            read -a hgds <<< "${buf//\\/\\\\}"
-            for hgd in "${hgds[@]}"; do
-                buf="$(::hgd:explode ${tldid} "${hgd}")"
-                if [ $? -eq 0 ]; then
-                    buffers["${hgd}"]="${buf}"
-                else
-                    core:log WARNING "Failed to resolve ${hgd}"
-                    e=${CODE_FAILURE?}
-                    break
-                fi
-            done
-        fi
-    else
-        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 2 expected"
+    local eq="$1"
+    local buf
+    buf="$(sets "${eq}")"
+    if [ $? -eq 0 ]; then
+        e=${CODE_SUCCESS?}
+        read -a hgds <<< "${buf//\\/\\\\}"
+        for hgd in "${hgds[@]}"; do
+            buf="$(::hgd:explode "${hgd}")"
+            if [ $? -eq 0 ]; then
+                buffers["${hgd}"]="${buf}"
+            else
+                core:log WARNING "Failed to resolve ${hgd}"
+                e=${CODE_FAILURE?}
+                break
+            fi
+        done
     fi
 
     if [ $e -eq ${CODE_SUCCESS?} ]; then
@@ -255,39 +247,35 @@ function ::hgd:resolve() {
 }
 
 function :hgd:resolve() {
+    core:raise_bad_fn_call $# 1
+
     local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 2 ]; then
-        local tldid=$1
+    #. &(...|...) or |(...|...) patterns
+    if [[ ${1:0:2} =~ ^[\|\&\!]\($ ]]; then
+        local eq="${1}"
 
-        #. &(...|...) or |(...|...) patterns
-        if [[ ${2:0:2} =~ ^[\|\&\!]\($ ]]; then
-            local eq="${2}"
-
-            local buffer
-            buffer="$(::hgd:resolve ${tldid} "${eq}")"
-            if [ $? -eq ${CODE_SUCCESS?} -a -n "${buffer}" ]; then
-                echo -e "${buffer}" | sets "$eq"
-                e=$?
-            else
-                e=${CODE_FAILURE?}
-            fi
-        #. simple alphanumeric patterns
-        elif [[ ${2:0:1} =~ ^[a-zA-Z0-9]$ ]]; then
-            local session="$2"
-            local -a buflist
-            buflist=( $(awk -F '\t' '$1~/^'${session}'$/&&$2~/^('${tldid}'|\.)$/{print$0}' ${g_HGD_CACHE?}) )
-            if [ $? -eq ${CODE_SUCCESS?} -a ${#buflist[@]} -gt 3 ]; then
-                e=${CODE_SUCCESS?}
-                echo ${buflist[@]:4}
-            fi
-        else
-            local eq="|(${2})"
-            :hgd:resolve ${tldid} "${eq}"
+        local buffer
+        buffer="$(::hgd:resolve "${eq}")"
+        if [ $? -eq ${CODE_SUCCESS?} -a -n "${buffer}" ]; then
+            echo -e "${buffer}" | sets "$eq"
             e=$?
+        else
+            e=${CODE_FAILURE?}
+        fi
+    #. simple alphanumeric patterns
+    elif [[ ${1:0:1} =~ ^[a-zA-Z0-9]$ ]]; then
+        local session="$1"
+        local -a buflist
+        buflist=( $(awk -F '\t' '$1~/^'${session}'$/{print$0}' ${g_HGD_CACHE?}) )
+        if [ $? -eq ${CODE_SUCCESS?} -a ${#buflist[@]} -gt 3 ]; then
+            e=${CODE_SUCCESS?}
+            echo ${buflist[@]:3}
         fi
     else
-        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 2 expected"
+        local eq="|(${1})"
+        :hgd:resolve "${eq}"
+        e=$?
     fi
 
     return $e
@@ -318,28 +306,21 @@ function hgd:resolve:help() {
     combination of <hgd> classes are used, it may or may not make sense.
 !
 }
-function hgd:resolve:usage(){ echo "[-T <tldid>] <hgd:*>"; }
+function hgd:resolve:usage(){ echo "<hgd:*>"; }
 function hgd:resolve() {
     local -i e=${CODE_DEFAULT?}
 
-    local tldid=${g_TLDID?}
     if [ $# -eq 1 ]; then
-        local eq=$1
-        local tld
-        if tld=$(core:tld "${tldid}"); then
-            local -a resolved
-            resolved=$(:hgd:resolve "${tldid}" "${eq}")
-            e=$?
-            if [ $e -eq ${CODE_SUCCESS?} ]; then
-                for token in ${resolved[@]}; do
-                    cpf '%{b:%s}\n' "${token}"
-                done | sort #| sort -n -t. -k1,1n -k2,2n -k3,3n -k4,4n -r
-            else
-                theme ERR_USAGE "Bad formula or zero matches with equation \`${eq}' and TLDID ${tldid}"
-            fi
+        local eq="$1"
+        local -a resolved
+        resolved=$(:hgd:resolve "${eq}")
+        e=$?
+        if [ $e -eq ${CODE_SUCCESS?} ]; then
+            for token in ${resolved[@]}; do
+                cpf '%{b:%s}\n' "${token}"
+            done | sort #| sort -n -t. -k1,1n -k2,2n -k3,3n -k4,4n -r
         else
-            e=${CODE_FAILURE?}
-            theme ERR_USAGE "Invalid TLDID ${tldid}"
+            theme ERR_USAGE "Bad formula or zero matches with equation \`${eq}'"
         fi
     fi
 
@@ -348,44 +329,39 @@ function hgd:resolve() {
 #. }=-
 #. HGD Save -={
 function :hgd:save() {
+    core:raise_bad_fn_call $# 2
+
     local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 3 ]; then
-        local tldid="$1"
-        local session="$2"
-        local hgd="$3"
+    local session="$1"
+    local hgd="$2"
 
-        :hgd:delete "${session}"
+    :hgd:delete "${session}"
 
-        local -a hosts=( $(:hgd:resolve ${tldid} "${hgd}") )
-        echo -ne "${session}\t${tldid}\t${NOW?}\t${hgd}\t${hosts[@]}\n" >> ${g_HGD_CACHE?}
-        [ ${#hosts[@]} -eq 0 ] || e=${CODE_SUCCESS?}
-    else
-        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 2 expected"
-    fi
+    local -a hosts=( $(:hgd:resolve "${hgd}") )
+    echo -e "${session}\t${NOW?}\t${hgd}\t${hosts[*]}" >> ${g_HGD_CACHE?}
+    [ ${#hosts[@]} -eq 0 ] || e=${CODE_SUCCESS?}
 
     return $e
 }
 
-function hgd:save:usage(){ echo "[-T <tldid>] <session> <hgd>"; }
+function hgd:save:usage(){ echo "<session> <hgd>"; }
 function hgd:save() {
     local -i e=${CODE_DEFAULT?}
+    [ $# -eq 2 ] || return $e
 
-    local tldid=${g_TLDID?}
-    if [ $# -eq 2 ]; then
-        local session="$1"
-        if [ -z "${session//[-a-zA-Z0-9]/}" ]; then
-            local hgd="$2"
-            if :hgd:save "${tldid}" "${session}" "${hgd}"; then
-                e=${CODE_SUCCESS?}
-            else
-                theme ERR_USAGE "There is no <hgd> cached by that session name."
-                e=${CODE_FAILURE?}
-            fi
+    local session="$1"
+    if [ -z "${session//[-a-zA-Z0-9]/}" ]; then
+        local hgd="$2"
+        if :hgd:save "${session}" "${hgd}"; then
+            e=${CODE_SUCCESS?}
         else
-            theme ERR_USAGE "That's not a valid session name."
+            theme ERR_USAGE "There is no <hgd> cached by that session name."
             e=${CODE_FAILURE?}
         fi
+    else
+        theme ERR_USAGE "That's not a valid session name."
+        e=${CODE_FAILURE?}
     fi
 
     return $e
@@ -419,7 +395,6 @@ function :hgd:list() {
 function hgd:list() {
     local -i e=${CODE_DEFAULT?}
 
-echo "$@"
     local data
     data=$(:hgd:list "$@")
     e=$?
@@ -427,9 +402,9 @@ echo "$@"
         0:${CODE_SUCCESS?}|1:${CODE_SUCCESS?})
             while read line; do
                 read -a data <<< "$line"
-                cpf '%{y:%-24s} %{@tldid:%s} %{@int:%3s} %{n:%s} %{@hgd:%s}\n'\
-                    "${data[0]}" "${data[1]}" "$((${#data[@]}-4))"\
-                    "$(:util:date_i2s ${data[2]})" "${data[3]}"
+                cpf '%{y:%-24s} %{@int:%3s} %{n:%s} %{@hgd:%s}\n'\
+                    "${data[0]}" "$((${#data[@]}-3))"\
+                    "$(:util:date_i2s ${data[1]})" "${data[2]}"
             done <<< "${data}"
         ;;
         0:2)
@@ -447,20 +422,17 @@ echo "$@"
 #. }=-
 #. HGD Load -={
 function :hgd:load() {
+    core:raise_bad_fn_call $# 0 1
+
     # This function simply returns the `formula' of a given `session'.
 
     local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 2 ]; then
-        local tldid=$1
-        local session=$2
-        local hgd=$(awk -F '\t' '$1~/^'${session}'$/&&$2~/^('${tldid}'|\.)$/{print$4}' ${g_HGD_CACHE?})
-        if [ ${#hgd} -gt 0 ]; then
-            echo ${hgd}
-            e=${CODE_SUCCESS?}
-        fi
-    else
-        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 1 expected"
+    local session=$1
+    local hgd=$(awk -F '\t' '$1~/^'${session}'$/{print$3}' ${g_HGD_CACHE?})
+    if [ ${#hgd} -gt 0 ]; then
+        echo ${hgd}
+        e=${CODE_SUCCESS?}
     fi
 
     return $e
@@ -469,18 +441,16 @@ function :hgd:load() {
 function hgd:load:usage(){ echo "<session>"; }
 function hgd:load() {
     local -i e=${CODE_DEFAULT?}
+    [ $# -eq 1 ] || return $e
 
-    if [ $# -eq 1 ]; then
-        local tldid=${g_TLDID?}
-        local session=$1
-        local -a hgd=( $(:hgd:load ${tldid} ${session}) )
-        if [ ${#hgd} -gt 0 ]; then
-            cpf "%{@hgd:%s}\n" "${hgd[@]}"
-            e=${CODE_SUCCESS?}
-        else
-            theme ERR_USAGE "There is no <hgd> cached by that session name."
-            e=${CODE_FAILURE?}
-        fi
+    local session=$1
+    local -a hgd=( $(:hgd:load ${session}) )
+    if [ ${#hgd} -gt 0 ]; then
+        cpf "%{@hgd:%s}\n" "${hgd[@]}"
+        e=${CODE_SUCCESS?}
+    else
+        theme ERR_USAGE "There is no <hgd> cached by that session name."
+        e=${CODE_FAILURE?}
     fi
 
     return $e
@@ -488,20 +458,17 @@ function hgd:load() {
 #. }=-
 #. HGD Refresh -={
 function :hgd:refresh() {
+    core:raise_bad_fn_call $# 1
+
     local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 2 ]; then
-        local tldid="$1"
-        local session="$2"
-        local hgd
-        hgd="$(:hgd:load ${tldid} ${session})"
-        if [ $? -eq 0 ]; then
-            :hgd:delete ${session}
-            :hgd:save "${tldid}" "${session}" "${hgd}"
-            e=$?
-        fi
-    else
-        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 2 expected"
+    local session="$1"
+    local hgd
+    hgd="$(:hgd:load ${session})"
+    if [ $? -eq 0 ]; then
+        :hgd:delete ${session}
+        :hgd:save "${session}" "${hgd}"
+        e=$?
     fi
 
     return $e
@@ -510,16 +477,14 @@ function :hgd:refresh() {
 function hgd:refresh:usage(){ echo "<session>"; }
 function hgd:refresh() {
     local -i e=${CODE_DEFAULT?}
+    [ $# -eq 1 ] || return $e
 
-    if [ $# -eq 1 ]; then
-        local tldid=${g_TLDID?}
-        local session="$1"
-        if :hgd:refresh "${tldid}" "${session}"; then
-            e=${CODE_SUCCESS?}
-        else
-            theme ERR_USAGE "There is no <hgd> cached by that session name."
-            e=${CODE_FAILURE?}
-        fi
+    local session="$1"
+    if :hgd:refresh "${session}"; then
+        e=${CODE_SUCCESS?}
+    else
+        theme ERR_USAGE "There is no <hgd> cached by that session name."
+        e=${CODE_FAILURE?}
     fi
 
     return $e

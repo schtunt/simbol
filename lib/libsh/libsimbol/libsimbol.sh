@@ -273,8 +273,6 @@ declare -g -A CORE_MODULES=(
 )
 
 declare -gA USER_MODULES
-declare -g  USER_TLDID_DEFAULT
-declare -gA USER_TLDS
 declare -gA USER_MON_CMDGRPREMOTE
 declare -gA USER_MON_CMDGRPLOCAL
 declare -g  USER_LOG_LEVEL=INFO
@@ -298,7 +296,6 @@ declare -g  USER_CPF_INDENT_STR='UNSET'
 source ${SIMBOL_USER_ETC}/simbol.conf
 
 test ! -f ~/.simbolrc || source ~/.simbolrc
-: ${USER_TLDS[@]?}
 : ${USER_FULLNAME?}
 : ${USER_USERNAME?}
 : ${USER_EMAIL?}
@@ -310,7 +307,6 @@ declare -i g_DEBUG=${FALSE?}
 declare -i g_CACHED=${TRUE?}
 declare -i g_LDAPHOST=-1
 declare g_FORMAT=ansi
-declare g_TLDID=${USER_TLDID_DEFAULT?}
 declare g_DUMP
 #. }=-
 
@@ -898,14 +894,12 @@ function :core:cachefile() {
         fi
 
         cachefile+=/${1//:/=}
-        cachefile+=+${g_TLDID?}
         cachefile+=+${g_VERBOSE?}
         cachefile+=+$(md5sum <<< "$2"|cut -b -32);
     elif [ $# -eq 1 ]; then
         #. Hand-picked signature from caller...
 
         cachefile+=/
-        cachefile+=+${g_TLDID?}
         cachefile+=+${g_VERBOSE?}
         cachefile+=+${1}
         effective_format='sig'
@@ -986,29 +980,6 @@ function :core:cached() {
 #. 1.13 Execution -={
 : ${USER_USERNAME:=$(whoami)}
 
-function core:tld() {
-    local -i e=${CODE_FAILURE?}
-
-    if [ $# -eq 1 ]; then
-        local tldid="$1"
-        local tld
-
-        if [ "${tldid}" == '.' ]; then
-            tld="${USER_TLDS[${tldid}]}"
-            e=${CODE_SUCCESS?}
-        elif echo ${!USER_TLDS[@]} | grep -qE "\<${tldid}\>"; then
-            tld="${USER_TLDS[${tldid}]}"
-            e=${CODE_SUCCESS?}
-        fi
-
-        [ $e -ne ${CODE_SUCCESS?} ] || echo "${tld}"
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
-
-    return $e
-}
-
 function ::core:execute:internal() {
     local module=$1
     local fn=$2
@@ -1058,7 +1029,6 @@ function ::core:flags.eval() {
     DEFINE_boolean cached   true             "<use-cache>"              C
     DEFINE_integer ldaphost "${g_LDAPHOST}"  "<ldap-host-index>"        L
     DEFINE_string  format   "${g_FORMAT}"    "ansi|text|csv|html|email" F
-    DEFINE_string  tldid    "${g_TLDID}"     "<top-level-domain-id>"    T
     #. }=-
 
     #. Out module/function-specific options
@@ -1105,7 +1075,6 @@ declare -g fn_4d9d6c17eeae2754c9b49171261b93bd=${fn:-}
         #. Everything else is straight-forward:
         g_LDAPHOST=${FLAGS_ldaphost?}; unset FLAGS_ldaphost
         g_FORMAT=${FLAGS_format?}; unset FLAGS_format
-        g_TLDID=${FLAGS_tldid?}; unset FLAGS_tldid
         #. }=-
 
         cat <<!
@@ -1116,7 +1085,6 @@ declare g_DEBUG=${g_DEBUG?}
 declare g_CACHED=${g_CACHED?}
 declare g_LDAPHOST=${g_LDAPHOST?}
 declare g_FORMAT=${g_FORMAT?}
-declare g_TLDID=${g_TLDID?}
 declare g_SSH_OPTS="${g_SSH_OPTS?}"
 #. }=-
 set -- ${FLAGS_ARGV?}

@@ -61,7 +61,6 @@ SIMBOL_OUTPUT_THEME+=(
     [profile]='%{c:@%s}'
     [module]='%{b:%s}'
     [function]='%{c:%s}'
-    [tldid]='%{y:%s}'
     [hgd]='%{m:%s}'
 
     [version]='%{+bo}v%{g:%s}%{-bo}'
@@ -248,7 +247,6 @@ function ::cpf:theme() {
                     note)                fmt="%{m:${fmt}}";;
                     link)                fmt="%{b:${fmt}}";;
                     loc)                 fmt="%{c:${fmt}}";;
-                    tldid)               fmt="%{m:<${fmt}>}";;
                     netgroup)            fmt="%{c:${fmt}}";;
                     netgroup_empty)      fmt="%{+bo}%{n:${fmt}}%{-bo}";;
                     netgroup_missing)    fmt="%{+bo}%{r:${fmt}}%{-bo}";;

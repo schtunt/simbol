@@ -226,18 +226,19 @@ function :net:firsthost() {
 #. }=-
 #. net:portpersist -={
 function :net:portpersist() {
+    core:raise_bad_fn_call $# 4
+
     core:requires socat
 
     local -i e=${CODE_FAILURE?}
 
     if [ $# -eq 4 ]; then
-        local tldid=$1
-        local qdn=$2
-        local port=$3
-        local -i attempts=$4
+        local qdn="$1"
+        local -i port; let port=$2
+        local -i attempts; let attempts=$3
         local -i i=0
         while ((i < attempts)) && ((e == ${CODE_FAILURE?})); do
-            :net:portping ${tldid} ${qdn} ${port}
+            :net:portping "${qdn}" ${port}
             e=$?
             ((i++))
         done
@@ -296,73 +297,39 @@ function :net:freelocalport() {
 #. }=-
 #. net:portping -={
 function :net:portping() {
+    core:raise_bad_fn_call $# 3 4
+
     core:requires nc
     core:requires socat
 
     local -i e=${CODE_FAILURE?}
-    if [ $# -eq 3 -o $# -eq 4 ]; then
-        local tldid="$1"
-        local qdn="$2"
-        local port="$3"
-        local ssh_proxy="${4:-}"
-        local cmd="nc -zqw1 ${qdn} ${port}"
-        cmd="socat /dev/null TCP:${qdn}:${port},connect-timeout=1"
-        if [ ${tldid} != '_' ]; then
-            local tld=${USER_TLDS[${tldid}]}
+    local qdn="$2"
+    local port="$3"
+    local ssh_proxy="${4:-}"
+    local cmd="nc -zqw1 ${qdn} ${port}"
+    cmd="socat /dev/null TCP:${qdn}:${port},connect-timeout=1"
 
-            #. DEPRECATED: USER_SSH_PROXY
-            #local ssh_proxy=${USER_SSH_PROXY[${tldid}]}
-            if [ ${#ssh_proxy} -gt 0 ]; then
-                ssh ${g_SSH_OPTS} ${ssh_proxy} ${cmd} >/dev/null 2>&1
-                e=$?
-            else
-                eval ${cmd} >/dev/null 2>&1
-                e=$?
-            fi
-        else
-            eval ${cmd} >/dev/null 2>&1
-            e=$?
-        fi
-    else
-        theme EXCEPTION "$# / $*"
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+    eval ${cmd} >/dev/null 2>&1
+    e=$?
 
     return $e
 }
 function net:portping:usage() { echo "<hnh> <port>"; }
 function net:portping() {
     local -i e=${CODE_DEFAULT?}
+    [ $# -eq 2 ] || return $e
 
-    if [ $# -eq 2 ]; then
-        local hnh=$1
-        local port=$2
+    local hn=$1
+    local port=$2
 
-        cpf "Testing TCP connectivity to %{@host:%s}:%{@port:%s}..." ${hnh} ${port}
+    cpf "Testing TCP connectivity to %{@host:%s}:%{@port:%s}..." ${hnh} ${port}
 
-        local fqdn
-        local tldid=${g_TLDID?}
-        #. If the name supplied does not end with a `.':
-        if [ "${hnh:$((${#hnh}-1))}" != '.' ]; then
-            fqdn=$(:dns:get ${tldid} fqdn ${hnh})
-            if [ $? -eq ${CODE_FAILURE?} ]; then
-                e=${CODE_FAILURE?}
-                theme HAS_FAILED "INVALID_FQDN"
-            fi
-        else
-            tldid='_'
-            fqdn=${hnh}
-        fi
-
-        if [ $e -ne ${CODE_FAILURE?} ]; then
-            if :net:portping ${tldid} ${fqdn} ${port}; then
-                theme HAS_PASSED "CONNECTED"
-                e=${CODE_SUCCESS?}
-            else
-                theme HAS_WARNED "NO_CONN"
-                e=${CODE_FAILURE?}
-            fi
-        fi
+    if :net:portping ${hn} ${port}; then
+        theme HAS_PASSED "CONNECTED"
+        e=${CODE_SUCCESS?}
+    else
+        theme HAS_WARNED "NO_CONN"
+        e=${CODE_FAILURE?}
     fi
 
     return $e
