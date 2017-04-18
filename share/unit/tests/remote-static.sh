@@ -1,45 +1,53 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 core:import util
 
-function testCoreRemoteImport() {
+function remoteSetUp() {
     core:softimport remote
     assertTrue 'testCoreRemoteImport/1' $?
 }
 
 #. Remote -={
-#. remoteTearDown() -={
-function remoteTearDown() {
-    core:import remote
-}
-#. }=-
 #. testCoreRemoteConnectPasswordlessInternal -={
 function testCoreRemoteConnectPasswordlessInternal() {
-    local hn=$(hostname -f)
+    mock:write <<-!MOCK
+        function dig() {
+            $(which dig) -p 5353 @localhost "$@"
+            return $?
+        }
+	!MOCK
+
+    cat <<-!DNSMASQ > /tmp/hosts.mocked
+        127.0.0.1 batman.gotham.com
+        127.6.6.6 jester.gotham.com
+	!DNSMASQ
+
+    local hn="batman.gotham.com"
     local user=$(id -un)
+
     # First run will run into a host key validation prompt; so here we first
     # force the acception of the host key to make the next run successful.
     ssh ${g_SSH_OPTS?} -o StrictHostKeyChecking=no ${user}@${hn} --\
-        whoami >${stdoutF?} 2>${stderrF?}
-    assertTrue "${FUNCNAME}/1.1" $?
+        whoami #>${stdoutF?} 2>${stderrF?}
+    assertTrue "${FUNCNAME?}/1.1" $?
 
     grep -qF "$(whoami)" "${stdoutF?}"
-    assertTrue "${FUNCNAME}/1.2" $?
+    assertTrue "${FUNCNAME?}/1.2" $?
 
     # g_SSH_OPTS contains -E which sends log messages to a file
     #grep -qE "^Warning: Permanently added '${hn}'" "${stderrF?}"
-    #assertTrue "${FUNCNAME}/1.3" $?
+    #assertTrue "${FUNCNAME?}/1.3" $?
 
     :remote:connect:passwordless ${hn}
-    assertTrue "${FUNCNAME}/2" $?
+    assertTrue "${FUNCNAME?}/2" $?
 
     :remote:connect:passwordless ${user}@${hn}
-    assertTrue "${FUNCNAME}/3" $?
+    assertTrue "${FUNCNAME?}/3" $?
 
     :remote:connect:passwordless hostdoesnotexist
-    assertFalse "${FUNCNAME}/4" $?
+    assertFalse "${FUNCNAME?}/4" $?
 
     :remote:connect:passwordless userdoesnotexist@${hn}
-    assertFalse "${FUNCNAME}/5" $?
+    assertFalse "${FUNCNAME?}/5" $?
 }
 #. }=-
 #. testCoreRemoteConnectInternal -={
@@ -47,8 +55,8 @@ function testCoreRemoteConnectInternal() {
     local hn1 hn2
     hn1=$(hostname -f)
     hn2=$(:remote:connect _ host-8c.unit-tests.mgmt.simbol -- hostname -f)
-    assertTrue   "${FUNCNAME}/1" $?
-    assertEquals "${FUNCNAME}/2" "${hn1}" "${hn2}"
+    assertTrue   "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/2" "${hn1}" "${hn2}"
 }
 #. }=-
 #. testCoreRemoteConnectPublic -={

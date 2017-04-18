@@ -5,7 +5,6 @@ The simbol remote access/execution module (ssh, ssh/sudo, tmux, etc.)
 [core:docstring]
 
 #. Remote Execution/Monitoring -={
-core:import dns
 core:import hgd
 core:import util
 
@@ -78,57 +77,18 @@ function remote:connect() {
         local username=
         [ "${1//[^@]/}" != '@' ] || username="${1//@*}"
 
-        local hnh=${1##*@}
-        local -i resolve=${FLAGS_resolve:-0}; ((resolve=~resolve+2)); unset FLAGS_resolve
-        [ "${hnh:-1}" != '.' ] || resolve=0
-
-        local hcs qdn qt hnh_ qual tldid_ usdn dn fqdn resolved qid
-        [ ! -t 1 ] || cpf "Resolving %{@host:%s} in %{@tldid:%s}..." "${hnh}" "${tldid}"
-        if [ ${resolve} -eq 1 ]; then
-            local -a data=( $(:dns:lookup.csv ${tldid} a ${hnh}) )
-
-            if [ ${#data[@]} -eq 1 ]; then
-                IFS=, read qt hnh_ qual tldid_ usdn dn fqdn resolved qid <<< "${data[0]}"
-                [ ! -t 1 ] || theme HAS_PASSED "${fqdn}/${resolved}"
-
-                qdn="${fqdn%.${dn}}"
-                [ ! -t 1 ] || cpf "Connecting to %{@host:%s}.%{@tldid:%s}...\n"\
-                    "${qdn}" "${tldid}"
-
-                hcs=${fqdn}
-            elif [ ${#data[@]} -gt 1 ]; then
-                [ ! -t 1 ] || theme ERR "Too many matches to the <hnh> \`${hnh}'"
-                e=${CODE_FAILURE?}
-            else
-                [ ! -t 1 ] || theme ERR "Failed to resolve any host matching \`${hnh}'"
-                e=${CODE_FAILURE?}
-            fi
+        local hcs="${1##*@}"
+        [ ${#username} -eq 0 ] || hcs=${username}@${hcs}
+        if [ $# -eq 1 ]; then
+            :remote:connect ${tldid} ${hcs}
+            e=$?
         else
-            hcs=${hnh}
-            [ ! -t 1 ] || theme HAS_WARNED "SKIPPED/${hcs}"
-        fi
-
-        if [ $e -ne ${CODE_FAILURE?} ]; then
-#           #. DEPRECATED
-#           local sshproxystr=$(:remote:sshproxystr ${tldid})
-#           if [ $? -eq ${CODE_SUCCESS?} ]; then
-#               #. If bouncing, use the FQDN as we don't know if the remote host
-#               #. will resolve like out local simbol host:
-#               local hcs=${fqdn}
-#           fi
-
-            [ ${#username} -eq 0 ] || hcs=${username}@${hcs}
-            if [ $# -eq 1 ]; then
-                :remote:connect ${tldid} ${hcs}
-                e=$?
-            else
-                :remote:connect ${tldid} ${hcs} "${@:2}"
-                e=$?
-                if [ $e -eq 255 ]; then
-                    [ ! -t 1 ] || theme HAS_FAILED "Failed to connect to \`${hcs}'"
-                elif [ $e -ne ${CODE_SUCCESS?} ]; then
-                    [ ! -t 1 ] || theme HAS_WARNED "Connection terminated with error code \`$e'"
-                fi
+            :remote:connect ${tldid} ${hcs} "${@:2}"
+            e=$?
+            if [ $e -eq 255 ]; then
+                [ ! -t 1 ] || theme HAS_FAILED "Failed to connect to \`${hcs}'"
+            elif [ $e -ne ${CODE_SUCCESS?} ]; then
+                [ ! -t 1 ] || theme HAS_WARNED "Connection terminated with error code \`$e'"
             fi
         fi
     fi
@@ -140,97 +100,75 @@ function remote:connect() {
 function remote:copy:usage() { echo "-T<tldid> [[<user>@]<dst-hnh>:]<src-path> [[<user>@]<dst-hnh>:]<dst-path>"; }
 function remote:copy() {
     local -i e=${CODE_DEFAULT?}
+    [ $# -eq 2 ] || return $e
 
     local tldid=${g_TLDID?}
     local -A data
-    if [ $# -eq 2 ]; then
-        e=${CODE_SUCCESS?}
+    e=${CODE_SUCCESS?}
 
-        local hs=src
-        local -a uri
+    local hs=src
+    local -a uri
 
-        for hstr in "$@"; do
-            if [[ ${hstr} =~ ^(([^@]+@)?[^:]+:)?[^:@]*$ ]]; then
-                IFS=':@' read -a uri <<< "${hstr}"
+    for hstr in "$@"; do
+        if [[ ${hstr} =~ ^(([^@]+@)?[^:]+:)?[^:@]*$ ]]; then
+            IFS=':@' read -a uri <<< "${hstr}"
 
-                ((data[mode_${hs}] = ${#uri[@]}))
-echo "$hs // ${data[mode_${hs}]}" >&2
-                case ${data[mode_${hs}]} in
-                    1)
-                        data[pth_${hs}]="${uri[0]}"
-                    ;;
-                    2)
-                        data[hnh_${hs}]="${uri[0]}"
-                        data[pth_${hs}]="${uri[1]}"
-                    ;;
-                    3)
-                        data[un_${hs}]="${uri[0]}"
-                        data[hnh_${hs}]="${uri[1]}"
-                        data[pth_${hs}]="${uri[2]}"
-                    ;;
-                esac
-
-                #. If a hostname is at all specified...
-                local hnh="${data[hnh_${hs}]}"
-                if [ ${#hnh} -gt 0 ]; then
-                    [ ! -t 1 ] || cpf "Resolving %{@host:%s} in %{@tldid:%s}..." "${hnh}" "${tldid}"
-
-                    local -a hdata=( $(:dns:lookup.csv ${tldid} a ${hnh}) )
-                    if [ ${#hdata[@]} -eq 1 ]; then
-                        local qt hnh_ qual tldid_ usdn dn fqdn resolved qid
-                        IFS=, read qt hnh_ qual tldid_ usdn dn fqdn resolved qid <<< "${hdata[0]}"
-
-                        data[qdn_${hs}]=${fqdn%.${dn}}
-                        data[fqdn_${hs}]=${fqdn}
-
-                        [ ! -t 1 ] || theme HAS_PASSED "${data[qdn_${hs}]}"
-                    else
-                        [ ! -t 1 ] || theme HAS_FAILED "${hdata[*]}"
-                        e=${CODE_FAILURE?}
-                    fi
-                fi
-            else
-                e=${CODE_DEFAULT?}
-            fi
-
+            ((data[mode_${hs}] = ${#uri[@]}))
             case ${data[mode_${hs}]} in
-                1) data[cmd_${hs}]="${data[pth_${hs}]}";;
-                2) data[cmd_${hs}]="${data[fqdn_${hs}]}:${data[pth_${hs}]}";;
-                3) data[cmd_${hs}]="${data[un_${hs}]}@${data[fqdn_${hs}]}:${data[pth_${hs}]}";;
-            esac
-
-            hs=dst
-        done
-
-        if [ $e -eq ${CODE_SUCCESS?} ]; then
-            local ssh_options="${g_SSH_OPTS?}"
-
-            [ ! -t 1 ] || cpf "Copying from %{@path:%s} to %{@path:%s} [MODE:%{@int:%s}:%{@int:%s}]..."\
-                "${data[cmd_src]}" "${data[cmd_dst]}" ${data[mode_src]} ${data[mode_dst]}
-
-            case ${data[mode_src]}:${data[mode_dst]} in
-                1:1)
-                    cp -a "${data[pth_src]}" "${data[pth_dst]}"
-                    e=$?
+                1)
+                    data[pth_${hs}]="${uri[0]}"
                 ;;
-                [23]:1|1:[23])
-                    eval "rsync -ae 'ssh ${ssh_options}' '${data[cmd_src]}' '${data[cmd_dst]}'"
-                    e=$?
+                2)
+                    data[hn_${hs}]="${uri[0]}"
+                    data[pth_${hs}]="${uri[1]}"
                 ;;
-                *:*)
-                    local tmp="${SIMBOL_USER_VAR_TMP?}/remote-copy.$$.tmp/${data[pth_src]}"
-                    rm -rf ${tmp}
-                    mkdir -p $(dirname ${tmp})
-                    eval "rsync -ae 'ssh ${ssh_options}' ${data[cmd_src]} ${tmp}"
-                    [ $? -ne 0 ] || eval "rsync -ae 'ssh ${ssh_options}' ${tmp} ${data[cmd_dst]}"
-                    e=$?
-                    rm -rf ${tmp}
+                3)
+                    data[un_${hs}]="${uri[0]}"
+                    data[hn_${hs}]="${uri[1]}"
+                    data[pth_${hs}]="${uri[2]}"
                 ;;
             esac
-            theme HAS_AUTOED $e
-
-            e=$?
+        else
+            e=${CODE_DEFAULT?}
         fi
+
+        case ${data[mode_${hs}]} in
+            1) data[cmd_${hs}]="${data[pth_${hs}]}";;
+            2) data[cmd_${hs}]="${data[hn_${hs}]}:${data[pth_${hs}]}";;
+            3) data[cmd_${hs}]="${data[un_${hs}]}@${data[hn_${hs}]}:${data[pth_${hs}]}";;
+        esac
+
+        hs=dst
+    done
+
+    if [ $e -eq ${CODE_SUCCESS?} ]; then
+        local ssh_options="${g_SSH_OPTS?}"
+
+        [ ! -t 1 ] || cpf "Copying from %{@path:%s} to %{@path:%s} [MODE:%{@int:%s}:%{@int:%s}]..."\
+            "${data[cmd_src]}" "${data[cmd_dst]}" ${data[mode_src]} ${data[mode_dst]}
+
+        case ${data[mode_src]}:${data[mode_dst]} in
+            1:1)
+                cp -a "${data[pth_src]}" "${data[pth_dst]}"
+                e=$?
+            ;;
+            [23]:1|1:[23])
+                eval "rsync -ae 'ssh ${ssh_options}' '${data[cmd_src]}' '${data[cmd_dst]}'"
+                e=$?
+            ;;
+            *:*)
+                local tmp="${SIMBOL_USER_VAR_TMP?}/remote-copy.$$.tmp/${data[pth_src]}"
+                rm -rf ${tmp}
+                mkdir -p $(dirname ${tmp})
+                eval "rsync -ae 'ssh ${ssh_options}' ${data[cmd_src]} ${tmp}"
+                [ $? -ne 0 ] || eval "rsync -ae 'ssh ${ssh_options}' ${tmp} ${data[cmd_dst]}"
+                e=$?
+                rm -rf ${tmp}
+            ;;
+        esac
+        theme HAS_AUTOED $e
+
+        e=$?
     fi
 
     return $e
@@ -299,32 +237,11 @@ function remote:sudo() {
     local -i e=${CODE_DEFAULT?}
 
     if [ $# -ge 2 ]; then
-        local -r hnh="$1"
+        local -r hcs="$1"
         local -r tldid="${g_TLDID?}"
-        [ ! -t 1 ] || cpf "Resolving %{@host:%s} in %{@tldid:%s}..." "${hnh}" "${tldid}"
 
-        local -a data
-        data=( $(:dns:lookup.csv ${tldid} a ${hnh}) )
-
-        local qt hnh_ qual tldid_ usdn dn fqdn resolved qid
-        if [ ${#data[@]} -eq 1 ]; then
-            IFS=, read qt hnh_ qual tldid_ usdn dn fqdn resolved qid <<< "${data[0]}"
-            [ ! -t 1 ] || theme HAS_PASSED "${fqdn}"
-
-            local hcs=${fqdn}
-#           #. DEPRECATED
-#           local sshproxystr=$(:remote:sshproxystr ${tldid})
-#           if [ $? -eq ${CODE_SUCCESS?} ]; then
-#               #. If bouncing, use the FQDN as we don't know if the remote host
-#               #. will resolve like out local simbol host:
-#               local hcs=${fqdn}
-#           fi
-
-            [ ! -t 1 ] || theme INFO "SUDOing \`${*:2}'"
-            :remote:sudo ${tldid} ${hcs} "${@:2}"
-        else
-            [ ! -t 1 ] || theme HAS_FAILED "${hnh}"
-        fi
+        [ ! -t 1 ] || theme INFO "SUDOing \`${*:2}'"
+        :remote:sudo ${tldid} ${hcs} "${@:2}"
         e=$?
     fi
 
@@ -356,10 +273,7 @@ function remote:cluster() {
     elif [ $# -gt 1 ]; then
         local -a qdns
         local hnh
-        for hnh in $@; do
-            qdns=( ${qdns[@]} $(:dns:get qdn ${tldid} ${hnh}) )
-        done
-        cssh ${qdns[@]}
+        cssh "$@"
         e=$?
     fi
 
@@ -394,9 +308,9 @@ function ::remote:tmux_setup.eval() {
         echo "tmux new-session -d -s ${session}"
 
         echo "#. Window Creation"
-        local -i wid
+        local -i wid=1
         local wname=${session}:w${wid}
-        echo "tmux rename-window -t ${session} ${session}:w1"
+        echo "tmux rename-window -t ${session} ${wname}"
         for ((wid=2; wid<windows+1; wid++)); do
             wname=${session}:w${wid}
             echo "tmux new-window -d -n ${wname}"
@@ -563,9 +477,9 @@ declare -g -A STATES
 #. TODO: move this to util -={
 LOCKDIR="/tmp/lock.%d.sct"
 function lock() {
-    local -i lid=${2:0}
-    local lockdir="$(printf "${LOCKDIR}" ${lid})"
     local action="${1}"
+    local lid=${2:-0}
+    local lockdir="$(printf "${LOCKDIR}" ${lid})"
     case ${action} in
         on)
             while ! mkdir "${lockdir}" &>/dev/null; do
@@ -761,8 +675,8 @@ function ::remote:mon.ipc() {
         done
 
         while [ ${active} -lt ${threads} -a ${hcsi} -lt ${#hcss[@]} ]; do
-            core:log DEBUG "Launching remote execution on ${hcs}"
             hcs=${hcss[${hcsi}]}
+            core:log DEBUG "Launching remote execution on ${hcs}"
             ((hcsi++))
 
             STATES[${hcs}]='PENDING'
@@ -923,7 +837,7 @@ function remote:mon() {
                         echo "#. Remote Cmd: ${rcmd[*]}"
                         echo "#.   Attempts: ${retries}"
                         echo "#.   Timeout:  ${timeout}"
-                        echo "#. Local Cmd:  ${lcmd}"
+                        echo "#. Local Cmd:  ${lcmd:-Undefined}"
                     fi
 
                     local delim='|'
