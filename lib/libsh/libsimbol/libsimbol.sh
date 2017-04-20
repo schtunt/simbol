@@ -266,7 +266,7 @@ CODE_DEFAULT=${CODE_USAGE_FN_LONG?}
 declare -g -A CORE_MODULES=(
     [tutorial]=0   [help]=1
     [unit]=1       [util]=1      [hgd]=1       [git]=1
-    [dns]=1        [net]=1       [tunnel]=1    [remote]=1
+                   [net]=1       [tunnel]=1    [remote]=1
     [xplm]=1       [rb]=1        [py]=1        [pl]=1
     [gpg]=1        [vault]=1     [cpf]=1
     [ng]=0         [ldap]=0

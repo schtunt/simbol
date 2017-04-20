@@ -5,7 +5,6 @@ SSH Tunnelling
 [core:docstring]
 
 #. Tunneling Module -={
-core:import dns
 core:import net
 core:import util
 

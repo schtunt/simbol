@@ -19,8 +19,8 @@ declare -g -A PACKAGES=(
     [KCOV]='libcurl4-openssl-dev,libelf-dev,libdw-dev,cmake'
     [gpg,vault,remote]='gnupg2,pwgen,xclip'
     [net]='iproute,net-tools,netcat,socat'
-    [dns,remote]='dnsutils'
-    [remote]='tmux,socat'
+    #[dns,remote]='dnsutils'
+    [remote]='tmux,socat,dnsutils'
 )
 
 function citm:apt_get_install_for() {
