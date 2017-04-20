@@ -217,15 +217,45 @@ function :util:undelimit() {
 
 function :util:join() {
     #. Usage: array=( a b c ); :util:join $delim array
-    if [ $# -eq 2 ]; then
-        local IFS=$1
-        eval "printf \"\${${2}[*]}\""
-    elif [ $# -eq 3 ]; then
-        local IFS=$1
-        eval "printf \"\${${2}[*]:${3}}\""
+    local -i e=${CODE_FAILURE?}
+
+    if [ $# -eq 2 -o $# -eq 3 ]; then
+        local -i len=$(core:len $2)
+
+        case ${len}:$# in
+            0:3)
+                if (( $3 > len )); then
+                    core:raise EXCEPTION_USER_ERROR 'Array overrun ${%s[*]:%d} when array length is only %d' "$2" $3 ${len}
+                else
+                    e=${CODE_SUCCESS?}
+                fi
+            ;;
+            *:3)
+                if (( $3 <= len )); then
+                    local IFS=$1
+                    eval "printf \"\${${2}[*]:${3}}\""
+                    e=$?
+                else
+                    core:raise EXCEPTION_USER_ERROR 'Array overrun ${%s[*]:%d} when array length is only %d' "$2" $3 ${len}
+                fi
+            ;;
+            0:2)
+                e=${CODE_SUCCESS?}
+            ;;
+            *:2)
+                local IFS=$1
+                eval "printf \"\${${2}[*]}\""
+                e=$?
+            ;;
+            *:*)
+                core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+            ;;
+        esac
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
+
+    return $e
 }
 
 function :util:zip.eval() {
