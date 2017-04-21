@@ -1,10 +1,5 @@
 #. format: profile|module|function|context|stdin|arguments|stdout|stderr|exitcode
 #. Remote -={
-#core|remote|mon|public
-#core|remote|monIpc|private
-#core|remote|tmux|public
-#core|remote|tmux|private
-#core|remote|tmux_attach|private
 core|remote|tmux_setupEval|private||tester 60 12|aadc5ab61d71e024bda9eb8f4d19520a||0
 #core|remote|cluster|public
 core|remote|pipewrapEval|private||0xDEADBEEF /tmp/nosuchfile|0xDEADBEEF||0

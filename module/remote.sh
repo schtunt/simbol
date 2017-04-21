@@ -20,9 +20,10 @@ function :remote:connect:passwordless() {
     local extra_SSH_OPTS="-o PasswordAuthentication=no -o StrictHostKeyChecking=no"
     local hcs="$1"
 
-    local rv
-    rv=$(ssh ${g_SSH_OPTS?} ${extra_SSH_OPTS} ${hcs} -- echo -n "${NOW}" 2> /dev/null)
-    [ $? -eq ${CODE_SUCCESS?} -a "${rv}" = "${NOW}" ] || e=${CODE_FAILURE?}
+    local -i rv
+    #shellcheck disable=SC2029
+    let rv=$(ssh "${g_SSH_OPTS?}" "${extra_SSH_OPTS}" "${hcs}" -- echo -n "${NOW}" 2> /dev/null)
+    [ $? -eq ${CODE_SUCCESS?} ] && [ ${rv} -eq ${NOW} ] || e=${CODE_FAILURE?}
 
     return $e
 }
@@ -30,25 +31,24 @@ function :remote:connect:passwordless() {
 #.   remote:connect() -={
 function :remote:connect() {
     local -i e=${CODE_FAILURE?}
-    core:raise_bad_fn_call_compare $# ge 1
+    core:raise_bad_fn_call_unless $# ge 1
 
-    local hcs="$1"
+    local hcs
+    if ! hcs="$(:hgd:resolve "${1}"|shuf -n1; exit ${PIPESTATUS[0]})"; then
+        hcs="$1"
+    fi
 
     local ssh_options="${g_SSH_OPTS?}"
     if [ $# -eq 1 ]; then
         #. User wants to ssh into a shell
         ssh_options+=" -ttt"
     elif [ $# -ge 2 ]; then
-        if [ "$3" == "sudo" ]; then
-            #. User wants to ssh and execute a command via sudo
-            ssh_options+=" -T"
-        else
-            #. User wants to ssh and execute a command
-            ssh_options+=" -T"
-        fi
+        #. User wants to ssh and execute a command
+        ssh_options+=" -T"
     fi
 
-    ssh ${ssh_options} "${hcs}" "${@:3}"
+    #shellcheck disable=SC2029
+    ssh ${ssh_options} "${hcs}" "${@:2}"
     e=$?
 
     return $e
@@ -59,9 +59,9 @@ function remote:connect:shflags() {
 boolean resolve   false  "resolve-first"  r
 !
 }
-function remote:connect:usage() { echo "[<username>@]<hnh> [<cmd> [<args> [...]]]"; }
+function remote:connect:usage() { echo "[<username>@]<hnh> [-- <cmd> [<args> [...]]]"; }
 function remote:connect() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=${CODE_DEFAULT?}
     [ $# -ge 1 ] || return $e
 
     local username=
@@ -70,11 +70,16 @@ function remote:connect() {
     local hcs="${1##*@}"
     [ ${#username} -eq 0 ] || hcs=${username}@${hcs}
     if [ $# -eq 1 ]; then
-        :remote:connect ${hcs}
+        :remote:connect "${hcs}"
         e=$?
     else
-        :remote:connect ${hcs} "${@:2}"
+        if [ "$2" == '--' ]; then
+            :remote:connect "${hcs}" "${@:3}"
+        else
+            :remote:connect "${hcs}" "${@:2}"
+        fi
         e=$?
+
         if [ $e -eq 255 ]; then
             [ ! -t 1 ] || theme HAS_FAILED "Failed to connect to \`${hcs}'"
         elif [ $e -ne ${CODE_SUCCESS?} ]; then
@@ -99,7 +104,7 @@ function remote:copy() {
 
     for hstr in "$@"; do
         if [[ ${hstr} =~ ^(([^@]+@)?[^:]+:)?[^:@]*$ ]]; then
-            IFS=':@' read -a uri <<< "${hstr}"
+            IFS=':@' read -ra uri <<< "${hstr}"
 
             ((data[mode_${hs}] = ${#uri[@]}))
             case ${data[mode_${hs}]} in
@@ -145,12 +150,14 @@ function remote:copy() {
                 e=$?
             ;;
             *:*)
+                e=${CODE_FAILURE?}
                 local tmp="${SIMBOL_USER_VAR_TMP?}/remote-copy.$$.tmp/${data[pth_src]}"
                 rm -rf ${tmp}
-                mkdir -p $(dirname ${tmp})
-                eval "rsync -ae 'ssh ${ssh_options}' ${data[cmd_src]} ${tmp}"
-                [ $? -ne 0 ] || eval "rsync -ae 'ssh ${ssh_options}' ${tmp} ${data[cmd_dst]}"
-                e=$?
+                mkdir -p "$(dirname "${tmp}")"
+                if eval "rsync -ae 'ssh ${ssh_options}' ${data[cmd_src]} ${tmp}"; then
+                    eval "rsync -ae 'ssh ${ssh_options}' ${tmp} ${data[cmd_dst]}"
+                    e=$?
+                fi
                 rm -rf ${tmp}
             ;;
         esac
@@ -181,13 +188,12 @@ function ::remote:pipewrap.eval() {
     #. The function will exit when output pipe is closed,
     while [ -e ${lckfile} ]; do
         # i.e., the ssh process
-        read -t 1 line
-        [ $? -ne 0 ] || echo "${line}"
+        read -rt 1 line && echo "${line}"
     done
 }
 
 function :remote:sudo() {
-    core:raise_bad_fn_call_compare $# ge 2
+    core:raise_bad_fn_call_unless $# ge 2
 
     local -i e=${CODE_FAILURE?}
 
@@ -195,12 +201,12 @@ function :remote:sudo() {
 
     local hcs="$1"
 
-    local sudo_opts=
-    local lckfile=$(mktemp)
+    local lckfile; lckfile="$(mktemp)" || return $e
 
     local passwd
     passwd="$(:vault:read SUDO)"
     if [ $? -eq ${CODE_SUCCESS?} ]; then
+        #shellcheck disable=SC2155
         local prompt="$(printf "\r")"
         eval ::remote:pipewrap.eval '${passwd}' '${lckfile}' | (
             :remote:connect ${hcs} sudo -p "${prompt}" -S "${@:2}"
@@ -224,7 +230,7 @@ function remote:sudo() {
 
     local -r hcs="$1"
 
-    [ ! -t 1 ] || theme INFO "SUDOing \`${*:2}'"
+    [ ! -t 1 ] || theme INFO "SUDOing \`${*:2}' @ ${hcs}"
     :remote:sudo ${hcs} "${@:2}"
     e=$?
 
@@ -245,16 +251,14 @@ function remote:cluster() {
     if [ $# -eq 1 ]; then
         local hgd=$1
         local -a hosts
-        hosts=( $(hgd:resolve ${hgd}) )
-        if [ $? -eq 0 -a ${#hosts[@]} -gt 0 ]; then
-            cssh ${hosts[@]}
+        if hosts=( $(hgd:resolve ${hgd}) ) && [ ${#hosts[@]} -gt 0 ]; then
+            cssh "${hosts[@]}"
         else
             theme ERR_USAGE "That <hgd> did not resolve to any hosts."
             e=${CODE_FAILURE?}
         fi
     elif [ $# -gt 1 ]; then
         local -a qdns
-        local hnh
         cssh "$@"
         e=$?
     fi
@@ -321,33 +325,30 @@ function ::remote:tmux_setup.eval() {
 }
 
 function ::remote:tmux_attach() {
+    core:raise_bad_fn_call_unless $# in 1
+    local session=$1
+
     local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 1 ]; then
-        local session=$1
+    local -a windows=(
+        $(tmux list-windows -a -t ${session}| awk -F': ' '{print$1}')
+    )
 
-        local -a windows=(
-            $(tmux list-windows -a -t ${session}| awk -F': ' '{print$1}')
-        )
+    local wid
+    for wid in $(tmux list-windows -t ${session}|awk -F: '{print$1}'|sort -r); do
+        tmux select-window -t "${wid}"
+        tmux select-pane   -t "${wid}.0"
+        tmux set synchronize-panes on >/dev/null
+    done
 
-        local wid
-        for wid in $(tmux list-windows -t ${session}|awk -F: '{print$1}'|sort -r); do
-            tmux select-window -t "${wid}"
-            tmux select-pane   -t "${wid}.0"
-            tmux set synchronize-panes on >/dev/null
-        done
-
-        tmux attach-session -t ${session}
-        e=$?
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+    tmux attach-session -t ${session}
+    e=$?
 
     return $e
 }
 
 function ::remote:tmux() {
-    core:raise_bad_fn_call $# 2
+    core:raise_bad_fn_call_unless $# in 2
     local -i e=${CODE_FAILURE?}
 
     local session=$1
@@ -362,10 +363,10 @@ function ::remote:tmux() {
         )
 
         local -A data
-        eval data=$(:util:zip.eval hosts panes)
+        eval data="$(:util:zip.eval hosts panes)"
 
         local missconnects=${SIMBOL_USER_VAR_TMP?}/${session}.missconnects
-        > ${missconnects}
+        true > ${missconnects}
 
         local host pane
         local -i pid=1
@@ -380,13 +381,12 @@ function ::remote:tmux() {
             ((pid++))
         done
 
-        ::remote:tmux_attach ${session}
-        [ $? -ne 0 ] || e=${CODE_SUCCESS?}
+        ::remote:tmux_attach ${session} && e=${CODE_SUCCESS?}
 
         [ -s ${missconnects} ] || rm -f ${missconnects}
         if [ -e ${missconnects} ]; then
             cpf "%{r:ERROR}: Failed to connect to the following hosts...\n"
-            while read host; do
+            while read -r host; do
                 cpf " ! %{@host:%s}\n" "${host}"
             done < ${missconnects}
         fi
@@ -419,6 +419,8 @@ function remote:tmux:help() {
 function remote:tmux:usage() { echo "<tmux-session> [<hgd:@+>]"; }
 function remote:tmux() {
     local -i e=${CODE_DEFAULT?}
+    #shellcheck disable=SC2166
+    [ $# -eq 1 -o $# -eq 2 ] || return $e
 
     core:requires tmux
 
@@ -452,10 +454,11 @@ function remote:tmux() {
 
 declare -g -A STATES
 #. TODO: move this to util -={
-LOCKDIR="/tmp/lock.%d.sct"
+LOCKDIR="${SIMBOL_USER_VAR_TMP?}/lock.$$.%d.sct"
 function lock() {
     local action="${1}"
     local lid=${2:-0}
+    # shellcheck disable=SC2059,SC2155
     local lockdir="$(printf "${LOCKDIR}" ${lid})"
     case ${action} in
         on)
@@ -472,12 +475,15 @@ function lock() {
 
 #. ::remote:thread:cleanup() -={
 function ::remote:thread:cleanup() {
+    core:raise_bad_fn_call_unless $# in 1
+    local -i pid; let pid=$1
+
     local -i e=${CODE_SUCCESS?}
 
-    rm -f "/tmp/${USER}.sct"
+    rm -f "${SIMBOL_USER_VAR_TMP?}/thread.${pid}.sct"
     [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
 
-    rm -rf "/tmp/lock.*.sct"
+    rm -rf "${SIMBOL_USER_VAR_TMP?}/lock.${pid}.*.sct"
     [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
 
     return $e
@@ -485,34 +491,42 @@ function ::remote:thread:cleanup() {
 #. }=-
 #. ::remote:thread:setup() -={
 function ::remote:thread:setup() {
-    local -i e
+    core:raise_bad_fn_call_unless $# in 1
+    local -i pid; let pid=$1
 
-    ::remote:thread:cleanup
+    local -i e
+    ::remote:thread:cleanup ${pid}
     e=$?
 
-    exec 3>/tmp/${USER}.sct
-    exec 4</tmp/${USER}.sct
+    exec 3>"${SIMBOL_USER_VAR_TMP?}/thread.${pid}.sct"
+    [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
+
+    exec 4<"${SIMBOL_USER_VAR_TMP?}/thread.${pid}.sct"
+    [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
 
     return $e
 }
 #. }=-
 #. ::remote:thread:teardown() -={
 function ::remote:thread:teardown() {
+    core:raise_bad_fn_call_unless $# in 1
+    local -i pid; let pid=$1
+
     local -i e=${CODE_FAILURE?}
 
     exec 3>&-
     exec 4>&-
 
-    ::remote:thread:cleanup
+    ::remote:thread:cleanup ${pid}
     e=$?
 
     return $e
 }
 #. }=-
 
-#. ::remote:ssh_thread.ipc() -={
-function ::remote:ssh_thread.ipc() {
-    # ::remote:ssh_thread.ipc                    | ::remote:mon.ipc
+#. TODO core:thread.ipc() -={
+function core:thread.ipc() {
+    # core:thread.ipc                            | ::remote:mon.ipc
     #                                            |
     #                _____ [5<stdin]___/dev/null |
     #               /                            |
@@ -524,19 +538,12 @@ function ::remote:ssh_thread.ipc() {
     #                                    \ \     |
     #                                     \_\__ [3>user>4]___*
     #                                            |
-
     local -i e=-1
 
     local -i retries=$1
     local -i timeout=$2
     local hcs="$3"
-
-    local -a argv
-    if [ "$4" != '--' ]; then
-        argv=( "${@:4}" )
-    else
-        argv=( "${@:5}" )
-    fi
+    local cmd="$4"
 
     #. Maybe we want to read data one day, for now it's /dev/null
     local stdin="/dev/null"
@@ -566,15 +573,7 @@ function ::remote:ssh_thread.ipc() {
                 e=$?
             ;;
             *)
-                ssh -xTTT ${g_SSH_OPTS?}\
-                    -o ConnectionAttempts=${retries}\
-                    -o ConnectTimeout=${timeout}\
-                    -o PasswordAuthentication=no\
-                    -o PreferredAuthentications=publickey\
-                    -o StrictHostKeyChecking=no\
-                    -o BatchMode=yes\
-                    -o UserKnownHostsFile=/dev/null\
-                        "${hcs}" -- "${argv[@]}" <&5 1>&6 2>&8
+                ( eval -- "${cmd}" ) <&5 1>&6 2>&8
                 e=$?
             ;;
         esac
@@ -614,9 +613,32 @@ function ::remote:ssh_thread.ipc() {
     return $e
 }
 #. }=-
+#. ::remote:ssh_thread.ipc() -={
+function ::remote:ssh_thread.ipc() {
+    local -i retries; let retries=$1
+    local -i timeout; let timeout=$2
+    local hcs="$3"
+
+    local -a argv
+    argv=( "${@:4}" )
+
+    cmd="ssh -xTTT ${g_SSH_OPTS?}\
+        -o ConnectionAttempts=${retries}\
+        -o ConnectTimeout=${timeout}\
+        -o PasswordAuthentication=no\
+        -o PreferredAuthentications=publickey\
+        -o StrictHostKeyChecking=no\
+        -o BatchMode=yes\
+        -o UserKnownHostsFile=/dev/null\
+        '${hcs}' -- '${argv[*]}'"
+
+    core:thread.ipc ${retries} ${timeout} "${hcs}" "${cmd}"
+    return $?
+}
+#. }=-
 #. ::remote:mon.ipc() -={
 function ::remote:mon.ipc() {
-    local -i e=${CODE_FAILURE?}
+    local -i e=${CODE_SUCCESS?}
 
     local -i threads=$1
     local -i retries=$2
@@ -625,7 +647,7 @@ function ::remote:mon.ipc() {
     local delim="$4"
 
     local -a hcss
-    IFS=, read -a hcss <<< "$5"
+    IFS=, read -ra hcss <<< "$5"
 
     local -a argv=( "${@:6}" )
 
@@ -639,8 +661,9 @@ function ::remote:mon.ipc() {
     local -i active
     local state
 
-    core:log DEBUG "Seting up the thread-pool"
-    ::remote:thread:setup
+    local -i pid=$$
+    core:log DEBUG "Seting up the thread-pool for pid ${pid}"
+    ::remote:thread:setup ${pid}
 
     local hcs stdout stderr ee metadata_raw
     while [ ${incomplete} -eq 1 ]; do
@@ -651,7 +674,7 @@ function ::remote:mon.ipc() {
             fi
         done
 
-        while [ ${active} -lt ${threads} -a ${hcsi} -lt ${#hcss[@]} ]; do
+        while [ ${active} -lt ${threads} ] && [ ${hcsi} -lt ${#hcss[@]} ]; do
             hcs=${hcss[${hcsi}]}
             core:log DEBUG "Launching remote execution on ${hcs}"
             ((hcsi++))
@@ -667,33 +690,33 @@ function ::remote:mon.ipc() {
             ee=-9
             core:log DEBUG "Reading from thread IPC"
             #. IPC/read -={
-            while ! read -u 4 -d $'\0' hcs; do sleep 0.1; done
-            while ! read -u 4 -d $'\0' stdout; do sleep 0.1; done
-            while ! read -u 4 -d $'\0' stderr; do sleep 0.1; done
-            while ! read -u 4 -d $'\0' ee; do sleep 0.1; done
-            while ! read -u 4 -d $'\0' metadata_raw; do sleep 0.1; done
+            while ! read -ru 4 -d $'\0' hcs; do sleep 0.1; done
+            while ! read -ru 4 -d $'\0' stdout; do sleep 0.1; done
+            while ! read -ru 4 -d $'\0' stderr; do sleep 0.1; done
+            while ! read -ru 4 -d $'\0' ee; do sleep 0.1; done
+            while ! read -ru 4 -d $'\0' metadata_raw; do sleep 0.1; done
             #. }=-
             core:log DEBUG "Creating payload for view layer"
 
             printf "%s${delim}%s${delim}%s\n" xc "${hcs}" "${ee}"
 
             local -a payload
-            while read line; do
+            while read -r line; do
                 payload=( so "${hcs}" "${line}" )
-                :util:join ${delim} payload
+                :util:join "${delim}" payload
                 echo
             done <<< "${stdout}"
 
-            while read line; do
+            while read -r line; do
                 payload=( se "${hcs}" "${line}" )
-                :util:join ${delim} payload
+                :util:join "${delim}" payload
                 echo
             done <<< "${stderr}"
 
-            IFS=';' read -a metadata <<< "${metadata_raw}"
+            IFS=';' read -ra metadata <<< "${metadata_raw}"
             for line in "${metadata[@]}"; do
                 payload=( md "${hcs}" "${line}" )
-                :util:join ${delim} payload
+                :util:join "${delim}" payload
                 echo
             done
 
@@ -704,7 +727,7 @@ function ::remote:mon.ipc() {
             else
                 ((failure++))
                 ((total++))
-                e=1
+                e=${CODE_FAILURE?}
             fi
         else
             core:log DEBUG "Work complete"
@@ -713,7 +736,7 @@ function ::remote:mon.ipc() {
     done
 
     core:log DEBUG "Tearing down the thread-pool"
-    ::remote:thread:teardown
+    ::remote:thread:teardown ${pid}
 
     core:log INFO "Successfully complete ${success} of ${total} threads"
     [ ${failure} -eq 0 ] || core:log ERR "Failures in ${failure} threads"
@@ -738,136 +761,128 @@ function remote:mon:usage() {
 }
 function remote:mon() {
     local -i e=${CODE_DEFAULT?}
+    [ $# -ge 2 ] || return $e
 
-    if [ $# -ge 2 ]; then
-        local -i timeout=${FLAGS_timeout:-8}; unset FLAGS_timeout
-        local -i threads=${FLAGS_threads:-32}; unset FLAGS_threads
-        local -i retries=${FLAGS_retries:-3}; unset FLAGS_retries
-        local -i sudo=${FLAGS_sudo:-0}; ((sudo=~sudo+2)); unset FLAGS_sudo
+    local -i timeout=${FLAGS_timeout:-8}; unset FLAGS_timeout
+    local -i threads=${FLAGS_threads:-32}; unset FLAGS_threads
+    local -i retries=${FLAGS_retries:-3}; unset FLAGS_retries
+    local -i sudo=${FLAGS_sudo:-0}; ((sudo=~sudo+2)); unset FLAGS_sudo
 
-        #. so:stdout, se:stdout, xc:exit-code, md:metadata
-        local output_raw="${FLAGS_output:-so,se,xc}"; unset FLAGS_output
+    #. so:stdout, se:stdout, xc:exit-code, md:metadata
+    local output_raw="${FLAGS_output:-so,se,xc}"; unset FLAGS_output
 
-        #. Validate user parameters -={
-        e=${CODE_SUCCESS?}
+    #. Validate user parameters -={
+    [ ${threads} -gt 0 ] || e=${CODE_DEFAULT?}
 
-        [ ${threads} -gt 0 ] || e=${CODE_DEFAULT?}
+    local -A output=( [so]=0 [se]=0 [xc]=0 [md]=0 )
 
-        local -A output=( [so]=0 [se]=0 [xc]=0 [md]=0 )
-
-        if [ ${g_VERBOSE?} -eq 1 ]; then
-            output[so]=1
-            output[se]=1
-            output[xc]=1
-            output[md]=1
-        else
-            local token
-            local -a tokens
-            IFS=, read -a tokens <<< "${output_raw}"
-            for token in ${tokens[@]}; do
-                case ${token} in
-                    so) output[so]=1 ;;
-                    se) output[se]=1 ;;
-                    xc) output[xc]=1 ;;
-                    md) output[md]=1 ;;
-                esac
-            done
-        fi
-        #. }=-
-
-        if [ $e -eq ${CODE_SUCCESS?} ]; then
-            local -r hgd="$1"
-
-            local -a rcmd
-            local lcmd
-            if [ ${2:0:1} == '@' ]; then
-                rcmd=( "${USER_MON_CMDGRPREMOTE[${2:1}]}" )
-                lcmd="${USER_MON_CMDGRPLOCAL[${2:1}]}"
-            else
-                shift 1
-                rcmd=( "${@}" )
-            fi
-
-            if [ ${#rcmd[0]} -gt 0 ]; then
-                e=${CODE_FAILURE?}
-
-                cpf "Processing..."
-                local qdn ip
-                local -a qdns
-                qdns=( $(:hgd:resolve ${hgd}) )
-                e=$?
-                if [ $e -eq 0 ]; then
-                    cpf "(%{@int:${#qdns[@]}} hosts (max-threads=%{@int:%s})" ${threads}
-
-                    if [ ${#qdns[@]} -gt ${threads} ]; then
-                        cpf "; this could take some time"
-                    fi
-                    cpf ")...\n"
-
-                    local line
-                    local csv_hosts=$(:util:join ',' qdns)
-
-                    if [ ${g_VERBOSE?} -eq 1 ]; then
-                        echo "#. Hosts:      ${#qdns[@]}"
-                        echo "#. Threads:    ${threads}"
-                        echo "#. Remote Cmd: ${rcmd[*]}"
-                        echo "#.   Attempts: ${retries}"
-                        echo "#.   Timeout:  ${timeout}"
-                        echo "#. Local Cmd:  ${lcmd:-Undefined}"
-                    fi
-
-                    local delim='|'
-                    local line
-                    local otype
-                    local hcs
-                    local payload
-                    while read line; do
-                        IFS="${delim}" read otype hcs payload <<< "${line}"
-                        case ${otype}:${output[${otype}]}:${#payload} in
-                            xc:1:[1-9]*)
-                                case ${payload} in
-                                    0)
-                                        cpf "%{g:%8s}%{@host:%-48s}: "\
-                                            "excode" "${hcs}"
-                                        theme HAS_AUTOED ${payload}
-                                    ;;
-                                    *)
-                                        cpf "%{r:%8s}%{@host:%-48s}: "\
-                                            "excode" "${hcs}"
-                                        theme HAS_AUTOED ${payload}
-                                    ;;
-                                esac
-                            ;;
-                            so:1:[1-9]*)
-                                cpf "%{c:%8s}%{@host:%-48s}: %s\n"\
-                                    "stdout" "${hcs}" "${payload}"
-                            ;;
-                            se:1:[1-9]*)
-                                cpf "%{r:%8s}%{@host:%-48s}: %s\n"\
-                                    "stderr" "${hcs}" "${payload}"
-                            ;;
-                            md:1:[1-9]*)
-                                cpf "%{m:%8s}%{@host:%-48s}: %s\n"\
-                                    "metadata" "${hcs}" "${payload}"
-                            ;;
-                            so:0:*|so:1:0|se:0:*|se:1:0|md:0:*|xc:0:*)
-                                : pass
-                            ;;
-                            *:*:*)
-                                theme HAS_FAILED "Can't stomach \`${otype}:${output[${otype}]}:${#payload}'"
-                                core:raise EXCEPTION_SHOULD_NOT_GET_HERE
-                            ;;
-                        esac
-                    done < <(::remote:mon.ipc\
-                        ${threads} ${retries} ${timeout}\
-                        "${delim}" "${csv_hosts}" "${rcmd[@]}"
-                    )
-                else
-                    theme HAS_FAILED "NO_SUCH_HGD"
-                fi
-            fi
-        fi
+    if [ ${g_VERBOSE?} -eq ${TRUE?} ]; then
+        output[so]=1
+        output[se]=1
+        output[xc]=1
+        output[md]=1
+    else
+        local token
+        local -a tokens
+        IFS=, read -ra tokens <<< "${output_raw}"
+        for token in "${tokens[@]}"; do
+            case ${token} in
+                so) output[so]=1 ;;
+                se) output[se]=1 ;;
+                xc) output[xc]=1 ;;
+                md) output[md]=1 ;;
+            esac
+        done
     fi
+    #. }=-
+
+    e=${CODE_FAILURE?}
+
+    local -r hgd="$1"
+    cpf "Resolving HGD:%{@hgd:%s}..." "${hgd}"
+    local -a qdns
+    qdns=( $(:hgd:resolve ${hgd}) )
+    theme HAS_AUTOED $?
+    [ $? -eq ${CODE_SUCCESS?} ] || return $e
+
+    local -a rcmd
+    local lcmd
+    if [ ${2:0:1} == '@' ]; then
+        rcmd=( "${USER_MON_CMDGRPREMOTE[${2:1}]}" )
+        lcmd="${USER_MON_CMDGRPLOCAL[${2:1}]}"
+    else
+        shift 1
+        [ "$1" != '--' ] || shift 1
+        rcmd=( "${@}" )
+    fi
+
+    [ ${#rcmd[0]} -gt 0 ] || return $e
+
+    cpf "(%{@int:${#qdns[@]}} hosts (max-threads=%{@int:%s})" ${threads}
+    if [ ${#qdns[@]} -gt ${threads} ]; then
+        cpf "; this could take some time"
+    fi
+    cpf ")...\n"
+
+    local line
+    local csv_hosts; csv_hosts="$(:util:join ',' qdns)"
+
+    if [ ${g_VERBOSE?} -eq ${TRUE?} ]; then
+        echo "#. Hosts:      ${#qdns[@]}"
+        echo "#. Threads:    ${threads}"
+        echo "#. Remote Cmd: ${rcmd[*]}"
+        echo "#.   Attempts: ${retries}"
+        echo "#.   Timeout:  ${timeout}"
+        echo "#. Local Cmd:  ${lcmd:-Undefined}"
+    fi
+
+    local delim='|'
+    local line
+    local otype
+    local hcs
+    local payload
+    while read -r line; do
+        IFS="${delim}" read -r otype hcs payload <<< "${line}"
+        case ${otype}:${output[${otype}]}:${#payload} in
+            xc:1:[1-9]*)
+                case ${payload} in
+                    0)
+                        cpf "%{g:%8s}%{@host:%-48s}: "\
+                            "excode" "${hcs}"
+                        theme HAS_AUTOED ${payload}
+                    ;;
+                    *)
+                        cpf "%{r:%8s}%{@host:%-48s}: "\
+                            "excode" "${hcs}"
+                        theme HAS_AUTOED ${payload}
+                    ;;
+                esac
+            ;;
+            so:1:[1-9]*)
+                cpf "%{c:%8s}%{@host:%-48s}: %s\n"\
+                    "stdout" "${hcs}" "${payload}"
+            ;;
+            se:1:[1-9]*)
+                cpf "%{r:%8s}%{@host:%-48s}: %s\n"\
+                    "stderr" "${hcs}" "${payload}"
+            ;;
+            md:1:[1-9]*)
+                cpf "%{m:%8s}%{@host:%-48s}: %s\n"\
+                    "metadata" "${hcs}" "${payload}"
+            ;;
+            so:0:*|so:1:0|se:0:*|se:1:0|md:0:*|xc:0:*)
+                : pass
+            ;;
+            *:*:*)
+                theme HAS_FAILED "Can't stomach \`${otype}:${output[${otype}]}:${#payload}'"
+                core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+            ;;
+        esac
+    done < <(::remote:mon.ipc\
+        ${threads} ${retries} ${timeout}\
+        "${delim}" "${csv_hosts}" "${rcmd[@]}"
+    )
+    e=$?
 
     return $e
 }
