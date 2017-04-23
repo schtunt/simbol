@@ -1,22 +1,27 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
-declare -A FILES=(
-    [data_orig]="/tmp/simbol-gpg-unit-test-data"
-    [data_encr]="/tmp/simbol-gpg-unit-test-data.enc"
-    [data_decr]="/tmp/simbol-gpg-unit-test-data.dec"
-    [key_cnf]="~/.gnupg/*.UNITTEST.*.conf"
-    [key_sec]="~/.gnupg/*.UNITTEST.*.sec"
-    [key_pub]="~/.gnupg/*.UNITTEST.*.pub"
-)
+
+function gpgOneTimeSetUp() {
+    declare -A FILES=(
+        [data_orig]="/tmp/simbol-gpg-unit-test-data"
+        [data_encr]="/tmp/simbol-gpg-unit-test-data.enc"
+        [data_decr]="/tmp/simbol-gpg-unit-test-data.dec"
+        [key_cnf]="${HOME}/.gnupg/*.UNITTEST.*.conf"
+        [key_sec]="${HOME}/.gnupg/*.UNITTEST.*.sec"
+        [key_pub]="${HOME}/.gnupg/*.UNITTEST.*.pub"
+    )
+}
 
 function gpgSetUp() {
-    for file in ${!FILES[@]}; do
-        eval rm -f ${FILES[${file}]}
+    local file
+    for file in "${!FILES[@]}"; do
+        eval rm -f "${FILES[${file}]}"
     done
 }
 
 function gpgTearDown() {
-    for file in ${!FILES[@]}; do
-        eval rm -f ${FILES[${file}]}
+    local file
+    for file in "${!FILES[@]}"; do
+        eval rm -f "${FILES[${file}]}"
     done
 }
 
@@ -25,19 +30,23 @@ function testCoreGpgImport() {
     assertEquals 0x1 0 $?
 }
 
-function test_1_1_CoreGpgKeypathPrivate() {
+function testCoreGpgKeypathPrivate() {
     core:import gpg
+
+    local -i c
 
     SIMBOL_PROFILE=UNITTEST ::gpg:keypath '.' >${stdoutF?} 2>${stderrF?}
     assertTrue 0x1 $?
-    assertEquals 0x2 1 $(cat ${stdoutF}|wc -w)
+    let c=$(wc -w < "${stdoutF}")
+    assertEquals 0x2 1 $c
 
     SIMBOL_PROFILE=UNITTEST ::gpg:keypath '*' >${stdoutF?} 2>${stderrF?}
     assertFalse 0x3 $?
-    assertEquals 0x4 0 $(cat ${stdoutF}|wc -w)
+    let c=$(wc -w < "${stdoutF}")
+    assertEquals 0x4 0 $c
 }
 
-function test_2_1_CoreGpgListInternal() {
+function testCoreGpgListInternal() {
     core:import gpg
 
     #. Should be none to list at first
@@ -45,7 +54,7 @@ function test_2_1_CoreGpgListInternal() {
     assertFalse 0x1 $?
 }
 
-function test_2_2_CoreGpgCreateInternal() {
+function testCoreGpgCreateInternal() {
     core:import gpg
 
     #. Create one
@@ -61,20 +70,18 @@ function test_2_2_CoreGpgCreateInternal() {
     assertEquals 0x4 10 ${#gpgkid[1]}
 }
 
-function test_2_3_CoreGpgKidPrivate() {
+function testCoreGpgKidPrivate() {
     core:import gpg
 
     local -a gpgkid_a=( $(cat ${stdoutF?}) )
     local gpgkid_b="$(SIMBOL_PROFILE=UNITTEST ::gpg:kid)"
     assertEquals 0x1 "${gpgkid_a[1]}" "${gpgkid_b}"
 
-    if [ $? -eq 0 ]; then
-        local gpgkid_c=$(SIMBOL_PROFILE=UNITTEST ::gpg:kid ${gpgkid_b})
-        assertEquals 0x2 "${gpgkid_c}" "${gpgkid_b}"
-    fi
+    local gpgkid_c=$(SIMBOL_PROFILE=UNITTEST ::gpg:kid ${gpgkid_b})
+    assertEquals 0x2 "${gpgkid_c}" "${gpgkid_b}"
 }
 
-function test_2_4_CoreGpgDeleteInternal() {
+function testCoreGpgDeleteInternal() {
     core:import gpg
 
     local gpgkid=( $(cat ${stdoutF?}) )
@@ -88,7 +95,7 @@ function test_2_4_CoreGpgDeleteInternal() {
     assertFalse 0x2 $?
 }
 
-function test_3_1_CoreGpgListPublic() {
+function testCoreGpgListPublic() {
     core:import gpg
 
     #. Should be none to list at first
@@ -96,7 +103,7 @@ function test_3_1_CoreGpgListPublic() {
     assertFalse 0x1 $?
 }
 
-function test_3_2_CoreGpgCreatePublic() {
+function testCoreGpgCreatePublic() {
     core:import gpg
 
     #. Create one
@@ -111,7 +118,7 @@ function test_3_2_CoreGpgCreatePublic() {
     assertEquals 0x4 10 ${#gpgkid[1]}
 }
 
-function test_3_3_CoreGpgDeletePublic() {
+function testCoreGpgDeletePublic() {
     core:import gpg
 
     local gpgkid=( $(cat ${stdoutF?}) )
@@ -130,7 +137,7 @@ function test_3_3_CoreGpgDeletePublic() {
     fi
 }
 
-function test_4_1_CoreGpgEncryptInternal() {
+function testCoreGpgEncryptInternal() {
     core:import gpg
 
     #. Create it
@@ -142,7 +149,7 @@ function test_4_1_CoreGpgEncryptInternal() {
     assertTrue 0x1 $?
 }
 
-function test_4_2_CoreGpgDecryptInternal() {
+function testCoreGpgDecryptInternal() {
     core:import gpg
 
     SIMBOL_PROFILE=UNITTEST :gpg:encrypt\
