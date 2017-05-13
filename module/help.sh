@@ -11,11 +11,13 @@ function help:all() {
 
     if [ $# -eq 0 ]; then
         local _profile
+        #shellcheck disable=SC2034
         for _profile in USER_MODULES CORE_MODULES; do
             #. Initialize the ${profile} variable
-            eval $(::core:dereference.eval _profile)
+            eval "$(::core:dereference.eval _profile)"
             local module
-            for module in ${!profile[@]}; do
+            #shellcheck disable=SC2154
+            for module in "${!profile[@]}"; do
                 :core:usage ${module}
             done
             echo
