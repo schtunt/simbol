@@ -1,17 +1,40 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
+#shellcheck disable=SC2166
 
 :<<[core:docstring]
 Core GNUPG module
 [core:docstring]
 
 #. GNUPG -={
-core:requires gpg2
+core:requires ANY gpg2 gpg
+declare -g gpg_bin
+gpg_bin="$(which gpg2)" || gpg_bin="$(which gpg)"
 
 core:requires ENV SIMBOL_PROFILE
 core:requires ENV USER_USERNAME
 core:requires ENV USER_FULLNAME
 core:requires ENV USER_EMAIL
 
+#. gpg:version -={
+function :gpg:version() {
+    local gpg_version
+    gpg_version=$(${gpg_bin} --version | head -n 1 | cut -d' ' -f3)
+    case "${gpg_version}" in
+        1.*)
+            theme HAS_FAILED "gpg version too small. Greater than 2 required."
+            exit -1
+            ;;
+        2.0.*) echo 20;;
+        2.*) echo 21;;
+        *)
+            theme HAS_FAILED "gpg version unknown . Greater than 2 required."
+            exit -1
+            ;;
+    esac
+    return 0
+}
+
+#. }=-
 #. gpg:keypath -={
 function ::gpg:keypath() {
     #. Prints:
@@ -39,7 +62,7 @@ function ::gpg:keypath() {
                 for file in "${files[@]}"; do
                     gpgkid=$(
                         basename ${file} |
-                            sed -n -e "s/${USER_USERNAME?}.${SIMBOL_PROFILE%%@*}.\(.*\).sec/\1/p"
+                            sed -n -e "s/${USER_USERNAME?}.${SIMBOL_PROFILE%%@*}.\(.*\).pub/\1/p"
                     )
                     if [ ${#gpgkid} -eq 10 ]; then
                         data=( $(::gpg:keypath ${gpgkid}) )
@@ -50,11 +73,11 @@ function ::gpg:keypath() {
             fi
         ;;
         *:10)
-            if [ -e ${gpgkp}.${gpgkid}.sec -a -e ${gpgkp}.${gpgkid}.pub ]; then
+            if [ -e ${gpgkp}.${gpgkid}.pub ]; then
                 e=${CODE_SUCCESS?}
                 data=( ${gpgkp} ${gpgkid} )
 
-                gpg2 --no-default-keyring \
+                ${gpg_bin} --no-default-keyring \
                     --secret-keyring ${gpgkp}.${gpgkid}.sec\
                     --keyring ${gpgkp}.${gpgkid}.pub\
                     --list-secret-keys >/dev/null 2>&1
@@ -72,10 +95,12 @@ function ::gpg:keypath() {
 function ::gpg:kid() {
     core:raise_bad_fn_call_unless $# in 1
 
+    local token="${1}"
+
     local -i e=${CODE_FAILURE?}
 
     local gpgkp
-    gpgkp=( $(::gpg:keypath "$1") )
+    gpgkp=( $(::gpg:keypath "${token}") )
     e=$?
     [ $e -ne ${CODE_SUCCESS?} ] || echo "${gpgkp[1]}"
 
@@ -85,27 +110,33 @@ function ::gpg:kid() {
 
 #. gpg:decrypt -={
 function :gpg:decrypt() {
+    core:raise_bad_fn_call_unless $# in 2
+    [ ${USER_VAULT_PASSPHRASE:-NilOrNotSet} != "NilOrNotSet" ] ||
+        core:raise EXCEPTION_BAD_FN_CALL "USER_VAULT_PASSPHRASE was not set"
+
     local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 2 ]; then
-        local input="${1}"
-        local output="${2}"
-        local gpgkid=$(::gpg:kid '*')
-
+    local input="${1}"
+    local output="${2}"
+    local gpgkid
+    gpgkid=$(::gpg:kid '*')
+    if [ $? -ne ${CODE_SUCCESS} -o ${#gpgkid} -eq 0 ]; then
+        core:log ERR "GPG default recipient not found."
+    else
         if [ -e ${output} ]; then
-            core:log WARN "Removed ${output}"
+            core:log WARNING "Removed ${output}"
             rm -f "${output}"
         fi
-        gpg -q\
+        ${gpg_bin} -q\
+            --passphrase "${USER_VAULT_PASSPHRASE}" \
+            --pinentry-mode loopback\
+            --yes \
             --batch\
-            --use-agent\
             --trust-model always\
             --decrypt\
             --default-key ${gpgkid}\
             -o ${output} ${input} 2>/dev/null
         e=$?
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
     fi
 
     return $e
@@ -118,20 +149,23 @@ function :gpg:encrypt() {
     if [ $# -eq 2 ]; then
         local input="${1}"
         local output="${2}"
-        local gpgkid=$(::gpg:kid '*')
-
-        if [ -e ${output} ]; then
-            core:log WARN "Removed ${output}"
-            rm -f "${output}"
+        local gpgkid
+        gpgkid=$(::gpg:kid '*')
+        if [ $? -ne ${CODE_SUCCESS} -o ${#gpgkid} -eq 0 ]; then
+            core:log ERR "GPG default recipient not found."
+        else
+            if [ -e ${output} ]; then
+                core:log WARNING "Removed ${output}"
+                rm -f "${output}"
+            fi
+            ${gpg_bin} -q -a\
+                --batch\
+                --trust-model always\
+                --encrypt\
+                --recipient ${gpgkid}\
+                -o ${output} ${input} 2>/dev/null
+            e=$?
         fi
-        gpg -q -a\
-            --batch\
-            --use-agent\
-            --trust-model always\
-            --encrypt\
-            --recipient ${gpgkid}\
-            -o ${output} ${input} 2>/dev/null
-        e=$?
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
@@ -142,6 +176,8 @@ function :gpg:encrypt() {
 #. gpg:create -={
 function :gpg:create() {
     core:raise_bad_fn_call_unless $# in 0
+    [ ${USER_VAULT_PASSPHRASE:-NilOrNotSet} != "NilOrNotSet" ] ||
+        core:raise EXCEPTION_BAD_FN_CALL "USER_VAULT_PASSPHRASE was not set"
 
     local -i e=${CODE_FAILURE?}
 
@@ -163,33 +199,44 @@ Name-Real: ${USER_FULLNAME?}
 Name-Comment: ${USER_USERNAME?} profile key generated via simbol
 Name-Email: ${USER_EMAIL?}
 Expire-Date: 0
-Passphrase: TEMPORARY_PASSPHRASE
+Passphrase: ${USER_VAULT_PASSPHRASE}
 %pubring ${gpgkp}.pub
+%secring ${gpgkp}.sec
 %commit
 !
-        gpg2 -q --batch --gen-key ${gpgkp}.conf 2>/dev/null |
+        ${gpg_bin} -q --batch --gen-key ${gpgkp}.conf 2>/dev/null |
             sed -e '/^$/d' -e 's/^/   * /' 2>/dev/null
         if [ $? -eq ${CODE_SUCCESS?} ] && [ -e "${gpgkp}.pub" ]; then
             local gpgkid
             gpgkid=0x$(
-                gpg2 --no-default-keyring \
+                ${gpg_bin} --no-default-keyring \
                     --keyring ${gpgkp}.pub\
-                    --list-secret-keys 2>/dev/null |
-                        awk -F '[ /]+' '$1~/^sec/{print$3}'
+                    --keyid-format short\
+                    --list-keys 2>/dev/null |
+                        awk -F '[ /]+' '$1~/^pub/{print$3}'
             )
             if [ ${PIPESTATUS[0]} -eq 0 ]; then
-                if gpg -q --batch --import ${gpgkp}.pub; then
+                if ${gpg_bin} -q --batch --import ${gpgkp}.pub; then
                     mv ${gpgkp}.pub ${gpgkp}.${gpgkid}.pub
-                    mv ${gpgkp}.conf ${gpgkp}.${gpgkid}.conf
-                    echo ${gpgkid}
-                    e=${CODE_SUCCESS?}
+                    local -i gpg_version; let gpg_version=$(:gpg:version)
+                    if [ ${gpg_version} -le 20 ]; then
+                        ${gpg_bin} -q --batch --import ${gpgkp}.sec; 
+                        if [ $? -eq ${CODE_SUCCESS} ]; then
+                            mv ${gpgkp}.sec ${gpgkp}.${gpgkid}.sec
+                        else
+                           core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+                        fi
+                   fi
+                   mv ${gpgkp}.conf ${gpgkp}.${gpgkid}.conf
+                   echo ${gpgkid}
+                   e=${CODE_SUCCESS?}
                 fi
             fi
         fi
 
-        return $e
         if [ $e -ne ${CODE_SUCCESS?} ]; then
             rm -f ${gpgkp}.pub
+            rm -f ${gpgkp}.sec
             rm -f ${gpgkp}.conf
         fi
     fi
@@ -227,37 +274,52 @@ function gpg:create() {
 #. }=-
 #. gpg:delete -={
 function :gpg:delete() {
-    local -i e=${CODE_FAILURE?}
-
+    local -i e=${CODE_SUCCESS?}
     if [ $# -eq 1 ]; then
         local gpgkid=$1
         local -a data
-        data=( $(::gpg:keypath "${gpgkid}") )
+        data=( $(::gpg:keypath "${gpgkid}") ) || e=${CODE_FAILURE?}
         if [ ${#data[@]} -eq 2 ]; then
             #. Delete secret keys
-            local -a secretkeys=(
+            local -a secretkeys
+            secretkeys=(
+                #. Note: Why head -n 1
+                #. gpg >= 2.1 also prints out the fingerprint of ssb
                 $(
-                    gpg --list-secret-keys --with-colons --fingerprint ${gpgkid} |
-                        sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p'
+                    ${gpg_bin} --list-secret-keys --with-colons --fingerprint ${gpgkid} 2>/dev/null |
+                        sed -n 's/^fpr:::::::::\([[:alnum:]]\+\):/\1/p' |
+                        head -n 1
                 )
             )
+            if [ $? -eq ${CODE_SUCCESS} -a "${secretkeys:-NilOrNotSet}" != "NilOrNotSet" ]; then
+                local sk
+                for sk in "${secretkeys[@]}"; do
+                    if ! ${gpg_bin} --batch --yes --delete-secret-key "${sk}" 2>/dev/null; then 
+                        e=${CODE_FAILURE?}
+                        core:log WARNING "Could not delete secret key ${gpgkid}."
+                    fi
+                done
+            else
+                e=${CODE_FAILURE?}
+                core:log WARNING "There is no secret key ${gpgkid} to delete."
+            fi
 
-            local sk
-            for sk in "${secretkeys[@]}"; do
-                gpg --batch --yes --delete-secret-key "${sk}"
-            done
-
-            #. Delete publik key
-            gpg -q --batch --yes --delete-key ${gpgkid}
+            #. Delete public key
+            if ! ${gpg_bin} -q --batch --yes --delete-key ${gpgkid} 2>/dev/null; then
+                e=${CODE_FAILURE?}
+                core:log WARNING "There is no public key ${gpgkid} to delete"
+            fi
 
             #. Delete files
             local gpgkp
             gpgkp="${data[0]}.${gpgkid}"
-            rm -f "${gpgkp}.sec"
-            rm -f "${gpgkp}.pub"
-            rm -f "${gpgkp}.conf"
+            rm -f "${gpgkp}.sec" || core:log WARNING "There is no ${gpgkp}.sec to delete."
+            rm -f "${gpgkp}.pub" || core:log WARNING "There is no ${gpgkp}.pub to delete."
+            rm -f "${gpgkp}.conf" || core:log WARNING "There is no ${gpgkp}.conf to delete"
 
-            e=${CODE_SUCCESS?}
+            if [ -e "${gpgkp}.${gpgkid}.sec" -o -e "${gpgkp}.${gpgkid}.pub" -o -e "${gpgkp}.${gpgkid}.conf" ]; then
+                e=${CODE_FAILURE?}
+            fi
         fi
     else
         core:raise EXCEPTION_BAD_FN_CALL
@@ -272,14 +334,14 @@ function gpg:delete() {
 
     if [ $# -eq 1 ]; then
         local gpgkid=$1
-        cpf "Removing GPG key %{@hash:${gpgkid}}..."
+        cpf "Removing GPG key ${gpgkid}..."
 
         :gpg:delete ${gpgkid}
         e=$?
         if [ $e -eq ${CODE_SUCCESS?} ]; then
             theme HAS_PASSED "${gpgkid}"
         else
-            theme HAS_FAILED "${gpgkid}"
+            theme HAS_FAILED "${gpgkid}. Check ${SIMBOL_LOG}"
         fi
     fi
 
