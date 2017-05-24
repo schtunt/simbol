@@ -455,25 +455,27 @@ function core:softimport() {
 
     local module="$1"
     local modulepath="${1//.//}.sh"
-    local ouch="${SIMBOL_USER_VAR_TMP}/softimport.${module}.$$.ouch"
+    local ouch="${SIMBOL_USER_VAR_TMP}/softimport.${module}.ouch"
     if [ "${g_SIMBOL_IMPORTED_EXIT[${module}]:-NilOrNotSet}" == 'NilOrNotSet' ]; then
         if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
-            if [ -f ${SIMBOL_USER_MOD}/${modulepath} ]; then
+            if [ -f "${SIMBOL_USER_MOD}/${modulepath}" ]; then
                 #shellcheck disable=SC1090
-                if source ${SIMBOL_USER_MOD}/${modulepath} >&${ouch}; then
-                    rm -f ${ouch}
-                    e=${CODE_IMPORT_GOOOD?}
+                if ( set -x; source "${SIMBOL_USER_MOD}/${modulepath}"; exit $? ) >& "${ouch}"; then
+                    source "${SIMBOL_USER_MOD}/${modulepath}"
+                    rm -f "${ouch}"
+                    let e=${CODE_IMPORT_GOOOD?}
                 else
-                    e=${CODE_IMPORT_ERROR?}
+                    let e=${CODE_IMPORT_ERROR?}
                 fi
             else
                 e=${CODE_IMPORT_UNDEF?}
             fi
         elif [ ${CORE_MODULES[${module}]-9} -eq 1 ]; then
-            if [ -f ${SIMBOL_CORE_MOD}/${modulepath} ]; then
+            if [ -f "${SIMBOL_CORE_MOD}/${modulepath}" ]; then
                 #shellcheck disable=SC1090
-                if source ${SIMBOL_CORE_MOD}/${modulepath} >& ${ouch}; then
-                    rm -f ${ouch}
+                if ( set -x; source "${SIMBOL_CORE_MOD}/${modulepath}"; exit $? ) >& "${ouch}"; then
+                    source "${SIMBOL_CORE_MOD}/${modulepath}"
+                    rm -f "${ouch}"
                     e=${CODE_IMPORT_GOOOD?}
                 else
                     e=${CODE_IMPORT_ERROR?}
@@ -1616,11 +1618,11 @@ function core:raise_on_failed_softimport() {
     local module="$1"
     core:raise_bad_fn_call_unless $# in 1
 
-    local ouch="${SIMBOL_USER_VAR_TMP}/softimport.${module}.$$.ouch"
+    local ouch="${SIMBOL_USER_VAR_TMP}/softimport.${module}.ouch"
     if [ -e "${ouch}" ]; then
         cat "${ouch}"
 
-        core:raise EXCEPTION_PERMANENT_ERROR "Module soft import failure for \`${module}'"
+        core:raise EXCEPTION_PERMANENT_ERROR "Module softimport failure for \`${module}'"
     fi
 }
 
