@@ -1,81 +1,17 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 #shellcheck disable=SC2166
 
-#. Site Engine -={
-export SIMBOL_VERSION=1.0-rc1
+# shellcheck source=lib/libsh/libsimbol/constants.sh
+source ~/.simbol/.scm/lib/libsh/libsimbol/constants.sh
 
+unset  CDPATH
+
+#. Site Engine -={
 #. 1.1  Date/Time and Basics -={
 let NOW=$(date --utc +%s)
 export NOW
 #. FIXME: Mac OS X needs this instead:
 #. FIXME: export NOW=$(date -u +%s)
-#. }=-
-#. 1.2  Paths -={
-: ${SIMBOL_PROFILE?}
-export SIMBOL_BASENAME=$(basename -- $0)
-
-export SIMBOL_CORE=$(readlink ~/.simbol/.scm)
-export SIMBOL_CORE_BIN=${SIMBOL_CORE}/bin
-export SIMBOL_CORE_LIB=${SIMBOL_CORE}/lib
-export SIMBOL_CORE_LIBEXEC=${SIMBOL_CORE}/libexec
-export SIMBOL_CORE_LIBJS=${SIMBOL_CORE}/lib/libjs
-export SIMBOL_CORE_LIBPY=${SIMBOL_CORE}/lib/libpy
-export SIMBOL_CORE_LIBSH=${SIMBOL_CORE}/lib/libsh
-export SIMBOL_CORE_MOD=${SIMBOL_CORE}/module
-
-export SIMBOL_SCM=$(readlink ~/.simbol/.scm)
-
-export SIMBOL_UNIT=${SIMBOL_CORE}/share/unit
-export SIMBOL_UNIT_TESTS=${SIMBOL_CORE}/share/unit/tests
-
-export SIMBOL_USER=${HOME}/.simbol
-export SIMBOL_USER_ETC=${SIMBOL_USER}/etc
-export SIMBOL_USER_LIB=${SIMBOL_USER}/lib
-export SIMBOL_USER_LIBEXEC=${SIMBOL_USER}/libexec
-export SIMBOL_USER_MOD=${SIMBOL_USER}/module
-export SIMBOL_USER_VAR=${SIMBOL_USER}/var
-export SIMBOL_USER_VAR_CACHE=${SIMBOL_USER}/var/cache
-export SIMBOL_USER_VAR_LIB=${SIMBOL_USER}/var/lib
-export SIMBOL_USER_VAR_LIBEXEC=${SIMBOL_USER}/var/libexec
-export SIMBOL_USER_VAR_LIBPY=${SIMBOL_USER}/var/lib/libpy
-export SIMBOL_USER_VAR_LIBSH=${SIMBOL_USER}/var/lib/libsh
-export SIMBOL_USER_VAR_LOG=${SIMBOL_USER}/var/log
-export SIMBOL_USER_VAR_RUN=${SIMBOL_USER}/var/run
-export SIMBOL_USER_MOCKENV=${SIMBOL_USER_VAR_RUN}/.mockenv
-export SIMBOL_USER_VAR_SCM=${SIMBOL_USER}/var/scm
-export SIMBOL_USER_VAR_TMP=${SIMBOL_USER}/var/tmp
-
-export SIMBOL_LOG="${SIMBOL_USER_VAR_LOG}/simbol.log"
-
-#. Site's PATH
-PATH+=:${SIMBOL_CORE_LIBEXEC}
-PATH+=:${SIMBOL_USER_VAR_LIBEXEC}
-export PATH
-
-export RBENV_VERSION=${RBENV_VERSION:-2.1.1}
-#. Ruby -={
-#. rbenv
-RBENV_ROOT=${SIMBOL_USER_VAR}/rbenv
-export RBENV_ROOT RBENV_VERSION
-#. }=-
-
-export PYENV_VERSION=${PYENV_VERSION:-3.4.0}
-#. Python -={
-PYTHONPATH+=:${SIMBOL_CORE_LIBPY}
-PYTHONPATH+=:${SIMBOL_USER_VAR_LIBPY}
-export PYTHONPATH
-
-#. pyenv
-PYENV_ROOT=${SIMBOL_USER_VAR}/pyenv
-export PYENV_ROOT PYENV_VERSION
-#. }=-
-
-export PLENV_VERSION=${PLENV_VERSION:-5.18.2}
-#. Perl -={
-#. plenv
-PLENV_ROOT=${SIMBOL_USER_VAR}/plenv
-export PLENV_ROOT PLENV_VERSION
-#. }=-
 #. }=-
 #. 1.3  ShUnit2 -={
 export SHUNIT2=${SIMBOL_USER_VAR_LIBEXEC}/shunit2
@@ -94,22 +30,6 @@ function core:bool.eval() {
         unset FLAGS_$1;
 	!EVAL
 }
-#. }=-
-#. 1.5  Core Configuration -={
-unset  CDPATH
-export SIMBOL_DEADMAN=${SIMBOL_USER_VAR_CACHE}/deadman
-
-declare -rig FD_STDIN=0
-export FD_STDIN
-
-declare -rig FD_STDOUT=1
-export FD_STDOUT
-
-declare -rig FD_STDERR=2
-export FD_STDERR
-
-export SIMBOL_DATE_FORMAT="%x-%X"
-
 #. }=-
 #. 1.6  Core Utilities -={
 function core:len() {
@@ -214,49 +134,6 @@ function core:global() {
 
 
 #. }=-
-#. 1.7  Error Code Constants -={
-true
-TRUE=$?
-CODE_SUCCESS=${TRUE?}
-
-false
-FALSE=$?
-CODE_FAILURE=${FALSE?}
-
-declare -gA SIMBOL_BOOL=(
-    [false]=${FALSE?}
-    [true]=${TRUE?}
-)
-export SIMBOL_BOOL
-
-#. 64..127 Internal
-CODE_NOTIMPL=64
-CODE_DISABLED=66
-CODE_USAGE_SHORT=90
-CODE_USAGE_MODS=91
-CODE_USAGE_MOD=92
-CODE_USAGE_FN_GUESS=93
-#CODE_USAGE_FN_SHORT=94
-CODE_USAGE_FN_LONG=95
-
-#. 128..255 General Error Codes
-CODE_E01=128
-CODE_E02=129
-CODE_E03=130
-CODE_E04=131
-
-CODE_IMPORT_GOOOD=${CODE_SUCCESS} #. good module
-CODE_IMPORT_ERROR=${CODE_E01}     #. invalid/bad module (can't source/parse)
-CODE_IMPORT_ADMIN=${CODE_E02}     #. administratively disabled
-CODE_IMPORT_UNDEF=${CODE_E03}     #. no such module
-CODE_IMPORT_UNSET=${CODE_E04}     #. no module set
-
-export SIMBOL_DELIM=$(printf "\x07")
-export SIMBOL_DELOM=$(printf "\x08")
-
-# shellcheck disable=SC2034
-CODE_DEFAULT=${CODE_USAGE_FN_LONG?}
-#. }=-
 #. 1.8  User/Profile Configuration -={
 declare -g -A CORE_MODULES=(
     [tutorial]=1   [help]=1
@@ -359,85 +236,6 @@ function core:log() {
         fi
         #printf "%s; %5d; %8s[%24s]; $@\n" "${ts}" "$$" "${code}" "$(sed -e 's/ /<-/g' <<< ${FUNCNAME[@]})" >> ${WMII_LOG}
     fi
-}
-#. }=-
-#. 1.10 Sanity Checks / Validation -={
-function validate_bash() {
-    local -i e=${CODE_SUCCESS?}
-
-    local vv="${SIMBOL_USER_VAR_TMP?}/.simbol-bash-${BASH_VERSION}.verified"
-    [ ! -e "${vv}" ] || return $e
-
-    #. Associative Array Validation
-    local -A aa
-
-    #. Only supporting two style for updating associative array entries:
-    # 1. foo=( [key]+=value )
-    # 2. foo[key]=value
-    # 3. foo[key]+=value
-    #shellcheck disable=SC2154
-    aa[a]='A'
-    [ ${#aa[@]} -eq 1 -a "${aa[a]}" == 'A' ] || {
-        e=2
-        core:log CRIT "ValidationFailure: error code $e"
-    }
-
-    #. Avoid this style - `aa+=( ... )' - unless you know what you're doing.
-    #
-    # Only use this if the life-span of the variable is local, otherwise
-    # if you do this on a variable that's controlled elsewhere, and the
-    # mentioned keys already exist, the outcome could be one of two
-    # things depending on the version of bash - the new assignment
-    # values may clobber the existing ones, or they may append to them.
-    aa+=( [b]='B' [c]='C' )
-    [ ${#aa[@]} -eq 3 -a "${aa[b]}" == 'B' -a "${aa[c]}" == 'C' ] || {
-        e=3
-        core:log CRIT "ValidationFailure: error code $e"
-    }
-
-    aa[a]+='A'
-    [ "${aa[a]}" == 'AA' ] || {
-        e=4
-        core:log CRIT "ValidationFailure: error code $e"
-    }
-
-    aa=( [w]='W' [x]='X' [y]='Y' [z]='Z' )
-    [ ${#aa[@]} -eq 4 ] || {
-        e=5
-        core:log CRIT "ValidationFailure: error code $e"
-    }
-
-    #. Do not use the following as different version of bash will do
-    # different things, and these are just ambiguous!
-    # 2a. foo+=( [key]=value )
-    # 2b. foo+=( [key]+=value )
-    # 2c. foo=( [key]+=value )
-    #
-    # The output of the following should not match anything other than
-    # some of the tests in this functioa body itself:
-    #   git grep -E '[a-zA-Z0-9]+\+=\( *\['
-
-    local buf="${SIMBOL_USER_VAR_TMP?}/.simbol-null-term-rw-test"
-    local -a wstrs=( 11 'aa' 33 'stuff' ) #. TODO: \n, \r, etc.
-
-    touch "${buf}"
-    printf '%s\0' "${wstrs[@]}" >> "${buf}"
-
-    local -a rstrs
-    while read -rd $'\0' y; do
-        rstrs+=( "$y" )
-    done < "${buf}"
-    rm -f "${buf}"
-
-    if [ "${rstrs[*]}" != "${wstrs[*]}" -o "${#rstrs[@]}" -ne "${#wstrs[@]}" ]; then
-        e=6
-        core:log CRIT "ValidationFailure: error code $e"
-    fi
-
-    #. Cache the Response
-    [ $e -ne ${CODE_SUCCESS?} ] || touch "${vv}"
-
-    return $e
 }
 #. }=-
 #. 1.11 Modules -={

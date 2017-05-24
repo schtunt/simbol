@@ -42,7 +42,7 @@ function testCoreUnsupportedAssociativeArrayAssignments() {
     local vetted
     vetted="$(md5sum <(git grep -E '[a-zA-Z0-9]+\+=\( *\['))"
     assertEquals "${FUNCNAME[0]}/0"\
-        "fa0e5357ffa3f3f8f60054693f53f6d9"\
+        "07ae19932ce9efb152cae3537a63ac54"\
         "${vetted%% *}"
 }
 

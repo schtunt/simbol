@@ -4,6 +4,8 @@
 set -u
 
 let e=0
+#shellcheck source=lib/libsh/libsimbol/constants.sh
+source ~/.simbol/.scm/lib/libsh/libsimbol/constants.sh
 
 #. Source user-overrides if any
 #shellcheck disable=SC1090
@@ -28,13 +30,15 @@ if [ $e -eq 0 ]; then
         e=$?
         if [ $e -eq 0 ]; then
             export SIMBOL_PROFILE
-            #shellcheck disable=SC1090
-            source ~/.simbol/.scm/lib/libsh/libsimbol/libsimbol.sh
+            #shellcheck source=lib/libsh/libsimbol/sanity.sh
+            source ${SIMBOL_CORE}/lib/libsh/libsimbol/sanity.sh
             validate_bash
             e=$?
             case $e in
                 0)
                     rm -f "${SIMBOL_DEADMAN?}"
+                    #shellcheck source=lib/libsh/libsimbol/libsimbol.sh
+                    source ${SIMBOL_CORE}/lib/libsh/libsimbol/libsimbol.sh
                     core:wrapper "$@"
                     e=$?
                 ;;
