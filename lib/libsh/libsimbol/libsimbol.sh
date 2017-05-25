@@ -750,8 +750,11 @@ function :core:cached() {
         local cachefile="$1"
         local -i ttl; let ttl=${l_CACHE_TTL:-${g_CACHE_TTL?}}
         if [ ${ttl} -ge 0 ]; then
-            local -i age=$(:core:age "${cachefile}")
+            #. Don't use `let' here: `age' can return 0, and using `let' would
+            #. render $? to be non-zero; SC2086 below is therefore required.
+            local -i age; age=$(:core:age "${cachefile}")
             if [ $? -eq ${CODE_SUCCESS?} ]; then
+                #shellcheck disable=SC2086
                 if [ ${ttl} -gt 0 ] && [ ${age} -ge ${ttl} ] || [ ${age} -eq -1 ]; then
                     #. Cache Miss (Expiry)
                     rm -f "${cachefile}"
@@ -1106,18 +1109,18 @@ function :core:usage() {
         core:softimport "${module}"
         local -i ie=$?
         if [ $ie -eq ${CODE_IMPORT_GOOOD?} ]; then
-            if [ ${g_ONCE_WHOAMI:-0} -eq 0 ]; then
+            if [ "${g_ONCE_WHOAMI:-NilOrNotSet}" == "NilOrNotSet" ]; then
                 cpf:printf "${usage_prefix} %{@module:${module}}\n"
-                g_ONCE_WHOAMI=1
+                declare -g g_ONCE_WHOAMI="IKnowWhoIAm"
             fi
-            for module in $(core:modules ${module}); do
-                core:softimport ${module}
+            for module in $(core:modules "${module}"); do
+                core:softimport "${module}"
                 if [ $? -eq ${CODE_SUCCESS?} ]; then
-                    local -a fns=( $(:core:functions public ${module}) )
+                    local -a fns=( $(:core:functions public "${module}") )
                     for fn in "${fns[@]}"; do
                         local usage_fn="${module}:${fn}:usage"
                         local usagestr
-                        if [ "$(type -t ${usage_fn})" == "function" ]; then
+                        if [ "$(type -t "${usage_fn}")" == "function" ]; then
                             while read -r usagestr; do
                                 cpf:printf "    %{n:%s} %{@module:%s} %{@function:%s} %{c:%s}\n"\
                                     "${SIMBOL_BASENAME?}" "${module}" "${fn}" "${usagestr}"
@@ -1131,10 +1134,11 @@ function :core:usage() {
                 fi
             done
 
+            #shellcheck disable=SC2086
             if [ ${g_VERBOSE?} -eq ${TRUE?} -a ${#FUNCNAME[@]} -lt 4 ]; then
                 cpf:printf "\n%{@module:${module}} %{g:changelog}\n"
-                local modfile=${SIMBOL_USER_MOD?}/${module}
-                [ -f ${modfile} ] || modfile=${SIMBOL_CORE_MOD?}/${module}
+                local modfile="${SIMBOL_USER_MOD?}/${module}"
+                [ -f "${modfile}" ] || modfile="${SIMBOL_CORE_MOD?}/${module}"
                 core:cd "${SIMBOL_CORE?}"
                 :core:git --no-pager\
                     log --follow --all --format=format:"    |___%C(bold blue)%h%C(reset) %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(bold white)— %an%C(reset)%C(bold yellow)%d%C(reset)"\
@@ -1151,7 +1155,7 @@ function :core:usage() {
             "${module}" "${fn}"
 
         local usage_fn=${module}:${fn}:usage
-        if [ "$(type -t $usage_fn)" == "function" ]; then
+        if [ "$(type -t "${usage_fn}")" == "function" ]; then
             local usagestr
             while read -r usagestr; do
                 cpf:printf "    %{n:%s} %{@module:%s} %{@function:%s} %{c:%s}\n"\
@@ -1167,7 +1171,7 @@ function :core:usage() {
             --long)
                 local usage_l="${module}:${fn}:help"
                 local -i i=0
-                if [ "$(type -t $usage_l)" == "function" ]; then
+                if [ "$(type -t "${usage_l}")" == "function" ]; then
                     cpf:printf
                     local indent=""
                     local line
@@ -1195,17 +1199,17 @@ function :core:complete() {
     local fn=$2
     if [ "${fn}" != '-' ]; then
         if declare -F "${modulestr}:${fn}" >/dev/null; then
-            echo ${fn}
+            echo "${fn}"
         else
-            for afn in $(declare -F|awk -F'[ :]' '$3~/^'${modulestr}'$/{print$4}'|sort -n); do
-                local ${prefix}${afn//./_}=1
+            for afn in $(declare -F|awk -F'[ :]' '$3~/^'"${modulestr}"'$/{print$4}'|sort -n); do
+                eval "local ${prefix}${afn//./_}=1"
             done
             set +u
             local -a completed=( $(eval echo "\${!${prefix}${fn//./_}*}") )
-            if echo ${completed[*]} | grep -qE "\<${prefix}${fn//./_}\>"; then
-                echo ${fn}
+            if echo "${completed[*]}" | grep -qE "\<${prefix}${fn//./_}\>"; then
+                echo "${fn}"
             else
-                echo ${completed[*]//${prefix}/}
+                echo "${completed[*]//${prefix}/}"
             fi
             set -u
         fi
@@ -1213,7 +1217,7 @@ function :core:complete() {
 }
 
 function core:wrapper() {
-    if [ -e ${SIMBOL_DEADMAN?} ]; then
+    if [ -e "${SIMBOL_DEADMAN?}" ]; then
         theme HAS_FAILED "CRITICAL ERROR; ABORTING!" >&2
         exit 1
     fi
@@ -1231,6 +1235,7 @@ function core:wrapper() {
     fn=${fn_4d9d6c17eeae2754c9b49171261b93bd?}
     #. }=-
     core:log DEBUG "core:wrapper(module=${module}, fn=${fn}, argv=( $* ))"
+    #shellcheck disable=SC2086
     [ ${g_DEBUG} -ne ${TRUE} ] || cpf:initialize 1
 
     local regex=':+[a-z0-9]+(:[a-z0-9]+) |*'
@@ -1238,22 +1243,23 @@ function core:wrapper() {
     core:softimport "${module}"
     case $?/${module?}/${fn?} in
         ${CODE_IMPORT_UNSET?}/-/-)                                                                                       e=${CODE_USAGE_MODS} ;;
-        ${CODE_IMPORT_GOOOD?}/*/-)    :core:execute          ${module}                2>&1 | grep --color -E "${regex}"; e=${PIPESTATUS[0]}   ;;
-        ${CODE_IMPORT_GOOOD?}/*/::*) ::core:execute:private  ${module} ${fn:2} "${@}" 2>&1 | grep --color -E "${regex}"; e=${PIPESTATUS[0]}   ;;
-        ${CODE_IMPORT_GOOOD?}/*/:*)  ::core:execute:internal ${module} ${fn:1} "${@}" 2>&1 | grep --color -E "${regex}"; e=${PIPESTATUS[0]}   ;;
+        ${CODE_IMPORT_GOOOD?}/*/-)    :core:execute          "${module}"                2>&1 | grep --color -E "${regex}"; e=${PIPESTATUS[0]}   ;;
+        ${CODE_IMPORT_GOOOD?}/*/::*) ::core:execute:private  "${module}" "${fn:2}" "${@}" 2>&1 | grep --color -E "${regex}"; e=${PIPESTATUS[0]}   ;;
+        ${CODE_IMPORT_GOOOD?}/*/:*)  ::core:execute:internal "${module}" "${fn:1}" "${@}" 2>&1 | grep --color -E "${regex}"; e=${PIPESTATUS[0]}   ;;
         ${CODE_IMPORT_GOOOD?}/*/*)
-            local -a completed=( $(:core:complete ${module} ${fn}) )
+            local -a completed=( $(:core:complete "${module}" "${fn}") )
 
             local -A supported_formats=( [html]=1 [email]=1 [ansi]=1 [text]=1 [dot]=0 )
             local format
-            if format="$(type -t ${module}:${fn}:formats)"; then
+            if format="$(type -t "${module}:${fn}:formats")"; then
                 if [ "${format}" == "function" ]; then
-                    for format in $( ${module}:${fn}:formats ); do
+                    for format in $( "${module}:${fn}:formats" ); do
                         supported_formats[${format}]=2
                     done
                 fi
             fi
 
+            #shellcheck disable=SC2086
             case ${#completed[@]}:${e_flags}:${g_FORMAT?}:${supported_formats[${g_FORMAT}]:-NilOrNotSet} in
                 1:${CODE_SUCCESS?}:email:*)
                     :core:execute "${module}" "${fn}" "$@" 2>&1 |
@@ -1328,9 +1334,9 @@ function core:wrapper() {
 
     case $e in
         ${CODE_USAGE_MODS?})    :core:usage ;;
-        ${CODE_USAGE_SHORT?})   :core:usage ${module} ;;
-        ${CODE_USAGE_MOD?})     :core:usage ${module} ;;
-        ${CODE_USAGE_FN_LONG?}) :core:usage ${module} ${fn} ;;
+        ${CODE_USAGE_SHORT?})   :core:usage "${module}" ;;
+        ${CODE_USAGE_MOD?})     :core:usage "${module}" ;;
+        ${CODE_USAGE_FN_LONG?}) :core:usage "${module}" "${fn}" ;;
         0) : noop;;
     esac
 
@@ -1384,6 +1390,7 @@ function core:in() {
 
     local -i exp
     for exp in ${expected[*]}; do
+        #shellcheck disable=SC2086
         if [ ${exp} -eq ${argc} ]; then
             return ${CODE_SUCCESS?}
         fi
@@ -1393,18 +1400,22 @@ function core:in() {
 }
 
 function core:raise_bad_fn_call_unless() {
-    local -i argc; argc=$1
+    local -i argc; let argc=$1
     local op="$2"
     case "${op}:$#" in
         *:'in')
+            local -ia expected=( ${*:3} )
+            #shellcheck disable=SC2086
             if ! core:in ${argc} ${op} ${expected[*]}; then
                 core:raise EXCEPTION_BAD_FN_CALL\
                     "Expected one of ( ${expected[*]} ) arguments, received \`${argc}'"
             fi
         ;;
         3:*)
-            if ! core:compare ${argc} ${op} $3; then
-                local -i limit; let limit=$3
+            local -i expected; let expected=$3
+            #shellcheck disable=SC2086
+            if ! core:compare ${argc} ${op} ${expected}; then
+                local -i limit; let limit=expected
                 core:raise EXCEPTION_BAD_FN_CALL\
                     "Expected \$# -${op} ${limit}, received \`${argc}'"
             fi
@@ -1426,28 +1437,28 @@ function core:raise_on_failed_softimport() {
 
 function core:raise() {
     : !!! CRITICAL FAILURE !!!
-    : >${SIMBOL_DEADMAN?}
+    :>"${SIMBOL_DEADMAN?}"
 
-    local -i e=$1
+    local -i e; let e=$1
 
     if [[ $- =~ x ]]; then
         : !!! Exiting raise function early as we are being traced !!!
     else
-        cpf:printf "%{+r}EXCEPTION%{bo:[%s->%s]}: %s%{-r}:\n" "${e}" "$1" "${RAISE[$e]-[UNKNOWN EXCEPTION:$e]}" >&2
+        cpf:printf "%{+r}EXCEPTION%{bo:[%s->%s]}: %s%{-r}:\n" "$e" "$1" "${RAISE[$e]-[UNKNOWN EXCEPTION:$e]}" >&2
         cpf:printf "\n%{+r}  !!! %{bo:%s}%{-r}\n\n" "${@:2}" >&2
 
         cpf:printf "%{+r}EXCEPTION%{bo:[Traceback]}%{-r}:\n" >&2
         if [ ${#module} -gt 0 ]; then
             if [ ${#fn} -gt 0 ]; then
                 cpf:printf "Function %{c:${module}:${fn}()}" 1>&2
-                echo "Critical failure in function ${module}:${fn}()" >> ${SIMBOL_DEADMAN?}
+                echo "Critical failure in function ${module}:${fn}()" >> "${SIMBOL_DEADMAN?}"
             else
                 cpf:printf "Module %{c:${module}}" 1>&2
-                echo "Critical failure in module ${module}" >> ${SIMBOL_DEADMAN?}
+                echo "Critical failure in module ${module}" >> "${SIMBOL_DEADMAN?}"
             fi
         else
             cpf:printf "File %{@path:$0}" 1>&2
-            echo "Critical failure in file ${0}" >> ${SIMBOL_DEADMAN?}
+            echo "Critical failure in file ${0}" >> "${SIMBOL_DEADMAN?}"
         fi
 
         cpf:printf " %{r:failed with exception} %{g:$e}; %{c:traceback}:\n" 1>&2
@@ -1479,7 +1490,7 @@ function mock:path() {
 function mock:write() {
     core:raise_bad_fn_call_unless $# in 0 1
     local context="${1:-default}"
-    cat >>"$(mock:path ${context})"
+    cat >>"$(mock:path "${context}")"
     return $?
 }
 
