@@ -39,14 +39,17 @@ function core:len() {
 function :core:age() {
     local -i e=${CODE_FAILURE}
 
+    local -i elapsed=-1
+
     local filename="$1"
     if [ -e "${filename}" ]; then
         local -i changed; let changed=$(stat -c %Y "${filename}")
         local -i now; let now=$(date +%s)
-        local -i elapsed; let elapsed=now-changed
-        echo ${elapsed}
+        let elapsed=now-changed
         e=${CODE_SUCCESS}
     fi
+
+    echo ${elapsed}
 
     return ${e}
 }
@@ -628,11 +631,9 @@ function g_CACHE_OUT() {
 function g_CACHE_IN() {
     local -i e=$?
 
-    sync
+    cat "${g_CACHE_FILE?}"
 
-    if [ $e -eq ${CODE_SUCCESS?} ]; then
-        cat "${g_CACHE_FILE?}"
-    else
+    if [ $e -ne ${CODE_SUCCESS?} ]; then
         rm -f "${g_CACHE_FILE?}"
     fi
 
@@ -749,10 +750,9 @@ function :core:cached() {
         local cachefile="$1"
         local -i ttl; let ttl=${l_CACHE_TTL:-${g_CACHE_TTL?}}
         if [ ${ttl} -ge 0 ]; then
-            local -i age
-            let age=$(:core:age "${cachefile}")
+            local -i age=$(:core:age "${cachefile}")
             if [ $? -eq ${CODE_SUCCESS?} ]; then
-                if [ ${ttl} -gt 0 ] && [ ${age} -ge ${ttl} ]; then
+                if [ ${ttl} -gt 0 ] && [ ${age} -ge ${ttl} ] || [ ${age} -eq -1 ]; then
                     #. Cache Miss (Expiry)
                     rm -f "${cachefile}"
                     let e=${CODE_FAILURE?}
@@ -950,7 +950,7 @@ function :core:execute() {
                         local cachefile
                         cpf:printf "%{@comment:#. Cached Data} %{r:%s}\n" "-=["
                         while read -r cachefile; do
-                            age=$(:core:age "${cachefile}")
+                            let age=$(:core:age "${cachefile}")
 
                             case $(::core:cache:cachetype "${cachefile}") in
                                 output)

@@ -40,10 +40,8 @@ function coreCacheTester() {
 
 function testCoreUnsupportedAssociativeArrayAssignments() {
     local vetted
-    vetted="$(md5sum <(git grep -E '[a-zA-Z0-9]+\+=\( *\['))"
-    assertEquals "${FUNCNAME[0]}/0"\
-        "07ae19932ce9efb152cae3537a63ac54"\
-        "${vetted%% *}"
+    vetted="$(git grep -E '^[^#]*[a-zA-Z0-9]+\+=\( *\['|grep -v ^lib/libsh/libsimbol/sanity.sh)"
+    assertEquals "${FUNCNAME[0]}/0" "" "${vetted}"
 }
 
 function testCoreGlobalArithmeticFailure() {
@@ -195,36 +193,39 @@ function testCoreMockDelete() {
 }
 
 function exitWith() {
-  g_CACHE_OUT "$*" || {
+  g_CACHE_OUT "$@" || {
     date +%s.%N
     core:return $1
   } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
 
 function testCoreCacheExitDoesNotCacheNegatives() {
-    #. Negative returns do not get cached...
-    local o1
-    o1=$(exitWith 111)
-    assertEquals "${FUNCNAME?}/1.1" 111 $?
-    assertEquals ${FUNCNAME?}/"1.2" "" "${o1}"
+    local o1; o1=$(exitWith 11)
+    assertEquals "${FUNCNAME?}/1.1.1" 11 $?
+    assertNotEquals "${FUNCNAME?}/1.1.2" "" "${o1}"
 
-    local o2
-    o2=$(exitWith 111)
-    assertEquals "${FUNCNAME?}/2.1" 111 $?
-    assertEquals ${FUNCNAME?}/"2.2" "" "${o2}"
+    local o2; o2=$(exitWith 11)
+    assertEquals "${FUNCNAME?}/1.2.1" 11 $?
+    assertNotEquals "${FUNCNAME?}/1.2.2" "" "${o2}"
+
+    #. Negative returns do not get cached...
+    assertNotEquals "${FUNCNAME?}/1.3" "${o1}" "${o2}"
+
+    #. Especially given a different input!
+    local o3; o3=$(exitWith 22)
+    assertEquals "${FUNCNAME?}/2.1" 22 $?
+    assertNotEquals "${FUNCNAME?}/2.2" "${o1}" "${o3}"
 }
 
 function testCoreCacheExitDoesCachePositives() {
     #. Positive ones do...
-    local o1
-    o1="$(exitWith 0)"
-    assertTrue ${FUNCNAME?}/"2.1" $?
+    local o1; o1=$(exitWith 0)
+    assertTrue "${FUNCNAME?}/2.1" $?
 
-    local o2
-    o2=$(exitWith 0)
-    assertTrue ${FUNCNAME?}/"2.2" $?
+    local o2; o2=$(exitWith 0)
+    assertTrue "${FUNCNAME?}/2.2" $?
 
-    assertEquals ${FUNCNAME?}/"2.3" "${o1}" "${o2}"
+    assertEquals "${FUNCNAME?}/2.3" "${o1}" "${o2}"
 }
 
 function testCoreCache() {
