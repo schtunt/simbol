@@ -22,13 +22,14 @@ function :tunnel:pid() {
         if [ -e "${SIMBOL_USER_SSH_CONTROLPATH}" ]; then
             local raw
             raw=$(
-                ssh ${g_SSH_OPTS} -o 'ControlMaster=no'\
+                ssh ${g_SSH_OPTS?} -o ControlMaster=no\
                     -S "${SIMBOL_USER_SSH_CONTROLPATH}" -O check NULL 2>&1 |
                     tr -d '\r\n'
             )
             e=$?
 
             if [ $e -eq 0 ]; then
+                #shellcheck disable=SC2001
                 echo "${raw}" |
                     sed -e 's/Master running (pid=\(.*\))$/\1/'
             fi
@@ -54,8 +55,9 @@ function tunnel:status() {
         if [ $e -eq ${CODE_SUCCESS?} ]; then
             theme HAS_AUTOED $e "${pid:-NO_TUNNEL}"
 
-            while read line; do
-                IFS='[: ]' read lh1 lport lh2 rport rhost <<< "${line}"
+            while read -r line; do
+                #shellcheck disable=SC2034
+                IFS='[: ]' read -r lh1 lport lh2 rport rhost <<< "${line}"
                 cpf "Tunnel from %{@int:${lport}} to %{@host:${rhost}}:%{@int:${rport}}\n"
             done < <(
                 ps -fC ssh |
@@ -131,8 +133,8 @@ function :tunnel:stop() {
         if [ -e "${SIMBOL_USER_SSH_CONTROLPATH}" ]; then
             pid=$(:tunnel:pid ${hcs})
             if [ $? -eq ${CODE_SUCCESS?} ]; then
-                ssh ${g_SSH_OPTS} -no 'ControlMaster=no'\
-                    -fNS "${SIMBOL_USER_SSH_CONTROLPATH}" ${hcs} -O stop >/dev/null 2>&1
+                ssh ${g_SSH_OPTS} -no ControlMaster=no\
+                    -fNS "${SIMBOL_USER_SSH_CONTROLPATH}" ${hcs} -O stop 2>&/dev/null
                 e=$?
             fi
         else
@@ -184,8 +186,6 @@ function :tunnel:create() {
         #. all get -L
         if [ -S ${SIMBOL_USER_SSH_CONTROLPATH} ]; then
             if ! :net:localportping ${lport}; then
-                local -i first=0
-                local -i last=${#hcss[@]}
                 local -a cmd
                 local hcsn
                 for ((i=0; i<${#hcss[@]}; i++)); do
@@ -252,7 +252,7 @@ function tunnel:create() {
             cpf "%{r:<--->}"
             cpf "%{@ip:${raddr?}}:%{@int:${rport}}"
             cpf "] ..."
-            :tunnel:create ${laddr} ${lport} ${raddr} ${rport} ${hcss[@]}
+            :tunnel:create ${laddr} ${lport} ${raddr} ${rport} "${hcss[@]}"
             e=$?
             if [ $e -ne ${CODE_E01?} ]; then
                 theme HAS_AUTOED $e
