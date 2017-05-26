@@ -1,6 +1,7 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 core:import util
 
+#. Util -={
 function utilOneTimeSetUp() {
     : pass
 }
@@ -17,7 +18,6 @@ function utilOneTimeTearDown() {
     : pass
 }
 
-#. -={
 #. testCoreUtilUndelimitInternal -={
 function testCoreUtilUndelimitInternal() {
     # shellcheck disable=SC2034

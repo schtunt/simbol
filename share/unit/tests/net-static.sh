@@ -1,6 +1,7 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 core:import net
 
+#. Net -={
 function netOneTimeSetUp() {
     : pass
 }
@@ -17,6 +18,7 @@ function netOneTimeTearDown() {
     : pass
 }
 
+#. testCoreNetPortpersistInternal -={
 function testCoreNetPortpersistInternal() {
     local -a tcpPorts=(
         $(netstat -ntl|awk -F '[: ]+' '$1~/^tcp$/&&$8~/^LISTEN$/{print$5}')
@@ -37,7 +39,8 @@ function testCoreNetPortpersistInternal() {
         fi
     done
 }
-
+#. }=-
+#. testCoreNetLocalportpingInternal -={
 function testCoreNetLocalportpingInternal() {
     :net:localportping 22
     assertFalse '0.1' $?
@@ -45,7 +48,8 @@ function testCoreNetLocalportpingInternal() {
     :net:localportping 5000
     assertFalse '0.2' $?
 }
-
+#. }=-
+#. testCoreNetFreelocalportInternal -={
 function testCoreNetFreelocalportInternal() {
     local -i port
     for ((i=0; i<10; i++)); do
@@ -59,12 +63,14 @@ function testCoreNetFreelocalportInternal() {
         assertTrue '0.3' $?
     done
 }
-
+#. }=-
+#. testCoreNetMyipInternal -={
 function testCoreNetMyipInternal() {
     :net:myip >/dev/null
     assertTrue '0.1' $?
 }
-
+#. }=-
+#. testCoreNetI2sInternal -={
 function testCoreNetI2sInternal() {
     local -a ifaces=( $(ifconfig|awk -F: '$0~/^[a-z]/{print$1}') )
     local iface
@@ -78,4 +84,5 @@ function testCoreNetI2sInternal() {
         fi
     done
 }
-
+#. }=-
+#. }=-

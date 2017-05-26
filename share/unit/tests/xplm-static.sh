@@ -1,5 +1,6 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 core:import util
+core:import xplm
 
 #. XPLM -={
 function xplmOneTimeSetUp() {
@@ -18,13 +19,6 @@ function xplmOneTimeTearDown() {
     : pass
 }
 
-#. testCoreXplmVersionsInternal() -={
-testCoreXplmVersionsInternal() {
-    core:import xplm
-
-    : noop
-}
-#. }=-
 #. testCoreXplmLoadvirtenvPrivate() -={
 testCoreXplmLoadvirtenvPrivate() {
     : noop

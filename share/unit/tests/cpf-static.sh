@@ -1,6 +1,7 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 core:import cpf
 
+#. CPF -={
 function cpfOneTimeSetUp() {
     declare -g g_PLAYGROUND="/tmp/cpf-pg"
     rm -rf ${g_PLAYGROUND?}
@@ -18,10 +19,12 @@ function cpfOneTimeTearDown() {
     rm -rf ${g_PLAYGROUND?}
 }
 
+#. testCoreCpfInitializePublic -={
 function testCoreCpfInitializePublic() {
     cpf:initialize
 }
-
+#. }=-
+#. testCoreCpfPrintfPublic -={
 function testCoreCpfPrintfPublic() {
     local -a tester=(
         '.%{d:dbg}.'
@@ -79,12 +82,14 @@ SIMBOL_OUTPUT_THEME+=(
 
     mock:clear
 }
-
+#. }=-
+#. testCoreCpfModule_is_modifiedPrivate -={
 function testCoreCpfModule_is_modifiedPrivate() {
     ::cpf:module_is_modified "$(core:module_path remote)" remote
     assertFalse '::cpf:is_modified/1.1' $?
 }
-
+#. }=-
+#. testCoreCpfModule_has_alertsPrivate -={
 function testCoreCpfModule_has_alertsPrivate() {
     local data
 
@@ -96,11 +101,13 @@ function testCoreCpfModule_has_alertsPrivate() {
     assertFalse "${FUNCNAME?}/2.1" $?
     assertEquals "${FUNCNAME?}/2.2" "" "${data}"
 }
-
+#. }=-
+#. testCoreCpfModulePrivate -={
 function testCoreCpfModulePrivate() {
     : noop
 }
-
+#. }=-
+#. testCoreCpfFunction_has_alertsPrivate -={
 function testCoreCpfFunction_has_alertsPrivate() {
     local data
 
@@ -116,11 +123,13 @@ function testCoreCpfFunction_has_alertsPrivate() {
     assertFalse "${FUNCNAME?}/3.1" $?
     assertEquals "${FUNCNAME?}/3.2" "" "${data}"
 }
-
+#. }=-
+#. testCoreCpfFunctionPrivate -={
 function testCoreCpfFunctionPrivate() {
     : noop
 }
-
+#. }=-
+#. testCoreCpfIs_fmtPrivate -={
 function testCoreCpfIs_fmtPrivate() {
     ::cpf:is_fmt '%s'
     assertTrue '::cpf:is_fmt/1.1' $?
@@ -137,7 +146,8 @@ function testCoreCpfIs_fmtPrivate() {
     ::cpf:is_fmt '%{%ss}%'
     assertTrue '::cpf:is_fmt/1.5' $?
 }
-
+#. }=-
+#. testCoreCpfThemePrivate -={
 function testCoreCpfThemePrivate() {
     local out
     out=$(::cpf:theme "@host" "%s")
@@ -145,7 +155,8 @@ function testCoreCpfThemePrivate() {
     assertEquals '::cpf:theme/1.2' "${out}" "@ %{y:%s} %s"
     assertEquals '::cpf:theme/1.3' "$(::cpf:theme "@netgroup" "%s")" "+ %{c:%s} %s"
 }
-
+#. }=-
+#. testCoreCpfIndentPublic -={
 function testCoreCpfIndentPublic() {
     local -i cpf_indent
     let cpf_indent=${CPF_INDENT}
@@ -179,3 +190,5 @@ function testCoreCpfIndentPublic() {
 
     let CPF_INDENT=${cpf_indent}
 }
+#. }=-
+#. }=-

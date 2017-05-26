@@ -5,6 +5,7 @@ core:import vault
 
 declare -g g_GPGKID
 
+#. Vault -={
 function vaultOneTimeSetUp() {
     : pass
 }
@@ -49,6 +50,7 @@ function vaultOneTimeTearDown() {
     : pass
 }
 
+#. testCoreVaultCreatePublic -={
 function testCoreVaultCreatePublic() {
     local vault=${1:-${g_VAULT?}}
     local vault_tmp=$(::vault:getTempFile ${vault} killme)
@@ -62,7 +64,8 @@ function testCoreVaultCreatePublic() {
     test -e ${vault}
     assertTrue 0.2 $?
 }
-
+#. }=-
+#. testCoreVaultCleanPrivate -={
 function testCoreVaultCleanPrivate() {
     local vault="${1:-${g_VAULT?}}"
     local vault_tmp=$(::vault:getTempFile ${vault} killme)
@@ -93,7 +96,8 @@ function testCoreVaultCleanPrivate() {
     assertEquals 0.6 400 "$(:util:statmode "${vault_bu}")"
     rm -f ${vault_bu}
 }
-
+#. }=-
+#. testCoreVaultCreateInternal -={
 function testCoreVaultCreateInternal() {
     local vault="${1:-${g_VAULT?}}"
     local vault_tmp=$(::vault:getTempFile ${vault} killme)
@@ -107,12 +111,14 @@ function testCoreVaultCreateInternal() {
     test -e ${vault}
     assertTrue 0.2 $?
 }
-
+#. }=-
+#. testCoreVaultListPublic -={
 function testCoreVaultListPublic() {
     core:wrapper vault list >${stdoutF?} 2>${stderrF?}
     assertTrue 0.1 $?
 }
-
+#. }=-
+#. testCoreVaultListInternal -={
 function testCoreVaultListInternal() {
     local vault="${1:-${g_VAULT?}}"
     local vault_tmp=$(::vault:getTempFile ${vault} killme)
@@ -122,7 +128,8 @@ function testCoreVaultListInternal() {
     :vault:list ${vault} >${stdoutF?} 2>${stderrF?}
     assertTrue 0.1 $?
 }
-
+#. }=-
+#. testCoreVaultEditPublic -={
 function testCoreVaultEditPublic() {
     local vault="${1:-${g_VAULT?}}"
     local vault_tmp=$(::vault:getTempFile ${vault} killme)
@@ -146,7 +153,8 @@ function testCoreVaultEditPublic() {
         assertEquals 0.4 400 ${mode}
     fi
 }
-
+#. }=-
+#. testCoreVaultReadInternal -={
 function testCoreVaultReadInternal() {
     :vault:read MY_SECRET_1 >${stdoutF?} 2>${stderrF?}
     assertTrue 0.1 $?
@@ -154,7 +162,8 @@ function testCoreVaultReadInternal() {
     :vault:read MY_SECRET_111 >${stdoutF?} 2>${stderrF?}
     assertFalse 0.2 $?
 }
-
+#. }=-
+#. testCoreVaultReadPublic -={
 function testCoreVaultReadPublic() {
     core:wrapper vault read MY_SECRET_1 >${stdoutF?} 2>${stderrF?}
     assertTrue 0.1 $?
@@ -162,7 +171,8 @@ function testCoreVaultReadPublic() {
     core:wrapper vault read MY_SECRET_111 >${stdoutF?} 2>${stderrF?}
     assertFalse 0.2 $?
 }
-
+#. }=-
+#. testCoreVaultEncryptionInternal -={
 function testCoreVaultEncryptionInternal() {
     local secret="${SIMBOL_USER_VAR_TMP}/secret.txt"
     rm -f "${secret}"
@@ -188,8 +198,9 @@ function testCoreVaultEncryptionInternal() {
 
     rm -f "${secret}"
 }
-
-function test_1_CoreVaultEncryptPublic() {
+#. }=-
+#. testCoreVaultEncryptPublic -={
+function testCoreVaultEncryptPublic() {
     local secret="${SIMBOL_USER_VAR_TMP}/secret.txt"
     rm -f "${secret}"
     echo "Secret" > "${secret}"
@@ -205,8 +216,9 @@ function test_1_CoreVaultEncryptPublic() {
     md5="$(md5sum "${secret}" | awk '{print$1}')"
     assertNotEquals 1.2.2 "6657d705191a76297fe693296075b400" "${md5}"
 }
-
-function test_2_CoreVaultDecryptPublic() {
+#. }=-
+#. testCoreVaultDecryptPublic -={
+function testCoreVaultDecryptPublic() {
     local secret="${SIMBOL_USER_VAR_TMP}/secret.txt"
     [ -e "${secret}" ]
     assertTrue 2.1 $?
@@ -222,3 +234,5 @@ function test_2_CoreVaultDecryptPublic() {
 
     rm -f "${secret}"
 }
+#. }=-
+#. }=-
