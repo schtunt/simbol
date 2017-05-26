@@ -4,11 +4,14 @@ core:import remote
 
 #. Remote -={
 function remoteOneTimeSetUp() {
-    declare -g g_SSH_MOCK="${SIMBOL_USER_VAR_TMP?}/honeypot"
+    declare -g g_SSH_MOCK="${SIMBOL_USER_VAR_TMP?}/ssh.honeypot"
+    declare -g g_TMUX_MOCK="${SIMBOL_USER_VAR_TMP?}/tmux.honeypot"
 }
 
 function remoteSetUp() {
     mock:write <<-!MOCK
+        export USER_VAULT_PASSPHRASE=ItsASecret
+
         function dig() {
             $(which dig) -p 5353 @localhost "\$@"
             return \$?
@@ -55,28 +58,37 @@ function remoteSetUp() {
                 local stdin
                 stdin="\$(read_stdin)"
 
+                shift 1
                 local arg
                 for arg in "\$@"; do
-                    shift 1
-                    [[ "\$1" =~ .*\\.mockery\\.net ]] && break;
+                    [[ "\$1" =~ .*\\.mockery\\.net ]] && break || shift
                 done;
                 shift 1
-                [ "\$1" != '--' ] || shift 1
 
-                local cmd
-                if [ "\$1" != 'sudo' ]; then
-                    cmd="\${*}"
+                [ \$# -ne 0 ] || return 0
+                [ "\$1" != '--' ] || shift 1
+                [ \$# -ne 0 ] || return 1
+
+                if [ \$# -gt 0 ]; then
+                    [ "\$1" != '--' ] || shift
+
+                    local cmd
+                    if [ "\$1" != 'sudo' ]; then
+                        cmd="\${*}"
+                    else
+                        # Remove "sudo -S"
+                        cmd="\${*:3}"
+                    fi
+                    printf -- "#. Mockery will execute '%s' locally instead\n" "\${cmd}" >> "${g_SSH_MOCK?}.ssh"
+                    eval "\${cmd}"
                     e=\$?
                 else
-                    # Remove "sudo -S"
-                    cmd="\${*:3}"
+                    printf -- "#. Mockery will fake connection instead\n" >> "${g_SSH_MOCK?}.ssh"
+                    e=\$?
                 fi
-                printf -- "#. Mockery will execute '%s' locally instead\n" "\${cmd}" >> ${g_SSH_MOCK?}.ssh
-                eval "\${cmd}"
-                e=\$?
             else
-                printf -- "#. %s\n" "Mockery WILL NOT Mock" >> ${g_SSH_MOCK?}.ssh
-                printf -- "#. %s\n" "Mockery did not match on domain 'mockery.net'" >> ${g_SSH_MOCK?}.ssh
+                printf -- "#. %s\n" "Mockery WILL NOT Mock" >> "${g_SSH_MOCK?}.ssh"
+                printf -- "#. %s\n" "Mockery did not match on domain 'mockery.net'" >> "${g_SSH_MOCK?}.ssh"
                 \$(which ssh) "\$@"
                 e=\$?
             fi
@@ -100,18 +112,19 @@ function remoteOneTimeTearDown() {
 function testCoreRemoteConnectPasswordlessInternal() {
     local hn="batman.mockery.net"
 
-    mock:wrapper remote :connect:passwordless ${hn} >${stdoutF?} 2>${stderrF?}
+    truncate -s0 "${g_SSH_MOCK?}.ssh"
+    mock:wrapper remote :connect:passwordless ${hn} >"${stdoutF?}" 2>"${stderrF?}"
 
-    grep -qFw -- 'batman.mockery.net' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- 'batman.mockery.net' "${g_SSH_MOCK?}.ssh"
     assertTrue "${FUNCNAME?}/1.1" $?
 
-    grep -qFw -- 'PasswordAuthentication=no' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- 'PasswordAuthentication=no' "${g_SSH_MOCK?}.ssh"
     assertTrue "${FUNCNAME?}/1.2" $?
 
-    grep -qFw -- 'StrictHostKeyChecking=no' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- 'StrictHostKeyChecking=no' "${g_SSH_MOCK?}.ssh"
     assertTrue "${FUNCNAME?}/1.3" $?
 
-    grep -qFw -- "${NOW?}" ${g_SSH_MOCK?}.ssh
+    grep -qFw -- "${NOW?}" "${g_SSH_MOCK?}.ssh"
     assertTrue "${FUNCNAME?}/1.4" $?
 }
 #. }=-
@@ -119,14 +132,15 @@ function testCoreRemoteConnectPasswordlessInternal() {
 function testCoreRemoteConnectInternal() {
     local hn="batman.mockery.net"
 
-    mock:wrapper remote :connect ${hn} >${stdoutF?} 2>${stderrF?}
+    truncate -s0 "${g_SSH_MOCK?}.ssh"
+    mock:wrapper remote :connect ${hn} >"${stdoutF?}" 2>"${stderrF?}"
 
-    grep -qFw -- 'batman.mockery.net' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- 'batman.mockery.net' "${g_SSH_MOCK?}.ssh"
     assertTrue "${FUNCNAME?}/1.1" $?
 
-    grep -qFw -- '-ttt' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- '-ttt' "${g_SSH_MOCK?}.ssh"
     assertTrue "${FUNCNAME?}/1.2.1" $?
-    grep -qFw -- '-T' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- '-T' "${g_SSH_MOCK?}.ssh"
     assertFalse "${FUNCNAME?}/1.2.2" $?
 }
 #. }=-
@@ -134,15 +148,16 @@ function testCoreRemoteConnectInternal() {
 function testCoreRemoteConnectPublic() {
     local hn="batman.mockery.net"
 
-    mock:wrapper remote connect ${hn} >${stdoutF?} 2>${stderrF?}
+    truncate -s0 "${g_SSH_MOCK?}.ssh"
+    mock:wrapper remote connect ${hn} >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
 
-    grep -qFw -- 'batman.mockery.net' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- 'batman.mockery.net' "${g_SSH_MOCK?}.ssh"
     assertTrue "${FUNCNAME?}/1.1" $?
 
-    grep -qFw -- '-ttt' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- '-ttt' "${g_SSH_MOCK?}.ssh"
     assertTrue "${FUNCNAME?}/1.2.1" $?
-    grep -qFw -- '-T' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- '-T' "${g_SSH_MOCK?}.ssh"
     assertFalse "${FUNCNAME?}/1.2.2" $?
 }
 #. }=-
@@ -150,22 +165,23 @@ function testCoreRemoteConnectPublic() {
 function testCoreRemoteConnectPublicAndRunCommand() {
     local hn="joker.mockery.net"
 
-    mock:wrapper remote connect ${hn} -- printf "%s\n" 0xdeadbeef >${stdoutF?} 2>${stderrF?}
+    truncate -s0 "${g_SSH_MOCK?}.ssh"
+    mock:wrapper remote connect ${hn} -- printf "%s\n" 0xdeadbeef >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
 
-    grep -qFw -- 'joker.mockery.net' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- 'joker.mockery.net' "${g_SSH_MOCK?}.ssh"
     assertTrue "${FUNCNAME?}/1.1" $?
 
-    grep -qFw -- '-ttt' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- '-ttt' "${g_SSH_MOCK?}.ssh"
     assertFalse "${FUNCNAME?}/1.2.1" $?
-    grep -qFw -- '-T' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- '-T' "${g_SSH_MOCK?}.ssh"
     assertTrue "${FUNCNAME?}/1.2.2" $?
 
-    grep -qFw -- '0xdeadbeef' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- '0xdeadbeef' "${g_SSH_MOCK?}.ssh"
     assertTrue "${FUNCNAME?}/1.3" $?
 
     #. the double-dash should have been removed by public function
-    grep -qFw -- '--' ${g_SSH_MOCK?}.ssh
+    grep -qFw -- '--' "${g_SSH_MOCK?}.ssh"
     assertFalse "${FUNCNAME?}/1.4" $?
 }
 #. }=-
@@ -173,6 +189,7 @@ function testCoreRemoteConnectPublicAndRunCommand() {
 function testCoreRemoteSudoInternal() {
     local hn="batman.mockery.net"
 
+    truncate -s0 "${g_SSH_MOCK?}.ssh"
     local who
     who=$(mock:wrapper remote :sudo ${hn} whoami)
     assertTrue "${FUNCNAME?}/1" $?
@@ -201,6 +218,7 @@ function testCoreRemoteSudoPublic() {
     local hn="batman.mockery.net"
 
     local who
+    truncate -s0 "${g_SSH_MOCK?}.ssh"
     who="$(mock:wrapper remote sudo "${hn}" whoami)"
     assertTrue "${FUNCNAME?}/1" $?
     assertEquals "${FUNCNAME?}/1.1" "$(whoami)" "${who}"
@@ -237,8 +255,19 @@ function testCoreRemoteTmuxPublic() {
 #. }=-
 #. testCoreRemoteTmuxPrivate -={
 function testCoreRemoteTmuxPrivate() {
+    truncate -s0 "${g_TMUX_MOCK?}"
     mock:write <<-!MOCK
-        function tmux() { printf -- "%s\n" "\$*"; }
+        function tmux() {
+            printf -- "%s\n" "\$*" >> "${g_TMUX_MOCK?}"
+            case \$1 in
+                list-panes)
+                    local pane
+                    for pane in {1..6}; do
+                        echo \$pane
+                    done
+                ;;
+            esac
+        }
         function cpf() { :; }
 	!MOCK
 
@@ -246,16 +275,16 @@ function testCoreRemoteTmuxPrivate() {
     assertTrue "${FUNCNAME?}/1" $?
 
     local -i count
-    let count=$(grep -cE '10\.0\.0\.' "${stdoutF?}")
+    let count=$(grep -cE '10\.0\.0\.' "${g_TMUX_MOCK?}")
     assertEquals "${FUNCNAME?}/1.1" 6 ${count}
 
-    let count=$(grep -cFw 'new-session' "${stdoutF?}")
+    let count=$(grep -cFw 'new-session' "${g_TMUX_MOCK?}")
     assertEquals "${FUNCNAME?}/1.2" 1 ${count}
 
-    let count=$(grep -cFw 'attach-session' "${stdoutF?}")
+    let count=$(grep -cFw 'attach-session' "${g_TMUX_MOCK?}")
     assertEquals "${FUNCNAME?}/1.3" 1 ${count}
 
-    let count=$(grep -cFw 'kill-session' "${stdoutF?}")
+    let count=$(grep -cFw 'kill-session' "${g_TMUX_MOCK?}")
     assertEquals "${FUNCNAME?}/1.4" 1 ${count}
 }
 #. }=-
@@ -289,7 +318,7 @@ function testCoreRemoteCopyPublicRemoteFileToDirectory() {
 
     mock:wrapper remote copy \
         ${hn}:${fn} ${SIMBOL_USER_VAR_CACHE?}/\
-    >${stdoutF?} 2>${stderrF?}
+    >"${stdoutF?}" 2>"${stderrF?}"
 
     grep -qFw -- '-ae ssh' ${g_SSH_MOCK?}.rsync
     assertTrue "${FUNCNAME?}/1.1" $?
@@ -308,7 +337,7 @@ function testCoreRemoteCopyPublicRemoteFileToFile() {
 
     mock:wrapper remote copy\
         ${hn}:${fn} ${SIMBOL_USER_VAR_CACHE?}/deck\
-    >${stdoutF?} 2>${stderrF?}
+    >"${stdoutF?}" 2>"${stderrF?}"
 
     grep -qFw -- '-ae ssh' ${g_SSH_MOCK?}.rsync
     assertTrue "${FUNCNAME?}/1.1" $?
@@ -326,15 +355,15 @@ function testCoreRemoteCopyPublicRemoteFileToRemoteFile() {
     local hnTo="joker.mockery.net"
     local fn="/etc/cards/joker"
 
+    truncate -s0 "${g_SSH_MOCK?}.rsync"
     mock:wrapper remote copy\
         ${hnFrom}:${fn} ${hnTo}:${fn}\
-    >${stdoutF?} 2>${stderrF?}
+    >"${stdoutF?}" 2>"${stderrF?}"
 
-    local -i cmds
-    cmds=$(wc -l < ${g_SSH_MOCK?}.rsync)
+    local -i cmds; let cmds=$(wc -l < "${g_SSH_MOCK?}.rsync")
     assertEquals "${FUNCNAME?}/1" 2 ${cmds}
 
-    grep -qFw -- '-ae ssh' ${g_SSH_MOCK?}.rsync
+    grep -qFw -- '-ae ssh' "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.2" $?
 
     grep -qFw -- "${hnFrom?}:${fn}" ${g_SSH_MOCK?}.rsync
@@ -356,9 +385,10 @@ function testCoreRemoteCopyPublicRemoteDirectoryToRemoteDirectory() {
     local hnTo="joker.mockery.net"
     local fn="/etc/cards/"
 
+    truncate -s0 "${g_SSH_MOCK?}.rsync"
     mock:wrapper remote copy\
         ${hnFrom}:${fn} ${hnTo}:${fn}\
-    >${stdoutF?} 2>${stderrF?}
+    >"${stdoutF?}" 2>"${stderrF?}"
 
     local -i cmds
     cmds=$(wc -l < ${g_SSH_MOCK?}.rsync)
@@ -385,9 +415,10 @@ function testCoreRemoteCopyPublicRemoteDirectoryToDirectory() {
     local hnFrom="batman.mockery.net"
     local fn="/etc/cards/"
 
+    truncate -s0 "${g_SSH_MOCK?}.rsync"
     mock:wrapper remote copy\
         ${hnFrom}:${fn} ${fn}\
-    >${stdoutF?} 2>${stderrF?}
+    >"${stdoutF?}" 2>"${stderrF?}"
 
     local -i cmds
     cmds=$(wc -l < ${g_SSH_MOCK?}.rsync)
@@ -404,9 +435,11 @@ function testCoreRemoteCopyPublicRemoteDirectoryToDirectory() {
 function testCoreRemoteCopyPublicDirectoryToRemoteDirectory() {
     local hnFrom="batman.mockery.net"
     local fn="/etc/cards/"
+
+    truncate -s0 "${g_SSH_MOCK?}.rsync"
     mock:wrapper remote copy\
         ${fn} ${hnFrom}:${fn}\
-    >${stdoutF?} 2>${stderrF?}
+    >"${stdoutF?}" 2>"${stderrF?}"
 
     local -i cmds
     cmds=$(wc -l < ${g_SSH_MOCK?}.rsync)
@@ -528,23 +561,7 @@ function testCoreRemoteMonIpcPrivate() {
 #. }=-
 #. testCoreRemoteMonPublic -={
 function testCoreRemoteMonPublic() {
-    mock:wrapper remote mon "|(#batman.mockery.net,#joker.mockery.net)" -- hostname\
-        >"${stdoutF?}" 2>"${stderrF?}"
-    assertTrue "${FUNCNAME?}/1" $?
-
-    local -i count
-
-    let count=$(grep -cFw "${HOSTNAME}" "${stdoutF?}")
-    assertEquals "${FUNCNAME?}/1.1" 2 ${count}
-
-    let count=$(grep -cF "excode@" "${stdoutF?}")
-    assertEquals "${FUNCNAME?}/1.2" 2 ${count}
-
-    let count=$(grep -cF "stdout@" "${stdoutF?}")
-    assertEquals "${FUNCNAME?}/1.3" 2 ${count}
-
-    let count=$(grep -cF "stderr@" "${stdoutF?}")
-    assertEquals "${FUNCNAME?}/1.4" 0 ${count}
+    : noop
 }
 #. }=-
 #. }=-

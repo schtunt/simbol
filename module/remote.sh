@@ -668,7 +668,7 @@ function ::remote:mon.ipc() {
     local hcs stdout stderr ee metadata_raw
     while [ ${incomplete} -eq 1 ]; do
         active=0
-        for state in "${STATES[@]}"; do
+        for state in "${STATES[@]+${STATES[@]}}"; do
             if [ "${state}" == "PENDING" ]; then
                 ((active++))
             fi
