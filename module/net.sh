@@ -4,7 +4,6 @@ Core networking module
 [core:docstring]
 
 #. Network Utilities -={
-core:import dns
 
 function :net:fix() {
     #. input  10.1.2.123/24
@@ -13,7 +12,7 @@ function :net:fix() {
 
     if [ $# -eq 1 ]; then
         local ip mask
-        IFS=/ read ip mask <<< "${1}"
+        IFS=/ read -r ip mask <<< "${1}"
 
         local ip_bits=$(:net:s2h "${ip}")
         local mask_bits=$(:net:b2nm "${mask}")
@@ -88,7 +87,7 @@ function :net:h2s() {
                 $(( (ip & (0xff << 8)) >> 8 ))
                 $(( ip & 0xff ))
             )
-            printf "%d.%d.%d.%d\n" ${q[@]}
+            printf "%d.%d.%d.%d\n" "${q[@]}"
             e=${CODE_SUCCESS?}
         fi
     else
@@ -160,10 +159,10 @@ function :net:hosts() {
             local -r ipx=$(:net:s2h ${ips})
             local -r nm=$(:net:b2nm ${nmb})
             local -r hm=$(:net:b2hm ${nmb})
-            local hb nw ip i=0
-            while [ ${i} -lt $((${hm} - 1)) ]; do
+            local nw ip i=0
+            while [ ${i} -lt $((hm - 1)) ]; do
                 ((i++))
-                ip=$(printf "0x%x" $(( ( ipx & nm ) + ${i})))
+                ip=$(printf "0x%x" $(( ( ipx & nm ) + i)))
                 :net:h2s ${ip}
                 e=$?
             done
@@ -272,7 +271,7 @@ function :net:freelocalport() {
     local -i e=${CODE_FAILURE?}
 
     freeport=0
-    for port in $@; do
+    for port in "$@"; do
         if ! :net:localportping ${port}; then
             freeport=$port
             e=${CODE_SUCCESS?}
@@ -282,7 +281,7 @@ function :net:freelocalport() {
 
     while [ ${freeport} -eq 0 ]; do
         ((port=1024+RANDOM))
-        if ! :net:localportping ${lport}; then
+        if ! :net:localportping ${port}; then
             freeport=${port}
             e=${CODE_SUCCESS?}
             break
