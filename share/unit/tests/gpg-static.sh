@@ -12,6 +12,14 @@ function gpgOneTimeSetUp() {
     )
 }
 
+function gpgSetUp() {
+    : pass
+}
+
+function gpgTearDown() {
+    : pass
+}
+
 function gpgOneTimeTearDown() {
     local file
     for file in "${!FILES[@]}"; do

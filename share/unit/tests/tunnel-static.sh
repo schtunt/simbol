@@ -3,17 +3,14 @@ core:import util
 core:import net
 core:import tunnel
 
-function tunnelTearDown() {
-    : noop
-    #sudo rm -rf ~root/.ssh
-    #rm -rf ~/.ssh/id_rsa.pub
-    #rm -rf ~/.ssh/id_rsa
+function tunnelOneTimeSetUp() {
+    : pass
 }
 
 function tunnelSetUp() {
     case ${g_MODE?} in
         prime)
-            : noop
+            : pass
         ;;
         execute)
             export g_PID=0
@@ -22,6 +19,14 @@ function tunnelSetUp() {
             exit 127
         ;;
     esac
+}
+
+function tunnelTearDown() {
+    : pass
+}
+
+function tunnelOneTimeTearDown() {
+    : pass
 }
 
 function test_1_0_CoreTunnelStartPublic() {

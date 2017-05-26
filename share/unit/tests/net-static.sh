@@ -5,6 +5,18 @@ function netOneTimeSetUp() {
     : pass
 }
 
+function netSetUp() {
+    : pass
+}
+
+function netTearDown() {
+    : pass
+}
+
+function netOneTimeTearDown() {
+    : pass
+}
+
 function testCoreNetPortpersistInternal() {
     local -a tcpPorts=(
         $(netstat -ntl|awk -F '[: ]+' '$1~/^tcp$/&&$8~/^LISTEN$/{print$5}')

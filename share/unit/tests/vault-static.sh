@@ -5,10 +5,14 @@ core:import vault
 
 declare -g g_GPGKID
 
+function vaultOneTimeSetUp() {
+    : pass
+}
+
 function vaultSetUp() {
     case ${g_MODE?} in
         prime)
-            : noop
+            : pass
         ;;
         execute)
             export SIMBOL_PROFILE=UNITTEST
@@ -39,6 +43,10 @@ function vaultTearDown() {
             return 127
         ;;
     esac
+}
+
+function vaultOneTimeTearDown() {
+    : pass
 }
 
 function testCoreVaultCreatePublic() {

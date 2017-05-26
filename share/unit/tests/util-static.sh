@@ -1,20 +1,20 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 core:import util
 
-function utilOneTimeStartUp() {
-    : noop
+function utilOneTimeSetUp() {
+    : pass
 }
 
-function utilStartUp() {
-    : noop
+function utilSetUp() {
+    : pass
 }
 
 function utilTearDown() {
-    : noop
+    : pass
 }
 
 function utilOneTimeTearDown() {
-    : noop
+    : pass
 }
 
 #. -={

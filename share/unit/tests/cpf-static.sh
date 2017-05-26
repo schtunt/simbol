@@ -6,6 +6,14 @@ function cpfOneTimeSetUp() {
     rm -rf ${g_PLAYGROUND?}
 }
 
+function cpfSetUp() {
+    : pass
+}
+
+function cpfTearDown() {
+    : pass
+}
+
 function cpfOneTimeTearDown() {
     rm -rf ${g_PLAYGROUND?}
 }

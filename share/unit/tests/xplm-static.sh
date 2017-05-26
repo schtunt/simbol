@@ -2,12 +2,20 @@
 core:import util
 
 #. XPLM -={
-function xplmTearDown() {
-    : noop
+function xplmOneTimeSetUp() {
+    : pass
 }
 
-function xplmStartUp() {
-    : noop
+function xplmSetUp() {
+    : pass
+}
+
+function xplmTearDown() {
+    : pass
+}
+
+function xplmOneTimeTearDown() {
+    : pass
 }
 
 #. testCoreXplmVersionsInternal() -={
