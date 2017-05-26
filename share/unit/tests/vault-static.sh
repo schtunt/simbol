@@ -81,7 +81,7 @@ function testCoreVaultCleanPrivate() {
 
     ::vault:clean
     assertTrue 0.1 $?
-    assertEquals 0.6 600 $(:util:statmode ${vault})
+    assertEquals 0.6 600 "$(:util:statmode "${vault}")"
 
     test ! -e ${vault_ts}
     assertTrue 0.2 $?
@@ -92,7 +92,7 @@ function testCoreVaultCleanPrivate() {
     #. Back-up should not be removed, just fixed
     test -e ${vault_bu}
     assertTrue 0.4 $?
-    assertEquals 0.6 400 $(:util:statmode ${vault_bu})
+    assertEquals 0.6 400 "$(:util:statmode "${vault_bu}")"
     rm -f ${vault_bu}
 }
 
@@ -143,7 +143,8 @@ function testCoreVaultEditPublic() {
     local vault_ts=$(::vault:getTempFile ${vault} timestamp)
     local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
 
-    EDITOR=cat core:wrapper vault edit ${vault} >${stdoutF?} 2>${stderrF?}
+    #shellcheck disable=SC2037
+    EDITOR=cat core:wrapper vault edit "${vault}" >${stdoutF?} 2>${stderrF?}
     assertTrue 0.1 $?
 
     #. No amendments, so no back-up should be created
