@@ -231,9 +231,8 @@ ddd
 eee
 fff
 !
-    if assertEquals 0 $?; then
-        assertEquals "ccc ddd" "$(cat ${stdoutF})"
-    fi
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/2" "ccc ddd" "$(cat ${stdoutF})"
 }
 #. }=-
 #. testPySetsOR -={
@@ -257,9 +256,9 @@ ddd
 eee
 fff
 !
-    if assertEquals 0 $?; then
-        assertEquals "aaa bbb eee fff ccc ddd" "$(cat ${stdoutF})"
-    fi
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/2" \
+        "aaa bbb eee fff ccc ddd" "$(cat ${stdoutF})"
 }
 #. }=-
 #. testPySetsDIFF -={
@@ -277,8 +276,7 @@ ddd
 eee
 fff
 !
-    if assertEquals 0 $?; then
-        assertEquals "aaa bbb" "$(cat ${stdoutF})"
-    fi
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/2" "aaa bbb" "$(cat ${stdoutF})"
 }
 #. }=-

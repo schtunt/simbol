@@ -23,8 +23,8 @@ function testCoreUtilUndelimitInternal() {
     # shellcheck disable=SC2034
     local -a array=( b a d b a b e )
     :util:join , array >${stdoutF?} 2>${stderrF?}
-    assertTrue ':util:join.0' $?
-    assertEquals ':util:join.1' "$(cat ${stdoutF})" 'b,a,d,b,a,b,e'
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/2" "$(cat ${stdoutF})" 'b,a,d,b,a,b,e'
 }
 #. }=-
 #. testCoreUtilJoinInternal -={
@@ -32,8 +32,8 @@ function testCoreUtilJoinInternal() {
     local string="b${SIMBOL_DELIM?}a${SIMBOL_DELIM?}d${SIMBOL_DELIM?}"
     string+="b${SIMBOL_DELIM?}a${SIMBOL_DELIM?}b${SIMBOL_DELIM?}e"
     echo "${string}" | :util:undelimit >${stdoutF?} 2>${stderrF?}
-    assertTrue ':util:undelimit.0' $?
-    assertEquals ':util:undelimit.1' "$(cat <<!
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/2" "$(cat <<!
 b
 a
 d
@@ -49,8 +49,8 @@ e
 function testCoreUtilJoinInternalWithDelim() {
     local string="b,a,d,b,a,b,e"
     echo "${string}" | :util:undelimit , >${stdoutF?} 2>${stderrF?}
-    assertTrue ':util:undelimit.0' $?
-    assertEquals ':util:undelimit.1' "$(cat <<!
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/1" "$(cat <<!
 b
 a
 d
@@ -71,8 +71,8 @@ function testCoreUtilZipEvalInternal() {
     local -a v=( {A..D} )
 
     :util:zip.eval k v >${stdoutF?} 2>${stderrF?}
-    assertTrue ':util:zip.eval.0' $?
-    assertEquals ':util:zip.eval.1' "$(cat ${stdoutF})" "(
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/2" "$(cat ${stdoutF})" "(
 [a]=A
 [b]=B
 [c]=C
@@ -97,6 +97,8 @@ function testCoreUtilAnsi2htmlInternal() {
 
         echo #New line
     done | :util:ansi2html >${stdoutF?} 2>${stderrF?}
+    assertTrue "${FUNCNAME?}/1" $?
+
     #. TODO: Validate html syntax
 }
 #. }=-
