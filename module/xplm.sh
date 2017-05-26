@@ -95,20 +95,20 @@ function :xplm:requires() {
         case ${plid} in
             py)
                 if ::xplm:loadvirtenv ${plid}; then
-                    python -c "import ${required}" 2>/dev/null
-                    [ $? -ne 0 ] || e=${CODE_SUCCESS?}
+                    python -c "import ${required}" 2>/dev/null &&
+                        let e=${CODE_SUCCESS?}
                 fi
             ;;
             rb)
                 if ::xplm:loadvirtenv ${plid}; then
-                    ruby -e "require '${required//-/\/}'" 2>/dev/null
-                    [ $? -ne 0 ] || e=${CODE_SUCCESS?}
+                    ruby -e "require '${required//-/\/}'" 2>/dev/null &&
+                        let e=${CODE_SUCCESS?}
                 fi
             ;;
             pl)
                 if ::xplm:loadvirtenv ${plid}; then
-                    perl -M${required} -e ';' 2>/dev/null
-                    [ $? -ne 0 ] || e=${CODE_SUCCESS?}
+                    perl -M${required} -e ';' 2>/dev/null &&
+                        let e=${CODE_SUCCESS?}
                 fi
             ;;
         esac
@@ -161,7 +161,7 @@ function xplm:versions() {
         esac
     elif [ $# -eq 0 ]; then
         e=${CODE_SUCCESS?}
-        for plid in ${!g_PROLANG_ROOT[@]}; do
+        for plid in "${!g_PROLANG_ROOT[@]}"; do
             if ! :xplm:versions ${plid}; then
                 e=${CODE_FAILURE?}
             fi
@@ -230,7 +230,7 @@ function xplm:list() {
         done
 
         if [ $e -ne ${CODE_FAILURE?} ]; then
-            for plid in ${!prolangs[@]}; do
+            for plid in "${!prolangs[@]}"; do
                 if [[ $# -eq 0 || ${prolangs[${plid}]} -eq 1 ]]; then
                 cpf "Package listing for %{y:%s}->%{r:%s-%s}...\n"\
                     "${plid}"\
@@ -324,7 +324,7 @@ function :xplm:install() {
             ;;
             pl)
                 if ::xplm:loadvirtenv ${plid}; then
-                    cpanm ${@:2} \
+                    cpanm "${@:2}" \
                         >>${SIMBOL_USER}/var/log/${virtenv}.log 2>&1
                     e=$?
                 fi
@@ -347,8 +347,10 @@ function :xplm:install() {
                     mkdir -p ${RBENV_ROOT?}
                     echo .gems > ${RBENV_ROOT?}/.rbenv-gemsets
 
+                    local xplenv
+
                     #. rbenv.git
-                    local xplenv="git://github.com/sstephenson/rbenv.git"
+                    xplenv="git://github.com/sstephenson/rbenv.git"
                     if [ ! -e ${SIMBOL_USER_VAR_SCM?}/${virtenv}.git ]; then
                         git clone -q ${xplenv} ${SIMBOL_USER_VAR_SCM?}/${virtenv}.git
                     fi
@@ -357,16 +359,16 @@ function :xplm:install() {
 
                     #. rbenv->build
                     mkdir -p ${RBENV_ROOT?}/plugins
-                    local build="git://github.com/sstephenson/ruby-build.git"
+                    xplenv="git://github.com/sstephenson/ruby-build.git"
                     if [ ! -e ${SIMBOL_USER_VAR_SCM?}/${virtenv}-build.git ]; then
-                        git clone -q ${build} ${SIMBOL_USER_VAR_SCM?}/${virtenv}-build.git
+                        git clone -q ${xplenv} ${SIMBOL_USER_VAR_SCM?}/${virtenv}-build.git
                     fi
                     ln -sf ${SIMBOL_USER_VAR_SCM?}/${virtenv}-build.git\
                         ${RBENV_ROOT?}/plugins/${virtenv}-build
 
-                    local bundler="git://github.com/carsomyr/rbenv-bundler.git"
+                    xplenv="git://github.com/carsomyr/rbenv-bundler.git"
                     if [ ! -e ${SIMBOL_USER_VAR_SCM?}/${virtenv}-bundler.git ]; then
-                        git clone -q ${build} ${SIMBOL_USER_VAR_SCM?}/${virtenv}-bundler.git
+                        git clone -q ${xplenv} ${SIMBOL_USER_VAR_SCM?}/${virtenv}-bundler.git
                     fi
                     ln -sf ${SIMBOL_USER_VAR_SCM?}/${virtenv}-bundler.git\
                         ${RBENV_ROOT?}/plugins/${virtenv}-bundler
@@ -511,11 +513,11 @@ function :xplm:purge() {
         case ${plid} in
             rb|py|pl)
                 local virtenv="${plid}env"
-                rm -f ${SIMBOL_USER_VAR_LIBEXEC?}/${virtenv}
-                rm -rf ${SIMBOL_USER_VAR}/${virtenv}
+                rm -f ${SIMBOL_USER_VAR_LIBEXEC:?}/${virtenv}
+                rm -rf ${SIMBOL_USER_VAR:?}/${virtenv}
 
                 #. Unnecessary VCS purge...
-                rm -rf ${SIMBOL_USER_VAR_SCM}/${virtenv}*
+                rm -rf ${SIMBOL_USER_VAR_SCM:?}/${virtenv}*
 
                 e=${CODE_SUCCESS?}
             ;;
@@ -563,10 +565,9 @@ function :xplm:selfupdate() {
         case ${plid} in
             rb|py|pl)
                 local -a vcses
-                IFS=, read -a vcses <<< "${g_PROLANG_VCS[${plid}]}"
+                IFS=, read -r -a vcses <<< "${g_PROLANG_VCS[${plid}]}"
                 for vcs in ${vcses}; do
-                    cd ${xplmscm}/${vcs} >/dev/null 2>&1
-                    if [ $? -eq 0 ]; then
+                    if cd ${xplmscm}/${vcs} >&/dev/null; then
                         if ! git pull >> ${SIMBOL_USER}/var/log/${virtenv}.log 2>&1; then
                             e=${CODE_FAILURE?}
                         fi
@@ -601,7 +602,7 @@ function xplm:selfupdate() {
         esac
     elif [ $# -eq 0 ]; then
         e=${CODE_SUCCESS?}
-        for plid in ${!g_PROLANG_ROOT[@]}; do
+        for plid in "${!g_PROLANG_ROOT[@]}"; do
             cpf "Updating %{y:%s} to the latest release..." "${plid}"
             if :xplm:selfupdate ${plid}; then
                 theme HAS_PASSED
@@ -674,16 +675,16 @@ function :xplm:run() {
         local plid="${1}"
         local version="${2}"
         local cmd="${3}"
-        local cmdfull="${@:3}"
+        local -a cmdfull=( "${@:3}" )
         case ${plid} in
             rb|py|pl)
                 if ::xplm:loadvirtenv "${plid}" "${version}"; then
                     if [ -f "${cmd}" ]; then
-                        eval '${g_PROLANG[${plid}]} ${cmdfull}'
-                        e=$?
+                        ${g_PROLANG[${plid}]} "${cmdfull[@]}"
+                        let e=$?
                     else
-                        eval '${cmdfull}'
-                        e=$?
+                        "${cmdfull[@]}"
+                        let e=$?
                     fi
                 fi
             ;;
@@ -702,9 +703,9 @@ function xplm:run() {
         local plid="$1"
         case "${plid}" in
             py|pl|rb)
-                local script="${@:2}"
+                local -a script=( "${@:2}" )
                 local version="${g_PROLANG_VERSION[${plid}]}"
-                :xplm:run "${plid}" "${version}" "${script}"
+                :xplm:run "${plid}" "${version}" "${script[@]}"
                 e=$?
             ;;
             *)
