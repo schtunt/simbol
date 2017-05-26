@@ -7,9 +7,9 @@ function profile_active() {
     local -i e=0
 
     if [ -e "${SIMBOL_PROFILE_L}" ]; then
-        basename $(readlink ${SIMBOL_PROFILE_L}) || e=2
+        basename "$(readlink "${SIMBOL_PROFILE_L}")" || let e=2
     else
-        e=3
+        let e=3
     fi
 
     return $e
@@ -21,7 +21,7 @@ function profile_exists() {
     local profile="${1}"
     local simbol_profile_d="${HOME}/.simbol/profiles.d/${profile}"
     local simbolconf="${simbol_profile_d}/etc/simbol.conf"
-    [ -e "${simbolconf}" ] || e=4
+    [ -e "${simbolconf}" ] || let e=4
 
     return $e
 }
@@ -53,12 +53,10 @@ function profile_deactivate() {
 
     if profile_exists "${profile}"; then
         local simbol_profile_d="${HOME}/.simbol/profiles.d/${profile}"
-        if [ -d ${simbol_profile_d}/bin ]; then
-            cd ${simbol_profile_d}/bin
-            for i in *; do
-                if [ -h ~/bin/$i ]; then
-                    rm -f ~/bin/$i;
-                fi
+        if cd "${simbol_profile_d}/bin" 2>/dev/null; then
+            local fn
+            for fn in *; do
+                [ ! -h "${HOME}/bin/${fn}" ] || rm -f "${HOME}/bin/${fn}"
             done
         fi
 
@@ -79,11 +77,11 @@ function profile_activate() {
         local simbol_profile_d="${HOME}/.simbol/profiles.d/${profile}"
         ln -sf "${simbol_profile_d}" "${SIMBOL_PROFILE_L}"
 
-        if [ -d ${simbol_profile_d}/bin ]; then
-            cd ${simbol_profile_d}/bin
-            for i in *; do
-                if [ -x ${simbol_profile_d}/bin/$i ]; then
-                    ln -s ${simbol_profile_d}/bin/$i ~/bin/$i
+        if cd "${simbol_profile_d}/bin" 2>/dev/null; then
+            local fn
+            for fn in *; do
+                if [ -x "${simbol_profile_d}/bin/${fn}" ]; then
+                    ln -s "${simbol_profile_d}/bin/${fn}" "${HOME}/bin/${fn}"
                 fi
             done
         fi
@@ -107,44 +105,39 @@ function main() {
 
         if [ $e -eq 0 ]; then
             local active
-            active=$(profile_active)
-            if [ $? -eq 0 ]; then
+            if active="$(profile_active)"; then
                 if [ "${profile}" != "${active}" ]; then
                     profile_deactivate "${active}"
                     profile_activate "${profile}"
-                    e=$?
+                    let e=$?
                     #echo "#. Active profile changed from ${active} to ${profile}: $e"
                 else
-                    e=0
+                    let e=0
                     #echo "#. Active profile is already ${profile}."
                 fi
             else
                 profile_activate "${profile}"
-                e=$?
+                let e=$?
                 #echo "#. Profile ${profile} has been activated: $e"
             fi
         fi
     else
         profile_active
-        e=$?
+        let e=$?
     fi
 
     return $e
 }
 
-e=99
-
-if [ -d ~/.simbol/.scm/ ]; then
-    cd ~/.simbol/.scm/
+if cd "${HOME}/.simbol/.scm/" 2>/dev/null; then
     if [ $# -le 1 ]; then
         main "$@"
-        e=$?
+        exit $?
     else
-        echo "Usage: $(basename $0 <profile>)"
-        e=95
+        echo "Usage: $(basename "$0") <profile>"
+        exit 95
     fi
 else
     echo "Have you run the installer yet?"
+    exit 99
 fi
-
-exit $e
