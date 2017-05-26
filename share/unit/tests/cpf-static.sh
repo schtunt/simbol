@@ -1,9 +1,7 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
+core:import cpf
 
 function cpfOneTimeSetUp() {
-    core:import cpf
-    assertTrue ${FUNCNAME?}/0 $?
-
     declare -g g_PLAYGROUND="/tmp/cpf-pg"
     rm -rf ${g_PLAYGROUND?}
 }

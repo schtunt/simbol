@@ -1,9 +1,7 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
+core:import hgd
 
 function hgdOneTimeSetUp() {
-    core:import hgd
-    assertTrue ${FUNCNAME?}/0 $?
-
     declare -g g_HGD_CACHE_MOCK="${SIMBOL_USER_VAR_TMP?}/hgd.conf"
 }
 

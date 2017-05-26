@@ -1,4 +1,5 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
+core:import util
 
 function utilOneTimeStartUp() {
     : noop
@@ -17,12 +18,6 @@ function utilOneTimeTearDown() {
 }
 
 #. -={
-#. testCoreUtilImport() -={
-function testCoreUtilImport() {
-    core:softimport util
-    assertEquals 0 $?
-}
-#. }=-
 #. testCoreUtilUndelimitInternal -={
 function testCoreUtilUndelimitInternal() {
     # shellcheck disable=SC2034

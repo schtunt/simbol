@@ -25,10 +25,6 @@ function gpgOneTimeTearDown() {
     fi
 }
 
-function testCoreGpgImport() {
-    assertEquals "${FUNCNAME?}/1.1" 0 $?
-}
-
 function testCoreGpgVersionInternal() {
     local gpg_version; gpg_version="$(:gpg:version)"
     assertTrue "${FUNCNAME?}/1.1" $?

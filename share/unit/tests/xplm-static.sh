@@ -2,11 +2,6 @@
 core:import util
 
 #. XPLM -={
-function testCoreXplmImport() {
-    core:softimport xplm
-    assertTrue 0x0 $?
-}
-
 function xplmTearDown() {
     : noop
 }

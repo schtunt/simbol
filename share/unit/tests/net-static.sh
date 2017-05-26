@@ -1,8 +1,8 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
+core:import net
 
 function netOneTimeSetUp() {
-    core:import net
-    assertTrue ${FUNCNAME?}/0 $?
+    : pass
 }
 
 function testCoreNetPortpersistInternal() {

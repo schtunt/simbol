@@ -1,5 +1,4 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
-# shellcheck disable=SC2164
 core:import git
 
 function gitOneTimeSetUp() {
@@ -23,6 +22,7 @@ function gitOneTimeTearDown() {
     assertTrue "${FUNCNAME?}/0" $?
 }
 
+#shellcheck disable=SC2164
 function testCoreGitFilePublic() {
     cd "${g_PLAYGROUND?}"
 
@@ -80,6 +80,7 @@ function testCoreGitPlaygroundPublic() {
     assertFalse "${FUNCNAME?}/0" $?
 }
 
+#shellcheck disable=SC2164
 function testCoreGitCommitallPublic() {
     : ${g_PLAYGROUND?}
     rm -rf ${g_PLAYGROUND}
@@ -104,6 +105,7 @@ function testCoreGitCommitallPublic() {
     assertEquals "${FUNCNAME?}/1" 101 ${committed}
 }
 
+#shellcheck disable=SC2164
 function testCoreGitSplitPublic() {
     : ${g_PLAYGROUND?}
     rm -rf ${g_PLAYGROUND}
@@ -137,6 +139,7 @@ function testCoreGitSplitPublic() {
 #    assertEquals "${FUNCNAME?}/2" 99 ${committed}
 }
 
+#shellcheck disable=SC2164
 function testCoreGitBasedirInternal() {
     : ${g_PLAYGROUND?}
 
@@ -152,6 +155,7 @@ function testCoreGitBasedirInternal() {
     assertFalse "${FUNCNAME?}/0" $?
 }
 
+#shellcheck disable=SC2164
 function testCoreGitSizePublic() {
     cd /
     core:wrapper git size ${g_PLAYGROUND?} >${stdoutF?} 2>${stderrF?}
@@ -166,6 +170,7 @@ function testCoreGitSizePublic() {
     assertTrue "${FUNCNAME?}/2" $?
 }
 
+#shellcheck disable=SC2164
 function testCoreGitUsagePublic() {
     cd /
     core:wrapper git usage ${g_PLAYGROUND?} >${stdoutF?} 2>${stderrF?}
