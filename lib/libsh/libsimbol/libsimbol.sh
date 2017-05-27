@@ -17,9 +17,9 @@ export NOW
 export SHUNIT2=${SIMBOL_USER_VAR_LIBEXEC}/shunit2
 #. }=-
 #. 1.4  ShFlags -={
-export SHFLAGS=${SIMBOL_USER_VAR_LIBSH}/shflags
+export SHFLAGS="${SIMBOL_USER_VAR_LIBSH}/shflags"
 # shellcheck disable=SC1090
-source ${SHFLAGS?}
+source "${SHFLAGS?}"
 
 function core:bool.eval() {
     core:raise_bad_fn_call_unless $# in 1
@@ -151,16 +151,15 @@ declare -gA USER_MODULES
 
 declare -g  USER_LOG_LEVEL=INFO
 
-# -n breaks remote:copy (rsync via rsync)
-#declare -g g_SSH_OPTS="-n"
-declare -g g_SSH_OPTS=""
+# ssh's `-n' breaks remote:copy (rsync via rsync)
+declare -ga g_SSH_OPTS=()
 if grep -qw -- -E <( ssh 2>&1 ); then
     #. Log to file if supported
-    g_SSH_OPTS+=" -E ${SIMBOL_USER_VAR?}/log/ssh.log"
+    g_SSH_OPTS+=( '-E' "${SIMBOL_USER_VAR?}/log/ssh.log" )
 fi
 
 g_SSH_CONF=${SIMBOL_USER_ETC?}/ssh.conf
-[ ! -e "${g_SSH_CONF}" ] || g_SSH_OPTS+=" -F ${g_SSH_CONF}"
+[ ! -e "${g_SSH_CONF}" ] || g_SSH_OPTS+=( '-F' "${g_SSH_CONF}" )
 #. Defaults and User-Overridables -={
 declare -gi USER_CPF_INDENT_SIZE=0; export USER_CPF_INDENT_SIZE
 declare -g  USER_CPF_INDENT_STR='UNSET'; export USER_CPF_INDENT_STR
@@ -213,9 +212,9 @@ function core:log() {
         ;;
     esac
 
-    if [ "${module:-NilOrNotSet}" != 'NilOrNotSet' ]; then
-        caller=${module}
-        [ ${#fn} -eq 0 ] || caller+=":${fn}"
+    if [ "${g_MODULE:-NilOrNotSet}" != 'NilOrNotSet' ]; then
+        caller="${g_MODULE?}"
+        [ ${#g_FUNCTION} -eq 0 ] || caller+=":${g_FUNCTION?}"
     else
         local -i fi=0
         while true; do
@@ -781,21 +780,21 @@ function :core:cached() {
 : ${USER_USERNAME:=$(whoami)}
 
 function ::core:execute:internal() {
-    local module=$1
-    local fn=$2
+    local module="$1"
+    local fn="$2"
     ":${module}:${fn}" "${@:3}"
     return $?
 }
 
 function ::core:execute:private() {
-    local module=$1
-    local fn=$2
+    local module="$1"
+    local fn="$2"
     "::${module}:${fn}" "${@:3}"
     return $?
 }
 
 function ::core:flags.eval() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=${CODE_FAILURE?}
 
     #. Extract the first 2 non-flag tokens as module and function
     #. All remaining tokens are added to the new argv array
@@ -846,8 +845,8 @@ function ::core:flags.eval() {
             fi
         fi
         cat <<!
-declare -g module_22884db148f0ffb0d830ba431102b0b5=${module:-}
-declare -g fn_4d9d6c17eeae2754c9b49171261b93bd=${fn:-}
+declare -g module_22884db148f0ffb0d830ba431102b0b5="${module:-}"
+declare -g fn_4d9d6c17eeae2754c9b49171261b93bd="${fn:-}"
 !
     fi
 
@@ -859,17 +858,17 @@ declare -g fn_4d9d6c17eeae2754c9b49171261b93bd=${fn:-}
         eval "$(core:bool.eval debug)"; g_DEBUG=${debug?}
         eval "$(core:bool.eval cached)"; g_CACHED=${cached?}
 
-        if grep -qw -- -E <<< "${g_SSH_OPTS?}"; then
+        if grep -qw -- -E <<< "${g_SSH_OPTS[*]}"; then
             case ${g_DEBUG?}:${g_VERBOSE?} in
-                ${FALSE?}:0) g_SSH_OPTS+=" -q";;
-                ${FALSE?}:1) g_SSH_OPTS+=" -v";;
-                ${TRUE?}:0) g_SSH_OPTS+=" -vv";;
-                ${TRUE?}:1) g_SSH_OPTS+=" -vvv";;
+                ${FALSE?}:0) g_SSH_OPTS+=(  '-q' );;
+                ${FALSE?}:1) g_SSH_OPTS+=(  '-v' );;
+                ${TRUE?}:0) g_SSH_OPTS+=(  '-vv' );;
+                ${TRUE?}:1) g_SSH_OPTS+=( '-vvv' );;
             esac
         fi
 
         #. Last amendment to g_SSH_OPTS
-        g_SSH_OPTS+=" ${USER_SSH_OPTS:-}"
+        g_SSH_OPTS+=( "${USER_SSH_OPTS[@]}" )
 
         #. Everything else is straight-forward:
         g_LDAPHOST=${FLAGS_ldaphost?}; unset FLAGS_ldaphost
@@ -878,17 +877,11 @@ declare -g fn_4d9d6c17eeae2754c9b49171261b93bd=${fn:-}
 
         cat <<!
 #. GLOBAL_OPTS 4/4 -={
-declare g_HELP=${g_HELP?}
-declare g_VERBOSE=${g_VERBOSE?}
-declare g_DEBUG=${g_DEBUG?}
-declare g_CACHED=${g_CACHED?}
-declare g_LDAPHOST=${g_LDAPHOST?}
-declare g_FORMAT=${g_FORMAT?}
-declare g_SSH_OPTS="${g_SSH_OPTS?}"
+$(declare -p g_HELP g_VERBOSE g_DEBUG g_CACHED g_LDAPHOST g_FORMAT g_SSH_OPTS)
 #. }=-
 set -- ${FLAGS_ARGV?}
 !
-        e=${CODE_SUCCESS}
+        let e=${CODE_SUCCESS}
     else
         cat <<!
 g_DUMP="$(FLAGS "$@" 2>&1|sed -e '1,2 d' -e 's/^/    /')"
@@ -912,12 +905,10 @@ function :core:execute() {
         let e=${CODE_USAGE_MOD}
 
         if [ $# -ge 2 ]; then
-            #. FIXME: Why do these need to be global?  I did try to change them
-            #. FIXME: to locals, however all unit-tests (other than util) broke.
-            declare -g module=$1
-            declare -g fn=$2
+            declare -g g_MODULE=$1
+            declare -g g_FUNCTION=$2
 
-            if [ "$(type -t "${module}:${fn}")" == "function" ]; then
+            if [ "$(type -t "${g_MODULE}:${g_FUNCTION}")" == "function" ]; then
                 local -i sic
                 case ${g_FORMAT} in
                     html|email|ansi)
@@ -932,17 +923,17 @@ function :core:execute() {
                 esac
 
                 cpf:initialize ${sic}
-                "${module}:${fn}" "${@:3}"
+                "${g_MODULE}:${g_FUNCTION}" "${@:3}"
                 let e=$?
 
                 if [ ${sic} -eq 1 ]; then
-                    if [ "$(type -t "${module}:${fn}:alert")" == "function" ]; then
-                        cpf:printf "%{r:ALERTS}%{@profile:%s} %{@module:%s} %{@function:%s}:\n"\
-                            "${SIMBOL_PROFILE?}" "${module}" "${fn}"
+                    if [ "$(type -t "${g_MODULE}:${g_FUNCTION}:alert")" == "function" ]; then
+                        cpf:printf "%{r:ALERTS}%{@profile:%s} %{@g_MODULE:%s} %{@function:%s}:\n"\
+                            "${SIMBOL_PROFILE?}" "${g_MODULE}" "${g_FUNCTION}"
                         while read -ra line; do
                             local alert="${line[0]}"
                             theme "${alert}" "${line:1}"
-                        done < <( "${module}:${fn}:alert" )
+                        done < <( "${g_MODULE}:${g_FUNCTION}:alert" )
                         cpf:printf
                     fi
 
@@ -973,7 +964,7 @@ function :core:execute() {
                     theme INFO "Execution time was ${SECONDS} seconds"
                 fi
             else
-                theme ERR_INTERNAL "Function ${module}:${fn} not defined!"
+                theme ERR_INTERNAL "Function ${g_MODULE}:${g_FUNCTION} not defined!"
             fi
         fi
     else
@@ -1117,6 +1108,7 @@ function :core:usage() {
                 core:softimport "${module}"
                 if [ $? -eq ${CODE_SUCCESS?} ]; then
                     local -a fns=( $(:core:functions public "${module}") )
+                    local fn
                     for fn in "${fns[@]}"; do
                         local usage_fn="${module}:${fn}:usage"
                         local usagestr
@@ -1154,7 +1146,7 @@ function :core:usage() {
         cpf:printf "${usage_prefix} %{@module:%s} %{@function:%s}\n"\
             "${module}" "${fn}"
 
-        local usage_fn=${module}:${fn}:usage
+        local usage_fn="${module}:${fn}:usage"
         if [ "$(type -t "${usage_fn}")" == "function" ]; then
             local usagestr
             while read -r usagestr; do
@@ -1196,7 +1188,7 @@ function :core:usage() {
 function :core:complete() {
     local modulestr=$1
     local prefix="AC_${modulestr//./_}_"
-    local fn=$2
+    local fn="$2"
     if [ "${fn}" != '-' ]; then
         if declare -F "${modulestr}:${fn}" >/dev/null; then
             echo "${fn}"
@@ -1229,10 +1221,10 @@ function core:wrapper() {
     local -i e_flags=$?
     core:log DEBUG "core:flags.eval() returned ${e_flags}"
 
-    eval "${setdata}" #. -={
     #. NOTE: This sets module, fn, $@, etc.
-    module=${module_22884db148f0ffb0d830ba431102b0b5?}
-    fn=${fn_4d9d6c17eeae2754c9b49171261b93bd?}
+    eval "${setdata}" #. -={
+    local module="${module_22884db148f0ffb0d830ba431102b0b5?}"
+    local fn="${fn_4d9d6c17eeae2754c9b49171261b93bd?}"
     #. }=-
     core:log DEBUG "core:wrapper(module=${module}, fn=${fn}, argv=( $* ))"
     #shellcheck disable=SC2086
@@ -1400,18 +1392,18 @@ function core:in() {
 }
 
 function core:raise_bad_fn_call_unless() {
-    local -i argc; let argc=$1
+    local argc="$1"
     local op="$2"
     case "${op}:$#" in
-        *:'in')
-            local -ia expected=( ${*:3} )
+        'in':*)
+            local -a expected=( ${@:3} )
             #shellcheck disable=SC2086
             if ! core:in ${argc} ${op} ${expected[*]}; then
                 core:raise EXCEPTION_BAD_FN_CALL\
                     "Expected one of ( ${expected[*]} ) arguments, received \`${argc}'"
             fi
         ;;
-        3:*)
+        eq:3|lt:3|gt:3|ge:3|le:3)
             local -i expected; let expected=$3
             #shellcheck disable=SC2086
             if ! core:compare ${argc} ${op} ${expected}; then
@@ -1448,13 +1440,13 @@ function core:raise() {
         cpf:printf "\n%{+r}  !!! %{bo:%s}%{-r}\n\n" "${@:2}" >&2
 
         cpf:printf "%{+r}EXCEPTION%{bo:[Traceback]}%{-r}:\n" >&2
-        if [ ${#module} -gt 0 ]; then
-            if [ ${#fn} -gt 0 ]; then
-                cpf:printf "Function %{c:${module}:${fn}()}" 1>&2
-                echo "Critical failure in function ${module}:${fn}()" >> "${SIMBOL_DEADMAN?}"
+        if [ ${#g_MODULE} -gt 0 ]; then
+            if [ ${#g_FUNCTION} -gt 0 ]; then
+                cpf:printf "Function %{c:${g_MODULE}:${g_FUNCTION}()}" 1>&2
+                echo "Critical failure in function ${g_MODULE}:${g_FUNCTION}()" >> "${SIMBOL_DEADMAN?}"
             else
-                cpf:printf "Module %{c:${module}}" 1>&2
-                echo "Critical failure in module ${module}" >> "${SIMBOL_DEADMAN?}"
+                cpf:printf "g_MODULE %{c:${g_MODULE}}" 1>&2
+                echo "Critical failure in g_MODULE ${g_MODULE}" >> "${SIMBOL_DEADMAN?}"
             fi
         else
             cpf:printf "File %{@path:$0}" 1>&2
@@ -1514,7 +1506,7 @@ function mock:clear() {
     local -i e
 
     if [ $# -eq 0 ]; then
-        rm -f "${SIMBOL_USER_MOCKENV?}".*
+        set +f; rm -f "${SIMBOL_USER_MOCKENV?}".*; set -f
         mock:context
         let e=$?
     elif [ $# -eq 1 ]; then
@@ -1536,8 +1528,6 @@ function mock:context() {
 }
 
 function mock:wrapper() {
-    local -i e=${CODE_FAILURE?}
-
     function closure() {
         if [ ! -r "${SIMBOL_USER_MOCKENV?}" ]; then
             mock:context default
@@ -1547,20 +1537,15 @@ function mock:wrapper() {
             source "${SIMBOL_USER_MOCKENV?}"
         fi
 
-        core:wrapper "${@}"
+        core:wrapper "$@"
         local -i _e=$?
 
         unset closure
         return $_e
     }
 
-    local data
-    data="$(closure "${@}")"
-    e=$?
-
-    echo "${data}"
-
-    return $e
+    closure "$@"
+    return $?
 }
 #. }=-
 #. }=-

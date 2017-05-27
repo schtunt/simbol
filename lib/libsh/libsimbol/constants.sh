@@ -1,6 +1,9 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 #shellcheck disable=SC2034
 
+set -f
+set -u
+
 #shellcheck disable=SC2086
 if [ ${SOURCED_CONSTANTS:-0} -eq 0 ]; then
 
