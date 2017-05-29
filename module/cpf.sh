@@ -6,11 +6,11 @@ Site's color printf module
 
 #. The Color PrintF Module -={
 
-: ${USER_CPF_INDENT_STR?}
-: ${USER_CPF_INDENT_SIZE?}
+ #shellcheck disable=SC2086
+: ${USER_CPF_INDENT_STR?} ${USER_CPF_INDENT_SIZE?}
 
-: ${FD_STDOUT?}
-: ${FD_STDERR?}
+#shellcheck disable=SC2086
+: ${FD_STDOUT?} ${FD_STDERR?}
 
 #declare -i ncolors=$(tput colors)
 #if [ ${ncolors:=-2} -ge 8 ]; then
@@ -34,9 +34,10 @@ declare -A SIMBOL_ESCAPE_SEQUENCES_ON=(
 declare -A SIMBOL_ESCAPE_SEQUENCES
 
 function cpf:initialize() {
+    #shellcheck disable=SC2086
     [ ${g_DEBUG?} -eq ${FALSE?} ] || set +x
 
-    local -i sic=$1
+    local -i sic; let sic=$1
 
     if [ ${sic} -eq 1 ]; then
         for key in "${!SIMBOL_ESCAPE_SEQUENCES_ON[@]}"; do
@@ -53,6 +54,7 @@ function cpf:initialize() {
     PS4+="/${SIMBOL_ESCAPE_SEQUENCES[+b]}\${FUNCNAME}/ "
     export PS4
 
+    #shellcheck disable=SC2086
     [ ${g_DEBUG} -eq ${FALSE?} ] || set -x
 }
 
@@ -89,10 +91,11 @@ function ::cpf:module_is_modified() {
     local module=$2
 
     core:cd "${module_path}"
-    local amended=$(git status --porcelain "${module}.sh"|wc -l)
+    local -i amended; let amended=$(git status --porcelain "${module}.sh"|wc -l)
+    #shellcheck disable=SC2086
     [ ${PIPESTATUS[0]} -eq ${CODE_SUCCESS?} ] || core:raise EXCEPTION_SHOULD_NOT_GET_HERE
 
-    [ ${amended} -eq 0 ] || e=${TRUE?}
+    [ ${amended} -eq 0 ] || let e=${TRUE?}
 
     return $e
 }
@@ -109,22 +112,23 @@ function ::cpf:module() {
     core:raise_bad_fn_call_unless $# in 1
 
     local -r module=$1
-    local -i enabled="$(core:module_enabled "${module}")"
+    local -i enabled; let enabled="$(core:module_enabled "${module}")"
+    #shellcheck disable=SC2086
     [ ${enabled} -eq ${TRUE?} ] || return ${CODE_FAILURE?}
 
     local -i amended=${FALSE?}
 
-    local module_path
-    module_path="$(core:module_path "${module}")"
+    local module_path; module_path="$(core:module_path "${module}")"
     local fmt
-    if ::cpf:module_has_alerts "${module_path}" ${module}; then
+    if ::cpf:module_has_alerts "${module_path}" "${module}"; then
         fmt="%{+y}"
     else
         fmt="%{+c}"
-        ::cpf:module_is_modified "${module_path}" ${module}
-        amended=$?
+        ::cpf:module_is_modified "${module_path}" "${module}"
+        let amended=$?
     fi
 
+    #shellcheck disable=SC2086
     if [ ${amended} -eq ${FALSE?} ]; then
         fmt+="%{+ul:%s}"
     else
@@ -149,11 +153,12 @@ function ::cpf:function() {
     local -r module=$1
     local -r fn=$2
 
-    local -i enabled="$(core:module_enabled "${module}")"
+    local -i enabled; let enabled="$(core:module_enabled "${module}")"
+    #shellcheck disable=SC2086
     if [ ${enabled} -eq ${TRUE?} ]; then
         local fmt=''
 
-        local module_path="$(core:module_path "${module}")"
+        local module_path; module_path="$(core:module_path "${module}")"
         ::cpf:function_has_alerts "${module_path}" ${module} ${fn}
         local has_alerts=$?
 
@@ -208,7 +213,7 @@ function ::cpf:theme() {
                     module) ::cpf:module "${arg}";;
                     function)
                         IFS=: read -r module fn <<< "${arg}"
-                        ::cpf:function ${module} ${fn}
+                        ::cpf:function "${module}" "${fn}"
                     ;;
                     *) core:raise EXCEPTION_BAD_FN_CALL 2;;
                 esac
@@ -291,9 +296,11 @@ function ::cpf:theme() {
 #. }=-
 #. cpf:printf -={
 function cpf:printf() {
+    #shellcheck disable=SC2086
     [ ${g_DEBUG?} -eq ${FALSE?} ] || set +x
     if [ $# -eq 0 ]; then
         echo
+        #shellcheck disable=SC2086
         return ${CODE_SUCCESS?}
     fi
 
@@ -334,7 +341,7 @@ function cpf:printf() {
             ;;
             '}'/-/*)
                 ((stacksize--))
-                [ ${stack[-1]} == ${buffer} ] || exit 1
+                [ "${stack[-1]}" == "${buffer}" ] || exit 1
                 buffer=
                 output+="${SIMBOL_ESCAPE_SEQUENCES[-${stack[-1]}]}"
                 #shellcheck disable=SC2184
@@ -407,13 +414,14 @@ function cpf:printf() {
         esac
     done <<< "${1}"
 
-    if [ ${#stack[@]} -ne 0 -o ${stacksize} -ne 0 ]; then
+    if [ ${#stack[@]} -ne 0 ] || [ ${stacksize} -ne 0 ]; then
         e=${CODE_FAILURE?}
     else
 #echo "# DEBUG: ${output} ${*:2} / stack: ${stack[@]+${stack[@]}} / buffer: $buffer" >&2
         eval "printf -- \"${output}\" \"\${@:2}\""
     fi
 
+    #shellcheck disable=SC2086
     [ ${g_DEBUG} -eq ${FALSE?} ] || set -x
 }
 #. }=-
@@ -423,7 +431,7 @@ function theme() {
 
     [ $# -gt 0 ] | return $e
 
-    local dvc=${FD_STDOUT}
+    local dvc="${FD_STDOUT?}"
     local item="$1"
     local s
     local c
@@ -437,28 +445,28 @@ function theme() {
         TRUE:*)         c='g'; s='TRUE';;
         FALSE:*)        c='r'; s='FALSE';;
 
-        INFO:*)         c='w'; s='INFO';           dvc=${FD_STDERR};;
-        NOTE:*)         c='w'; s='NOTE';           dvc=${FD_STDERR};;
-        WARN:*)         c='y'; s='WARN';           dvc=${FD_STDERR};;
-        DEPR:*)         c='y'; s='DEPRECATED';     dvc=${FD_STDERR};;
-        ERR:*)          c='r'; s='ERROR';          dvc=${FD_STDERR};;
-        ALERT:*)        c='r'; s='ALERT';          dvc=${FD_STDERR};;
-        ERR_USAGE:*)    c='r'; s='USAGE ERROR';    dvc=${FD_STDERR};;
-        WARN_USAGE:*)   c='y'; s='USAGE WARNING';  dvc=${FD_STDERR};;
-        NOTE_USAGE:*)   c='w'; s='USAGE NOTICE';   dvc=${FD_STDERR};;
-        EXCEPTION:*)    c='r'; s='EXCEPTION';      dvc=${FD_STDERR};;
-        ERR_INTERNAL:*) c='r'; s='INTERNAL ERROR'; dvc=${FD_STDERR};;
+        INFO:*)         c='w'; s='INFO';           dvc="${FD_STDERR}";;
+        NOTE:*)         c='w'; s='NOTE';           dvc="${FD_STDERR}";;
+        WARN:*)         c='y'; s='WARN';           dvc="${FD_STDERR}";;
+        DEPR:*)         c='y'; s='DEPRECATED';     dvc="${FD_STDERR}";;
+        ERR:*)          c='r'; s='ERROR';          dvc="${FD_STDERR}";;
+        ALERT:*)        c='r'; s='ALERT';          dvc="${FD_STDERR}";;
+        ERR_USAGE:*)    c='r'; s='USAGE ERROR';    dvc="${FD_STDERR}";;
+        WARN_USAGE:*)   c='y'; s='USAGE WARNING';  dvc="${FD_STDERR}";;
+        NOTE_USAGE:*)   c='w'; s='USAGE NOTICE';   dvc="${FD_STDERR}";;
+        EXCEPTION:*)    c='r'; s='EXCEPTION';      dvc="${FD_STDERR}";;
+        ERR_INTERNAL:*) c='r'; s='INTERNAL ERROR'; dvc="${FD_STDERR}";;
 
-        TODO:*)         c='y'; s='TODO';           dvc=${FD_STDERR};;
-        FIXME:*)        c='r'; s='FIXME';          dvc=${FD_STDERR};;
+        TODO:*)         c='y'; s='TODO';           dvc="${FD_STDERR}";;
+        FIXME:*)        c='r'; s='FIXME';          dvc="${FD_STDERR}";;
 
         *:*) core:raise EXCEPTION_BAD_FN_CALL 1
     esac
 
     if [ $# -eq 1 ]; then
-        cpf:printf "%{+$c}$s%{-$c}\n" >&${dvc}
+        cpf:printf "%{+$c}$s%{-$c}\n" >& "${dvc}"
     else
-        cpf:printf "%{+$c}$s %{bo:[%s]}%{-$c}\n" "${@:2}" >&${dvc}
+        cpf:printf "%{+$c}$s %{bo:[%s]}%{-$c}\n" "${@:2}" >& "${dvc}"
     fi
 
     return $e

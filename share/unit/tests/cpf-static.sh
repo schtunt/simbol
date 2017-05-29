@@ -21,7 +21,7 @@ function cpfOneTimeTearDown() {
 
 #. testCoreCpfInitializePublic -={
 function testCoreCpfInitializePublic() {
-    cpf:initialize
+    cpf:initialize 1
     assertTrue "${FUNCNAME?}/1" $?
 }
 #. }=-
