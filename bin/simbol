@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
-let -i e=0
+set -u
+
+let e=0
 
 #. Source user-overrides if any
-[ ! -f ${HOME}/.simbolrc ] || source ${HOME}/.simbolrc
+[ ! -f ${HOME?}/.simbolrc ] || source ${HOME?}/.simbolrc
 
 #. If the bash-shell override has been defined, exec into that first
-if [ ${#SIMBOL_SHELL} -gt 0 ]; then
-    if [ -x "${SIMBOL_SHELL}" -a -f "${SIMBOL_SHELL}" ]; then
-        if [ "${SIMBOL_SHELL}" != "${BASH}" ]; then
+if [ "${SIMBOL_SHELL:-NilOrNotSet}" != 'NilOrNotSet' ]; then
+    if [ -x "${SIMBOL_SHELL?}" -a -f "${SIMBOL_SHELL?}" ]; then
+        if [ "${SIMBOL_SHELL?}" != "${BASH?}" ]; then
             BASH_ENV=<(
                 declare -p | grep -E '\<USER_'
-            ) exec ${SIMBOL_SHELL} -$- "$0" "$@"
+            ) exec ${SIMBOL_SHELL?} -$- "$0" "$@"
         fi
     else
         e=127
@@ -20,8 +22,8 @@ if [ ${#SIMBOL_SHELL} -gt 0 ]; then
 fi
 
 if [ $e -eq 0 ]; then
-    if [ ${BASH_VERSINFO[0]} -ge 4 -a ${BASH_VERSINFO[1]} -ge 1 ]; then
-        SIMBOL_PROFILE="$(${HOME}/.simbol/bin/activate)"
+    if [ ${BASH_VERSINFO[0]?} -ge 4 -a ${BASH_VERSINFO[1]?} -ge 1 ]; then
+        SIMBOL_PROFILE="$(${HOME?}/.simbol/bin/activate)"
         e=$?
         if [ $e -eq 0 ]; then
             export SIMBOL_PROFILE
@@ -45,7 +47,7 @@ if [ $e -eq 0 ]; then
         echo "ERROR: Your version of BASH is too old; export SIMBOL_SHELL to override system bash; [e:$e]."
     fi
 else
-    echo "ERROR: The request SIMBOL_SHELL is invalid:" ${SIMBOL_SHELL}
+    echo "ERROR: The request SIMBOL_SHELL is invalid:" ${SIMBOL_SHELL?}
 fi
 
-exit ${e}
+exit ${e?}

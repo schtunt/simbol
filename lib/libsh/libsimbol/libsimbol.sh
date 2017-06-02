@@ -189,7 +189,110 @@ export SIMBOL_DELOM=$(printf "\x08")
 
 CODE_DEFAULT=${CODE_USAGE_FN_LONG?}
 #. }=-
-#. 1.6  Logging -={
+#. 1.6  Core Utilities -={
+function core:len() {
+    eval "local -a _$1=( \"\${$1[@]:+\${$1[@]}}\" ); echo \${#_$1[@]}"
+}
+
+function :core:age() {
+    local -i e=${CODE_FAILURE}
+
+    local filename="$1"
+    if [ -e ${filename} ]; then
+        local -i changed=$(stat -c %Y "${filename}")
+        local -i now=$(date +%s)
+        local -i elapsed
+        let elapsed=now-changed
+        echo ${elapsed}
+        e=${CODE_SUCCESS}
+    fi
+
+    return ${e}
+}
+
+function core:global() {
+    #. Usage:
+    #.     core:global <context>.<key>                  (read value from store)
+    #.     core:global <context>.<key> <value>          (write value to store)
+    #.     core:global <context>.<key> <oper> <value>   (amend value in store)
+    #.
+    #. For the last case, the supported operators are math operators available
+    #. to use via `let', for instance:
+    #.
+    #.     core:global g.delta += 4
+    #.
+    #. Obviously the latter case only supports integer types.
+
+    [ $# -ge 1 -o $# -le 3 ] || core:raise EXCEPTION_BAD_FN_CALL
+
+    local -i e=${CODE_FAILURE?}
+
+    local context
+    local key
+    local globalstore
+
+    local lockfile="${SIMBOL_USER_VAR_RUN?}/.core-global.lock.$$"
+    while true; do
+        if ( set -o noclobber; > "${lockfile}" ) 2>/dev/null; then
+            trap "\
+                SIMBOL_TRAP_ECODE=\$?;\
+                rm -f "${lockfile}";\
+                exit \${SIMBOL_TRAP_ECODE?};\
+            " INT TERM EXIT
+
+            case $# in
+                1)
+                    IFS='.' read context key <<< "${1}"
+                    globalstore="$(:core:cachefile "${context}" "${key}")"
+                    if [ $? -eq ${CODE_SUCCESS?} ]; then
+                        cat ${globalstore}
+                        e=$?
+                    fi
+                ;;
+                2)
+                    IFS='.' read context key <<< "${1}"
+                    local value="${2}"
+                    globalstore="$(:core:cachefile "${context}" "${key}")"
+                    printf "${value}" > ${globalstore}
+                    e=$?
+                ;;
+                3)
+                    IFS='.' read context key <<< "${1}"
+                    local oper="${2}"
+                    local -i amendment
+                    set -u; let amendment=$3 2>/dev/null; e=$?; set +u
+                    if [ $e -eq ${CODE_SUCCESS?} ]; then
+                        globalstore="$(:core:cachefile "${context}" "${key}")"
+                        if [ $? -eq ${CODE_SUCCESS?} ]; then
+                            local -i current
+                            let current=$(cat ${globalstore})
+                            if [ $? -eq ${CODE_SUCCESS?} ]; then
+                                local -i amendment
+                                let amendment=${3} 2>/dev/null
+                                if [ $? -eq ${CODE_SUCCESS?} ]; then
+                                    ((current${oper}amendment))
+                                    echo ${current} > ${globalstore}
+                                    e=$?
+                                fi
+                            fi
+                        fi
+                    fi
+                ;;
+            esac
+
+            rm -f "$lockfile"
+            break
+        else
+            sleep 0.1
+        fi
+    done
+
+    return $e
+}
+
+
+#. }=-
+#. 1.7  Logging -={
 declare -A SIMBOL_LOG_NAMES=(
     [EMERG]=0 [ALERT]=1 [CRIT]=2 [ERR]=3
     [WARNING]=4 [NOTICE]=5 [INFO]=6 [DEBUG]=7
@@ -211,7 +314,7 @@ function core:log() {
         ;;
     esac
 
-    if [ ${#module} -gt 0 ]; then
+    if [ ${module:-NilOrNotSet} != 'NilOrNotSet' ]; then
         caller=${module}
         [ ${#fn} -eq 0 ] || caller+=":${fn}"
     else
@@ -238,7 +341,7 @@ function core:log() {
     fi
 }
 #. }=-
-#. 1.7  Sanity Checks / Validation -={
+#. 1.8  Sanity Checks / Validation -={
 function validate_bash() {
     local -i e=${CODE_FAILURE?}
 
@@ -335,7 +438,7 @@ function core:softimport() {
         local module="$1"
         local modulepath="${1//.//}.sh"
         local ouch="${SIMBOL_USER_VAR_TMP}/softimport.${module}.$$.ouch"
-        if [ -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
+        if [ "${g_SIMBOL_IMPORTED_EXIT[${module}]:-NilOrNotSet}" == 'NilOrNotSet' ]; then
             if [ ${USER_MODULES[${module}]-9} -eq 1 ]; then
                 if [ -f ${SIMBOL_USER_MOD}/${modulepath} ]; then
                     if source ${SIMBOL_USER_MOD}/${modulepath} >${ouch} 2>&1; then
@@ -436,8 +539,11 @@ function core:imported() {
 
     if [ $# -eq 1 ]; then
         local module=$1
-        e=${g_SIMBOL_IMPORTED_EXIT[${module}]}
-        [ ${#e} -gt 0 ] || e=-1
+        if [ ! -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
+            e=${g_SIMBOL_IMPORTED_EXIT[${module}]}
+        else
+            core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+        fi
     else
         core:raise EXCEPTION_BAD_FN_CALL
     fi
@@ -652,7 +758,7 @@ function core:requires() {
         ;;
         *:ENV)
             for required in ${@:2}; do
-                if [ -z "${!required}" ]; then
+                if [ "${!required:-NilOrNotSet}" == 'NilOrNotSet' ]; then
                     core:log NOTICE "${caller} missing required environment variable ${required}"
                     e=${CODE_FAILURE}
                     break
@@ -709,16 +815,16 @@ the start of the function, and one right at the end:
 
 function <module>:<function>() {
   #. Optional...
-  #local l_CACHE_SIG="optional-custom-sinature-hash:template:funk/$3";
+  #local l_CACHE_SIG="optional-custom-sinature-hash:template:funk/\$3";
 
   #. vvv 1. Use cache and return or continue
-  local -i l_CACHE_TTL=600; g_CACHE_OUT "$*" || (
-    local -i e=${CODE_DEFAULT?}
+  local -i l_CACHE_TTL=600; g_CACHE_OUT "\$*" || (
+    local -i e=\${CODE_DEFAULT?}
 
     ...
 
-    return $e
-  ) > ${g_CACHE_FILE}; g_CACHE_IN; return $?
+    return \$e
+  ) > \${g_CACHE_FILE}; g_CACHE_IN; return \$?
   #. ^^^ 2. Update cache if previous did not return
 }
 function :<module>:<function>() { #. Same as above...; }
@@ -736,98 +842,6 @@ or otherwise slow code (network latency) that is expected to also produce the
 same result almost alll the time, for example dns might be a good candidate,
 whereas remote code execution is probably a bad candidate.
 !
-
-function :core:age() {
-    local -i e=${CODE_FAILURE}
-
-    local filename="$1"
-    if [ -e ${filename} ]; then
-        local -i changed=$(stat -c %Y "${filename}")
-        local -i now=$(date +%s)
-        local -i elapsed
-        let elapsed=now-changed
-        echo ${elapsed}
-        e=${CODE_SUCCESS}
-    fi
-
-    return ${e}
-}
-
-function core:global() {
-    #. Usage:
-    #.     core:global <context>.<key>                  (read value from store)
-    #.     core:global <context>.<key> <value>          (write value to store)
-    #.     core:global <context>.<key> <oper> <value>   (amend value in store)
-    #.
-    #. For the last case, the supported operators are math operators available
-    #. to use via `let', for instance:
-    #.
-    #.     core:global g.delta += 4
-    #.
-    #. Obviously the latter case only supports integer types.
-
-    [ $# -ge 1 -o $# -le 3 ] || core:raise EXCEPTION_BAD_FN_CALL
-
-    local -i e=${CODE_FAILURE?}
-
-    local context
-    local key
-    local globalstore
-
-    local lockfile=/tmp/.simbol.lockfile
-
-    while true; do
-        if ( set -o noclobber; echo "locked" > "$lockfile" ) 2>/dev/null; then
-            trap 'SIMBOL_TRAP_ECODE=$?; rm -f "$lockfile"; exit ${SIMBOL_TRAP_ECODE}' INT TERM EXIT
-
-            case $# in
-                1)
-                    IFS='.' read context key <<< "${1}"
-                    globalstore="$(:core:cachefile "${context}" "${key}")"
-                    if [ $? -eq ${CODE_SUCCESS?} ]; then
-                        cat ${globalstore}
-                        e=$?
-                    fi
-                ;;
-                2)
-                    IFS='.' read context key <<< "${1}"
-                    local value="${2}"
-                    globalstore="$(:core:cachefile "${context}" "${key}")"
-                    printf "${value}" > ${globalstore}
-                    e=$?
-                ;;
-                3)
-                    IFS='.' read context key <<< "${1}"
-                    local oper="${2}"
-                    local -i amendment=$3
-                    if [ $? -eq ${CODE_SUCCESS?} ]; then
-                        globalstore="$(:core:cachefile "${context}" "${key}")"
-                        if [ $? -eq ${CODE_SUCCESS?} ]; then
-                            local -i current
-                            let -i current=$(cat ${globalstore})
-                            if [ $? -eq ${CODE_SUCCESS?} ]; then
-                                local -i amendment
-                                let -i amendment=${3}
-                                if [ $? -eq ${CODE_SUCCESS?} ]; then
-                                    ((current${oper}amendment))
-                                    echo ${current} > ${globalstore}
-                                    e=$?
-                                fi
-                            fi
-                        fi
-                    fi
-                ;;
-            esac
-
-            rm -f "$lockfile"
-            break
-        else
-            sleep 0.1
-        fi
-    done
-
-    return $e
-}
 
 function :core:cachefile() {
     #. Constructs and prints a cachefile path
@@ -995,7 +1009,7 @@ function ::core:flags.eval() {
             ((argc++))
         fi
     done
-    set -- "${argv[@]}"
+    set -- "${argv[@]+${argv[@]}}"
 
     #. GLOBAL_OPTS 2/4: Our generic and global options -={
     DEFINE_boolean help     false            "<help>"                   H
@@ -1048,7 +1062,7 @@ declare -g fn_4d9d6c17eeae2754c9b49171261b93bd=${fn:-}
         fi
 
         #. Last amendment to g_SSH_OPTS
-        g_SSH_OPTS+=" ${USER_SSH_OPTS}"
+        g_SSH_OPTS+=" ${USER_SSH_OPTS:-}"
 
         let g_CACHED=~${FLAGS_cached?}+2; unset FLAGS_cached
 
@@ -1080,11 +1094,11 @@ set -- ${FLAGS_ARGV?}
         fi
     else
         cat <<!
-g_DUMP="$(FLAGS "${@}" 2>&1|sed -e '1,2 d' -e 's/^/    /')"
+g_DUMP="$(FLAGS "$@" 2>&1|sed -e '1,2 d' -e 's/^/    /')"
 !
     fi
 
-    if [ $e -eq ${CODE_SUCCESS} ]; then
+    if [ $e -eq ${CODE_SUCCESS} -a $(core:len extra) -gt 0 ]; then
         cat <<!
 $(for key in ${extra[@]}; do echo ${key}=${!key}; done)
 !
@@ -1228,8 +1242,8 @@ function :core:usage() {
 #. FIXME: destructive.  Additionally, it breaks the --long help which never
 #. FIXME: displays anymore once this is enabled.
 # g_CACHE_OUT "$*" || {
-    local module=$1
-    local fn=$2
+    local module=${1:-NilOrNotSet}
+    local fn=${2:-NilOrNotSet}
     local mode=${3---short}
     [ $# -eq 2 ] && mode=${3---long}
 
@@ -1346,7 +1360,7 @@ function :core:usage() {
                     done <<< "`${usage_l}`"
                 fi
 
-                if [ ${#g_DUMP} -gt 0 ]; then
+                if [ ${g_DUMP:-NilOrNotSet} != NilOrNotSet ]; then
                     cpf
                     cpf "%{c:%s}\n" "Flags:"
                     echo "${g_DUMP}"
@@ -1432,7 +1446,7 @@ function core:wrapper() {
                             grep --color -E "${regex}" |
                             ${SIMBOL_CORE_LIBEXEC}/ansi2html
                         e=${PIPESTATUS[2]}
-                    elif [ -z "${supported_formats[${g_FORMAT}]}" ]; then
+                    elif [ "${supported_formats[${g_FORMAT}]:-NilOrNotSet}" == 'NilOrNotSet' ]; then
                         theme ERR_USAGE "That is not a supported format."
                         e=${CORE_FAILURE}
                     elif [ ${supported_formats[${g_FORMAT}]} -gt 0 ]; then

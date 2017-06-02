@@ -271,7 +271,7 @@ function testCoverage() {
                             if [ -e ${dynamic} ]; then
                                 input="$(awk -F\| "\$1~/^${profile}$/&&\$2~/^${module}$/&&\$3~/^${fn}$/&&\$4~/^${context}$/{print\$0}" ${dynamic})"
                             fi
-                            if [ -n "${input}" ]; then
+                            if [ "${input:-NilOrNotSet}" != 'NilOrNotSet' ]; then
                                 local -i i=0
                                 local line
                                 while read line; do
@@ -335,7 +335,7 @@ function ${utf}Dyn${i}() {
         [ ${auto_exitcode} -eq 0 ] && cpf "%{g:0}" || cpf "%{r:${auto_exitcode}}"
     cpf " %{r:]=-}"
 
-    if [ -z "${auto_simbol}" -o "${auto_simbol}" == "${SIMBOL_PROFILE?}" ]; then
+    if [ "${auto_simbol:-NilOrNotSet}" == 'NilOrNotSet' -o "${auto_simbol}" == "${SIMBOL_PROFILE?}" ]; then
         cpf
         core:softimport ${auto_module}
         if assertEquals "import ${auto_module}" ${CODE_SUCCESS?} \$?; then
@@ -343,7 +343,7 @@ function ${utf}Dyn${i}() {
                 local -i e
                 local argv='${auto_arguments}'
                 if [ "${auto_context}" == "public" ]; then
-                    if [ -z "\${regex_stdin}" ]; then
+                    if [ "\${regex_stdin:-NilOrNotSet}" == 'NilOrNotSet' ]; then
                         #. We go via the outer core wrapper to ensure user short
                         #. and long options are resovled properly for public functions.
                         core:wrapper ${auto_module} ${auto_fn} \${argv} >\${stdoutF?} 2>\${stderrF?}
@@ -352,7 +352,7 @@ function ${utf}Dyn${i}() {
                         e=\$?
                     fi
                 else
-                    if [ -z "\${regex_stdin}" ]; then
+                    if [ "\${regex_stdin:-NilOrNotSet}" == 'NilOrNotSet' ]; then
                         #. No need to worry about such -a|--argument style options
                         #. for non-public function calls as they do not support
                         #. this, only public functions do, so we can call the
@@ -465,6 +465,7 @@ function ::unit:test() {
                 module=${modulepath//\//.}
                 module=${module%.sh}
                 if [ ${#g_MODULES[@]} -eq 0 -o ${g_MODULES[${module}]--1} -eq 1 ]; then
+                    script=${SIMBOL_UNIT_TESTS?}/${module}-static.sh
                     g_MODE="prime"
                     cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?}} via %{b:%s} %{r:-=[}\n" "${BASH_VERSION?}";
                     (
@@ -482,7 +483,7 @@ function ::unit:test() {
 #. Module    : ${module}
 #. Generated : $(date)
 !SCRIPT
-                        script=${SIMBOL_UNIT_TESTS?}/${module}-static.sh
+                        script=${script}
                         if [ -r "${script}" ]; then
                             cat "${script}" > ${g_RUNTIME_SCRIPT?}
                         fi
@@ -593,7 +594,8 @@ function unit:core() {
     local -i e=${CODE_SUCCESS?}
 
     g_MODE="core"
-    local module="core"
+    local profile='core'
+    local module='core'
 
     cpf "%{@comment:${profile}.${module}}.%{r:${g_MODE?} -=[}\n";
     script=${SIMBOL_UNIT_TESTS?}/core.sh

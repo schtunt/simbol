@@ -201,9 +201,8 @@ function :vault:list() {
 
     if [ $# -eq 1 -o $# -eq 2 ]; then
         local vault="$1"
-        local sid="$2"
         if [ -r ${vault} ]; then
-            if [ ${#sid} -eq 0 ]; then
+            if [ $# -eq 1 ]; then
                 local -a secrets
                 secrets=(
                     $(
@@ -216,6 +215,7 @@ function :vault:list() {
                     e=${CODE_SUCCESS?}
                 fi
             else
+                local sid="${2}"
                 local secret=$(
                     :gpg:decrypt ${vault} - | awk '$1~/\<'${sid}'\>/{print$1}';
                     exit ${PIPESTATUS[0]}
@@ -242,7 +242,7 @@ function vault:list() {
     if [ $# -le 1 ]; then
         cpf "Inspecting vault..."
         local vault=${g_VAULT?}
-        local sid="${1}"
+        local sid="${1:-}"
         local -a secrets
         secrets=( $(:vault:list ${vault}) )
         if [ $? -eq ${CODE_SUCCESS?} ]; then

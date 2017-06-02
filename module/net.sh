@@ -304,7 +304,7 @@ function :net:portping() {
         local tldid="$1"
         local qdn="$2"
         local port="$3"
-        local ssh_proxy="$4"
+        local ssh_proxy="${4:-}"
         local cmd="nc -zqw1 ${qdn} ${port}"
         cmd="socat /dev/null TCP:${qdn}:${port},connect-timeout=1"
         if [ ${tldid} != '_' ]; then

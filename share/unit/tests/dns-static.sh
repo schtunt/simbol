@@ -1,279 +1,326 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
-core:import util
 
-function testCoreDnsImport() {
-    core:softimport dns
-    assertTrue 0.1 $?
+function dnsSetUp() {
+    core:import util
+    core:import dns
+    assertTrue "${FUNCNAME?}/0" $?
 }
 
 function dnsTearDown() {
     : noop
 }
 
-function dnsStartUp() {
-    : noop
+function tearDown() {
+    mock:clear
 }
 
 #. -={
+#. testCoreDnsResolveInternal -={
+function testCoreDnsResolveInternalHits() {
+    local data
+
+    data=$(:dns:resolve google-public-dns-a.google.com. a)
+    assertTrue "${FUNCNAME?}/1.1" $?
+    assertEquals "${FUNCNAME?}/1.2" '8.8.8.8' "${data}"
+
+    data=$(:dns:resolve google-public-dns-b.google.com a)
+    assertTrue "${FUNCNAME?}/2.1" $?
+    assertEquals "${FUNCNAME?}/2.2" '8.8.4.4' "${data}"
+}
+
+function testCoreDnsResolveInternalGuesses() {
+    local data
+
+    data=$(:dns:resolve google-public-dns-a.google.com.)
+    assertTrue "${FUNCNAME?}/1.1" $?
+    assertEquals "${FUNCNAME?}/1.2" '8.8.8.8' "${data}"
+
+    data=$(:dns:resolve google-public-dns-b.google.com)
+    assertTrue "${FUNCNAME?}/2.1" $?
+    assertEquals "${FUNCNAME?}/2.2" '8.8.4.4' "${data}"
+}
+
+function testCoreDnsResolveInternalMisses() {
+    local data
+
+    data=$(:dns:resolve 404.google.com a)
+    assertFalse "${FUNCNAME?}/1" $?
+
+    data=$(:dns:resolve 404.google.com c)
+    assertFalse "${FUNCNAME?}/2" $?
+
+    data=$(:dns:resolve 404.google.com)
+    assertFalse "${FUNCNAME?}/3" $?
+}
+#. }=-
 #. testCoreDnsSubdomainsInternal -={
-function testCoreDnsSubdomainsInternal() {
-    core:import dns
+function testCoreDnsSubdomainsInternalFull() {
+    mock:write <<-!MOCK
+        local -A USER_TLDS=( [a]='aws.amazon.com' [b]='buildings.amazon.com' )
+        local -a USER_SUBDOMAIN_a=( s3 ec2 ddb rds )
+        local -a USER_SUBDOMAIN_b=( dopler arizona kumo blackfoot )
+        local USER_TLDID_DEFAULT='b'
+	!MOCK
 
     local -a sdns
     local -a results
 
-    sdns=( $(:dns:subdomains _ full) )
-    assertTrue 1.1 $?
-    results=(
-        unit-tests.mgmt.simbol
-        networks.mgmt.simbol
-        systems.mgmt.simbol
-        api.simbol.org
-        products.simbol.org
-        support.simbol.org
-    )
-    assertEquals 1.2 "$(:util:join , results)" "$(:util:join , sdns)"
+    sdns=( $(mock:wrapper dns :subdomains a full) )
+    assertTrue "${FUNCNAME?}/1.1" $?
+    results=( {s3,ec2,ddb,rds}.aws.amazon.com )
+    assertEquals "${FUNCNAME?}/1.2"\
+        "$(:util:join , results)"\
+        "$(:util:join , sdns)"
 
-    sdns=( $(:dns:subdomains m short) )
-    assertTrue 2.1 $?
-    results=(
-        unit-tests
-        networks
-        systems
-    )
-    assertEquals 2.2 "$(:util:join , results)" "$(:util:join , sdns)"
-    sdns=( $(:dns:subdomains m full) )
-    assertTrue 2.3 $?
-    results=(
-        unit-tests.mgmt.simbol
-        networks.mgmt.simbol
-        systems.mgmt.simbol
-    )
-    assertEquals 2.4 "$(:util:join , results)" "$(:util:join , sdns)"
+    sdns=( $(mock:wrapper dns :subdomains b full) )
+    assertTrue "${FUNCNAME?}/2.1" $?
+    results=( {dopler,arizona,kumo,blackfoot}.buildings.amazon.com )
+    assertEquals "${FUNCNAME?}/2.2"\
+        "$(:util:join , results)"\
+        "$(:util:join , sdns)"
 
-    sdns=( $(:dns:subdomains p short) )
-    assertTrue 3.1 $?
-    results=(
-        api
-        products
-        support
-    )
-    assertEquals 3.2 "$(:util:join , results)" "$(:util:join , sdns)"
-    sdns=( $(:dns:subdomains p full) )
-    assertTrue 3.3 $?
-    results=(
-        api.simbol.org
-        products.simbol.org
-        support.simbol.org
-    )
-    assertEquals 3.4 "$(:util:join , results)" "$(:util:join , sdns)"
+    sdns=( $(mock:wrapper dns :subdomains _ full) )
+    assertTrue "${FUNCNAME?}/3.1" $?
+    results=( {dopler,arizona,kumo,blackfoot}.buildings.amazon.com )
+    assertEquals "${FUNCNAME?}/3.2"\
+        "$(:util:join , results)"\
+        "$(:util:join , sdns)"
+}
 
-    sdns=( $(:dns:subdomains z) )
-    assertFalse 4.1 $?
-    [ -z "$(:util:join , sdns)" ]
-    assertTrue 4.2 $?
+function testCoreDnsSubdomainsInternalShort() {
+    mock:write <<-!MOCK
+        local -A USER_TLDS=( [a]='aws.amazon.com' [b]='buildings.amazon.com' )
+        local -a USER_SUBDOMAIN_a=( s3 ec2 ddb rds )
+        local -a USER_SUBDOMAIN_b=( dopler arizona kumo blackfoot )
+        local USER_TLDID_DEFAULT='a'
+	!MOCK
+
+    local -a sdns
+    local -a results
+
+    sdns=( $(mock:wrapper dns :subdomains a short) )
+    assertTrue "${FUNCNAME?}/1.1" $?
+    results=( {s3,ec2,ddb,rds} )
+    assertEquals "${FUNCNAME?}/1.2"\
+        "$(:util:join , results)"\
+        "$(:util:join , sdns)"
+
+    sdns=( $(mock:wrapper dns :subdomains b short) )
+    assertTrue "${FUNCNAME?}/2.1" $?
+    results=( {dopler,arizona,kumo,blackfoot} )
+    assertEquals "${FUNCNAME?}/2.2"\
+        "$(:util:join , results)"\
+        "$(:util:join , sdns)"
+
+    sdns=( $(mock:wrapper dns :subdomains _ short) )
+    assertTrue "${FUNCNAME?}/3.1" $?
+    results=( {s3,ec2,ddb,rds} )
+    assertEquals "${FUNCNAME?}/3.2"\
+        "$(:util:join , results)"\
+        "$(:util:join , sdns)"
 }
 #. }=-
 #. testCoreDnsSubdomainsPublic -={
-function testCoreDnsSubdomainsPublic() {
-    core:import dns
+function testCoreDnsSubdomainsPublicShort() {
+    mock:write <<-!MOCK
+        local -A USER_TLDS=( [a]='aws.amazon.com' [b]='buildings.amazon.com' )
+        local -a USER_SUBDOMAIN_a=( s3 ec2 ddb rds )
+        local -a USER_SUBDOMAIN_b=( dopler arizona kumo blackfoot )
+        local USER_TLDID_DEFAULT='a'
+	!MOCK
 
-    local data
-    data=( $(core:wrapper dns subdomains -T _) )
-    assertTrue   1.1 $?
-    assertEquals 1.2 6 ${#data[@]}
+    local -a sdns
+    local -a results
 
-    local data
-    data=( $(core:wrapper dns subdomains -T m) )
-    assertTrue   2.1 $?
-    assertEquals 2.2 3 ${#data[@]}
+    sdns=( $(mock:wrapper dns subdomains -T a -s) )
+    assertTrue "${FUNCNAME?}/1" $?
 
-    local data
-    data=( $(core:wrapper dns subdomains -T p) )
-    assertTrue   3.1 $?
-    assertEquals 3.2 3 ${#data[@]}
+    sdns=( $(mock:wrapper dns subdomains -T b -s) )
+    assertTrue "${FUNCNAME?}/2" $?
+
+    sdns=( $(mock:wrapper dns subdomains -T_ -s) )
+    assertTrue "${FUNCNAME?}/3" $?
+
+    sdns=( $(mock:wrapper dns subdomains -s) )
+    assertTrue "${FUNCNAME?}/4" $?
+}
+
+function testCoreDnsSubdomainsPubliclShortMiss() {
+    mock:write <<-!MOCK
+        local -A USER_TLDS=( )
+        unset USER_SUBDOMAIN_x
+        unset USER_SUBDOMAIN_y
+	!MOCK
+
+    mock:wrapper dns subdomains -Tx -s
+    assertFalse "${FUNCNAME?}/1" $?
+
+    mock:wrapper dns subdomains -Ty
+    assertFalse "${FUNCNAME?}/2" $?
 }
 #. }=-
 #. testCoreDnsInspectCsvInternal -={
 function testCoreDnsInspectCsvInternal() {
-    core:import dns
-
-    #:dns:inspect.csv 'trailer0dot.unit-tests.mgmt.simbol' >${stdoutF?} 2>${stderrF?}
-    #assertTrue   1.1 $?
-    #:dns:inspect.csv 'trailer1dot.unit-tests.mgmt.simbol.' >${stdoutF?} 2>${stderrF?}
-    #assertFalse  1.2 $? #. TODO This is technically a valid DNS name, so ...
-    #:dns:inspect.csv 'trailer2dot.unit-tests.mgmt.simbol..' >${stdoutF?} 2>${stderrF?}
-    #assertFalse  1.3 $?
-
     local -a data
 
-    data=( $(:dns:inspect.csv 'host-8f.api.simbol.org' a) )
-    assertTrue   1.1.1 $?
-    assertEquals 1.1.2 1 ${#data[@]}
-    assertEquals 1.1.3 "a,host-8f.api.simbol.org,fqdn,p,api,simbol.org,host-8f.api.simbol.org,127.2.8.15,1" "${data[0]}"
+    data=( $(:dns:inspect.csv 'google-public-dns-a.google.com.' a) )
+    assertTrue   "${FUNCNAME?}/1.1" $?
+    assertEquals "${FUNCNAME?}/1.2" 1 ${#data[@]}
+    assertEquals "${FUNCNAME?}/1.3"\
+        "a,google-public-dns-a.google.com.,ext,-,-,-,google-public-dns-a.google.com.,8.8.8.8,3"\
+        "${data[0]}"
 
-    data=( $(:dns:inspect.csv 'host-ca.products.simbol.org' a) )
-    assertTrue   1.2.1 $?
-    assertEquals 1.2.2 1 ${#data[@]}
-    assertEquals 1.2.3 "a,host-ca.products.simbol.org,fqdn,p,products,simbol.org,host-ca.products.simbol.org,127.2.12.10,1" "${data[0]}"
-
-    data=( $(:dns:inspect.csv 'host-d.mgmt.simbol' a) )
-    assertTrue   2.1 $?
-    assertEquals 2.2 1 ${#data[@]}
-    assertEquals 2.3 "a,host-d.mgmt.simbol,fqdn,m,,mgmt.simbol,host-d.mgmt.simbol,127.1.13.99,2" "${data[0]}"
-
-    data=( $(:dns:inspect.csv 'google-public-dns-a.google.com' a) )
-    assertTrue   3.1 $?
-    assertEquals 3.2 1 ${#data[@]}
-    assertEquals 3.3 "a,google-public-dns-a.google.com,ext,-,-,-,google-public-dns-a.google.com,8.8.8.8,3" "${data[0]}"
-
-    data=( $(:dns:inspect.csv 'host-ca.networks' a) )
-    assertTrue   4.1 $?
-    assertEquals 4.2 1 ${#data[@]}
-    assertEquals 4.3 "a,host-ca.networks,qdn,m,networks,mgmt.simbol,host-ca.networks.mgmt.simbol,127.1.12.10,6" "${data[0]}"
-
-    data=( $(:dns:inspect.csv 'host-ca' a) )
-    assertTrue   5.1 $?
-    assertEquals 5.2 2 ${#data[@]}
-    assertEquals 5.3 "a,host-ca,shn,m,networks,mgmt.simbol,host-ca.networks.mgmt.simbol,127.1.12.10,7" "${data[0]}"
-    assertEquals 5.4 "a,host-ca,shn,p,products,simbol.org,host-ca.products.simbol.org,127.2.12.10,7" "${data[1]}"
+    #TODO: Look in git history for a comprehensive test, when you figure out
+    #TODO: a way to mock DNS
 }
 #. }=-
 #. testCoreDnsLookupCsvInternal -={
 function testCoreDnsLookupCsvInternal() {
-    core:import dns
-
     local -a data
 
-    data=( $(:dns:lookup.csv p a 'host-8f') )
-    assertTrue   1.1 $?
-    assertEquals 1.2 1 ${#data[@]}
-    assertEquals 1.3 "a,host-8f,shn,p,api,simbol.org,host-8f.api.simbol.org,127.2.8.15,7" "${data[0]}"
-
-    data=( $(:dns:lookup.csv m a 'host-8f') )
-    assertTrue   2.1 $?
-    assertEquals 2.2 1 ${#data[@]}
-    assertEquals 2.3 "a,host-8f,shn,m,unit-tests,mgmt.simbol,host-8f.unit-tests.mgmt.simbol,127.1.8.15,7" "${data[0]}"
-
-    data=( $(:dns:lookup.csv p,m ca 'host-8f') )
-    assertTrue   3.1 $?
-    assertEquals 3.2 2 ${#data[@]}
-    assertEquals 3.3 "a,host-8f,shn,m,unit-tests,mgmt.simbol,host-8f.unit-tests.mgmt.simbol,127.1.8.15,7" "${data[0]}"
-    assertEquals 3.4 "a,host-8f,shn,p,api,simbol.org,host-8f.api.simbol.org,127.2.8.15,7" "${data[1]}"
-
-    data=( $(:dns:lookup.csv m,p ac 'host-8f') )
-    assertTrue   4.1 $?
-    assertEquals 4.2 2 ${#data[@]}
-    assertEquals 4.3 "a,host-8f,shn,m,unit-tests,mgmt.simbol,host-8f.unit-tests.mgmt.simbol,127.1.8.15,7" "${data[0]}"
-    assertEquals 4.3 "a,host-8f,shn,p,api,simbol.org,host-8f.api.simbol.org,127.2.8.15,7" "${data[1]}"
+    #TODO: Look in git history for a comprehensive test, when you figure out
+    #TODO: a way to mock DNS
 }
 #. }=-
 #. testCoreDnsLookupPublic -={
 function testCoreDnsLookupPublic() {
-    core:import dns
-
     local hostname
 
-    hostname=host-f9.unit-tests.mgmt.simbol
-    core:wrapper dns lookup ${hostname} >${stdoutF?} 2>${stderrF?}
-    assertTrue   1.1 $?
+    hostname='www.amazon.com'
+    mock:wrapper dns lookup ${hostname} >${stdoutF?} 2>${stderrF?}
+    assertTrue   "${FUNCNAME?}/1" $?
 
-    hostname=nohost.api.simbol.org
-    core:wrapper dns lookup ${hostname} >${stdoutF?} 2>${stderrF?}
-    assertFalse  1.2 $?
-}
-#. }=-
-#. testCoreDnsResolveInternal -={
-function testCoreDnsResolveInternal() {
-    core:import dns
-
-    local data
-
-    data=$(:dns:resolve host-88.support.simbol.org a)
-    assertTrue  1.1 $?
-
-    data=$(:dns:resolve nosuchhost.support.simbol.org a)
-    assertFalse 1.2 $?
-
-    data=$(:dns:resolve www.google.com a)
-    assertTrue  1.3 $?
+    hostname='www.schtunt.com'
+    mock:wrapper dns lookup ${hostname} >${stdoutF?} 2>${stderrF?}
+    assertFalse  "${FUNCNAME?}/2" $?
 }
 #. }=-
 #. testCoreDnsTldidsPublic -={
 function testCoreDnsTldidsPublic() {
-    core:import dns
+    mock:write <<-!MOCK
+        local -A USER_TLDS=( [a]='aws.amazon.com' [b]='buildings.amazon.com' )
+        local -a USER_SUBDOMAIN_a=( s3 ec2 ddb rds )
+        local -a USER_SUBDOMAIN_b=( dopler arizona kumo blackfoot )
+        local USER_TLDID_DEFAULT='a'
+	!MOCK
 
     local data
 
-    data=$(core:wrapper dns tldids)
-    assertTrue  1.1 $?
+    data="$(mock:wrapper dns tldids)"
+    assertTrue "${FUNCNAME?}/1.1" $?
+    local -i len=$(wc -l <<< "${data}")
+    assertEquals "${FUNCNAME?}/1.2" 2 ${len}
 
-    data=$(core:wrapper dns tldids '?')
-    assertFalse 1.2 $?
+    data="$(mock:wrapper dns tldids .)"
+    assertTrue "${FUNCNAME?}/2.1" $?
+    local -i len=$(wc -l <<< "${data}")
+    assertEquals "${FUNCNAME?}/2.2" 2 ${len}
+
+    data="$(mock:wrapper dns tldids b)"
+    assertTrue "${FUNCNAME?}/3.1" $?
+    local -i len=$(wc -l <<< "${data}")
+    assertEquals "${FUNCNAME?}/3.2" 1 ${len}
+}
+
+function testCoreDnsTldidsPublicMiss() {
+    mock:write <<-!MOCK
+        local -A USER_TLDS=( )
+        unset USER_SUBDOMAIN_z
+	!MOCK
+
+    data="$(mock:wrapper dns tldids z)"
+    assertFalse "${FUNCNAME?}/1" $?
 }
 #. }=-
 #. testCoreDnsGetInternal -={
 function testCoreDnsGetInternal() {
-    core:import dns
-
     local data
-    data=$(:dns:get _ usdn www.google.com.)
-    assertTrue   1.1 $?
-    data=$(:dns:get _ qdn www.google.com.)
-    assertTrue   1.2 $?
-    data=$(:dns:get _ fqdn www.google.com.)
-    assertTrue   1.3 $?
-    data=$(:dns:get _ resolved www.google.com.)
-    assertTrue   1.4 $?
+    data=$(mock:wrapper dns :get . usdn www.google.com.)
+    assertTrue "${FUNCNAME?}/1" $?
+
+    data=$(mock:wrapper dns :get . qdn www.google.com.)
+    assertTrue "${FUNCNAME?}/2" $?
+
+    data=$(mock:wrapper dns :get . fqdn www.google.com.)
+    assertTrue "${FUNCNAME?}/3" $?
+
+    data=$(mock:wrapper dns :get . resolved www.google.com.)
+    assertTrue "${FUNCNAME?}/4" $?
 }
 #. }=-
 #. testCoreDnsFqdnPublic -={
 function testCoreDnsFqdnPublic() {
-    core:import dns
+    mock:write <<-!MOCK
+        local -A USER_TLDS=( [a]='aws.amazon.com' [b]='buildings.amazon.com' )
+        local -a USER_SUBDOMAIN_a=( s3 ec2 ddb rds )
+        local -a USER_SUBDOMAIN_b=( dopler arizona kumo blackfoot )
+        local USER_TLDID_DEFAULT='a'
+	!MOCK
 
     local data
 
-    data=$(core:wrapper dns fqdn www.google.com.)
-    assertTrue   1.1 $?
-    assertEquals 1.2 "www.google.com." "${data}"
+    data=$(mock:wrapper dns fqdn -T . www.google.com.)
+    assertTrue "${FUNCNAME?}/1.1" $?
+    assertEquals "${FUNCNAME?}/1.2" "www.google.com." "${data}"
+
+    data=$(mock:wrapper dns fqdn www.google.com.)
+    assertFalse "${FUNCNAME?}/2" $?
 }
 #. }=-
 #. testCoreDnsQdnPublic -={
 function testCoreDnsQdnPublic() {
-    core:import dns
+    mock:write <<-!MOCK
+        local -A USER_TLDS=( [a]='aws.amazon.com' [b]='buildings.amazon.com' )
+        local -a USER_SUBDOMAIN_a=( s3 ec2 ddb rds )
+        local -a USER_SUBDOMAIN_b=( dopler arizona kumo blackfoot )
+        local USER_TLDID_DEFAULT='a'
+	!MOCK
 
     local data
 
-    data=$(core:wrapper dns qdn www.google.com)
-    assertTrue   1.1 $?
-    assertEquals 1.2 "www.google.com" "${data}"
+    data=$(mock:wrapper dns qdn -T . www.google.com.)
+    assertTrue "${FUNCNAME?}/1.1" $?
+    assertEquals "${FUNCNAME?}/1.2" "www.google.com." "${data}"
+
+    data=$(mock:wrapper dns qdn www.google.com.)
+    assertFalse "${FUNCNAME?}/2" $?
 }
 #. }=-
 #. testCoreDnsUsdnPublic -={
 function testCoreDnsUsdnPublic() {
-    core:import dns
+    mock:write <<-!MOCK
+        local -A USER_TLDS=( [a]='aws.amazon.com' [b]='buildings.amazon.com' )
+        local -a USER_SUBDOMAIN_a=( s3 ec2 ddb rds )
+        local -a USER_SUBDOMAIN_b=( dopler arizona kumo blackfoot )
+        local USER_TLDID_DEFAULT='a'
+	!MOCK
 
     local data
 
-    data=$(core:wrapper dns usdn www.google.com)
-    assertTrue   1.1 $?
-    assertEquals 1.2 "-" "${data}"
+    data=$(mock:wrapper dns usdn -T . www.google.com.)
+    assertTrue "${FUNCNAME?}/1.1" $?
+    assertEquals "${FUNCNAME?}/1.2" "-" "${data}"
+
+    data=$(mock:wrapper dns usdn www.google.com.)
+    assertFalse "${FUNCNAME?}/2" $?
 }
 #. }=-
 #. testCoreDnsIscnameInternal -={
 function testCoreDnsIscnameInternal() {
-    core:import dns
+    mock:wrapper dns :iscname . www.amazon.com
+    assertTrue "${FUNCNAME?}/1" $?
 
-    :dns:iscname _ www.google.com
-    assertFalse  1.1 $?
+    mock:wrapper dns :iscname . www.google.com
+    assertFalse "${FUNCNAME?}/2" $?
 }
 #. }=-
 #. testCoreDnsIsarecordInternal -={
 function testCoreDnsIsarecordInternal() {
-    core:import dns
+    mock:wrapper dns :isarecord . www.google.com
+    assertTrue "${FUNCNAME?}/1" $?
 
-    :dns:isarecord _ www.google.com
-    assertTrue   1.1 $?
+    mock:wrapper dns :isarecord . www.amazon.com
+    assertFalse "${FUNCNAME?}/2" $?
 }
 #. }=-
 #. }=-
