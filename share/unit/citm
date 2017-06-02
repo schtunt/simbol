@@ -19,8 +19,8 @@ declare -g -A PACKAGES=(
     [KCOV]='libcurl4-openssl-dev,libelf-dev,libdw-dev,cmake'
     [gpg,vault,remote]='gnupg2,pwgen,xclip'
     [net]='iproute,net-tools,netcat,socat'
-    [dns,remote]='dnsutils'
-    [remote]='tmux,socat'
+    #[dns,remote]='dnsutils'
+    [remote]='tmux,socat,dnsutils'
 )
 
 function citm:apt_get_install_for() {
@@ -29,7 +29,7 @@ function citm:apt_get_install_for() {
     local mcsv
     local buffer
     local -a pkgcsv="${PACKAGES[ALL]}"
-    for mcsv in ${!PACKAGES[@]}; do
+    for mcsv in "${!PACKAGES[@]}"; do
         buffer=",${mcsv},"
         if [ "${buffer/,${module},/}" != "${buffer}" ]; then
             pkgcsv+=",${PACKAGES[${mcsv}]}"
@@ -37,14 +37,14 @@ function citm:apt_get_install_for() {
     done
 
     local -a packages
-    IFS=, read -a packages <<< "${pkgcsv}"
-    citm:run sudo apt-get install ${packages[@]}
+    IFS=, read -ra packages <<< "${pkgcsv}"
+    citm:run sudo apt-get install "${packages[@]}"
 }
 
 function citm:run() {
     local -i e=9
 
-    echo "$ ${@}"
+    echo "$ ${*}"
     "${@}"
     e=$?
     echo "# exit status: $e"
@@ -80,13 +80,24 @@ function citm:kcov() {
         *:run)
             shift
             echo "$ citm:kcov run ${*}"
+
             mkdir coverage
-            if [ ${#TRAVIS_JOB_ID} -gt 0 ]; then
-                kcov coverage "$@"
-            else
-                kcov --coveralls-id=${TRAVIS_JOB_ID?} coverage "$@"
-            fi
+
+            local module="$1"
+            local -a kcov_opts=( "--bash-parser=/bin/bash" "--bash-method=DEBUG" )
+            [ ${#TRAVIS_JOB_ID} -gt 0 ] ||
+                kcov_opts+=( "--coveralls-id=\"${TRAVIS_JOB_ID?}\"" )
+
+            case ${module} in
+                core)
+                    kcov coverage "${kcov_opts[@]}" simbol unit core
+                ;;
+                *)
+                    kcov coverage "${kcov_opts[@]}" simbol unit test core ${MODULE}
+                ;;
+            esac
             e=$?
+
             echo "# citm:kcov run exit status: $e"
         ;;
 
@@ -120,6 +131,7 @@ if [ $# -eq 1 ]; then
             EXIT=0
 
             citm:run make install                                  ;((EXIT|=$?))
+            citm:kcov install                                      ;((EXIT|=$?))
         ;;
 
         before_script)
@@ -130,35 +142,19 @@ if [ $# -eq 1 ]; then
             EXIT=0
 
             case ${CONTEXT}:${MODULE} in
-                coverage:*)
-                    citm:kcov install                              ;((EXIT|=$?)) #. Code Coverage installation
-                    echo
-
-                    if [ ${MODULE} == 'core' ]; then
-                        citm:kcov run simbol unit core             ;((EXIT|=$?))
-                    else
-                        citm:kcov run simbol unit test ${MODULE}   ;((EXIT|=$?))
-                    fi
-                    echo
-
-                    citm:kcov report                               ;((EXIT|=$?))
-                    echo
-                ;;
-
-                execute:*)
-                    if [ ${MODULE} == 'core' ]; then
-                        citm:run simbol unit core                  ;((EXIT|=$?))
-                    else
-                        citm:run simbol unit test ${MODULE}        ;((EXIT|=$?))
-                    fi
-                    echo
-                ;;
-
                 installer:-)
                     citm:run make uninstall                        ;((EXIT|=$?)) #. Test uninstall
                     citm:run make install                          ;((EXIT|=$?)) #. Test reinstall
                     citm:run make purge                            ;((EXIT|=$?)) #. Test purge
                     citm:run make install                          ;((EXIT|=$?)) #. Test reinstall
+                ;;
+
+                execute:*)
+                    citm:kcov run ${MODULE}                        ;((EXIT|=$?))
+                    echo
+
+                    citm:kcov report                               ;((EXIT|=$?))
+                    echo
                 ;;
 
                 *:*)

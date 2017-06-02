@@ -1,15 +1,18 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
-function testCoreUtilImport() {
-    core:softimport util
-    assertTrue 0.1 $?
+function utilOneTimeStartUp() {
+    : noop
+}
+
+function utilStartUp() {
+    : noop
 }
 
 function utilTearDown() {
     : noop
 }
 
-function utilStartUp() {
+function utilOneTimeTearDown() {
     : noop
 }
 
@@ -22,22 +25,20 @@ function testCoreUtilImport() {
 #. }=-
 #. testCoreUtilUndelimitInternal -={
 function testCoreUtilUndelimitInternal() {
-    core:import util
-
+    # shellcheck disable=SC2034
     local -a array=( b a d b a b e )
     :util:join , array >${stdoutF?} 2>${stderrF?}
     assertTrue ':util:join.0' $?
-    assertEquals ':util:join.1' $(cat ${stdoutF}) 'b,a,d,b,a,b,e'
+    assertEquals ':util:join.1' "$(cat ${stdoutF})" 'b,a,d,b,a,b,e'
 }
 #. }=-
 #. testCoreUtilJoinInternal -={
 function testCoreUtilJoinInternal() {
-    core:import util
-
-    local -a string="b${SIMBOL_DELIM}a${SIMBOL_DELIM}d${SIMBOL_DELIM}b${SIMBOL_DELIM}a${SIMBOL_DELIM}b${SIMBOL_DELIM}e"
+    local string="b${SIMBOL_DELIM?}a${SIMBOL_DELIM?}d${SIMBOL_DELIM?}"
+    string+="b${SIMBOL_DELIM?}a${SIMBOL_DELIM?}b${SIMBOL_DELIM?}e"
     echo "${string}" | :util:undelimit >${stdoutF?} 2>${stderrF?}
     assertTrue ':util:undelimit.0' $?
-    assertEquals ':util:undelimit.1' "$(cat ${stdoutF})" "$(cat <<!
+    assertEquals ':util:undelimit.1' "$(cat <<!
 b
 a
 d
@@ -46,15 +47,34 @@ a
 b
 e
 !
-)"
+)" "$(cat ${stdoutF?})"
+}
+#. }=-
+#. testCoreUtilJoinInternalWithDelim -={
+function testCoreUtilJoinInternalWithDelim() {
+    local string="b,a,d,b,a,b,e"
+    echo "${string}" | :util:undelimit , >${stdoutF?} 2>${stderrF?}
+    assertTrue ':util:undelimit.0' $?
+    assertEquals ':util:undelimit.1' "$(cat <<!
+b
+a
+d
+b
+a
+b
+e
+!
+)" "$(cat ${stdoutF?})"
 }
 #. }=-
 #. testCoreUtilZipEvalInternal -={
 function testCoreUtilZipEvalInternal() {
-    core:import util
-
+    # shellcheck disable=SC2034
     local -a k=( {a..d} )
+
+    # shellcheck disable=SC2034
     local -a v=( {A..D} )
+
     :util:zip.eval k v >${stdoutF?} 2>${stderrF?}
     assertTrue ':util:zip.eval.0' $?
     assertEquals ':util:zip.eval.1' "$(cat ${stdoutF})" "(
@@ -67,17 +87,19 @@ function testCoreUtilZipEvalInternal() {
 #. }=-
 #. testCoreUtilAnsi2htmlInternal -={
 function testCoreUtilAnsi2htmlInternal() {
-    core:import util
-
-    for fgbg in 38 48 ; do #Foreground/Background
-        for color in {0..256} ; do #Colors
+    local -i fgbg
+    local -i color
+    for fgbg in 38 48; do #Foreground/Background
+        for color in {0..256}; do #Colors
             #Display the color
-            echo -en "\e[${fgbg};5;${color}m ${color}\t\e[0m"
+            echo -ne "\e[${fgbg};5;${color}m ${color}\t\e[0m"
+
             #Display 10 colors per lines
-            if [ $((($color + 1) % 10)) == 0 ] ; then
+            if (( ((color + 1) % 10) == 0 )); then
                 echo #New line
             fi
         done
+
         echo #New line
     done | :util:ansi2html >${stdoutF?} 2>${stderrF?}
     #. TODO: Validate html syntax

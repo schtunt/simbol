@@ -124,20 +124,23 @@ function :net:s2h() {
 function :net:i2s() {
     #. input  lo
     #. output 127.0.0.1
-    core:requires ip
+    core:requires ANY ip ifconfig
+    core:raise_bad_fn_call_unless $# in 1
 
     local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 1 ]; then
-        local -r iface=$1
+    local -r iface=$1
+    local ipdump
+    if ipdump="$(ip addr show dev ${iface} permanent 2>/dev/null)"; then
+        e=${CODE_SUCCESS?}
+    elif ipdump="$(ifconfig ${iface} 2>/dev/null)"; then
+        e=${CODE_SUCCESS?}
+    fi
+
+    if [ $e -eq ${CODE_SUCCESS?} ]; then
         local ip
-        ip=$(ip addr show dev ${iface} permanent|awk '$1~/^inet$/{print$2}' 2>/dev/null)
-        if [ $? -eq 0 ]; then
-            echo ${ip%%/*}
-            e=${CODE_SUCCESS?}
-        fi
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
+        ip="$(awk '$1~/^inet$/{print$2}' <<< "${ipdump}")"
+        echo "${ip%%/*}"
     fi
 
     return $e
@@ -228,22 +231,19 @@ function :net:firsthost() {
 function :net:portpersist() {
     core:requires socat
 
+    core:raise_bad_fn_call_unless $# in 3
+    local qdn="$1"
+    local -i port; let port=$2
+    local -i attempts; let attempts=$3
+
     local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 4 ]; then
-        local tldid=$1
-        local qdn=$2
-        local port=$3
-        local -i attempts=$4
-        local -i i=0
-        while ((i < attempts)) && ((e == ${CODE_FAILURE?})); do
-            :net:portping ${tldid} ${qdn} ${port}
-            e=$?
-            ((i++))
-        done
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+    local -i i=0
+    while ((i < attempts)) && ((e == ${CODE_FAILURE?})); do
+        :net:portping "${qdn}" ${port}
+        e=$?
+        ((i++))
+    done
 
     return $e
 }
@@ -296,73 +296,35 @@ function :net:freelocalport() {
 #. }=-
 #. net:portping -={
 function :net:portping() {
+    core:raise_bad_fn_call_unless $# in 2
+
     core:requires nc
     core:requires socat
 
-    local -i e=${CODE_FAILURE?}
-    if [ $# -eq 3 -o $# -eq 4 ]; then
-        local tldid="$1"
-        local qdn="$2"
-        local port="$3"
-        local ssh_proxy="${4:-}"
-        local cmd="nc -zqw1 ${qdn} ${port}"
-        cmd="socat /dev/null TCP:${qdn}:${port},connect-timeout=1"
-        if [ ${tldid} != '_' ]; then
-            local tld=${USER_TLDS[${tldid}]}
+    local qdn="$1"
+    local port="$2"
+    local cmd="nc -zqw1 ${qdn} ${port}"
+    cmd="socat /dev/null TCP:${qdn}:${port},connect-timeout=1"
 
-            #. DEPRECATED: USER_SSH_PROXY
-            #local ssh_proxy=${USER_SSH_PROXY[${tldid}]}
-            if [ ${#ssh_proxy} -gt 0 ]; then
-                ssh ${g_SSH_OPTS} ${ssh_proxy} ${cmd} >/dev/null 2>&1
-                e=$?
-            else
-                eval ${cmd} >/dev/null 2>&1
-                e=$?
-            fi
-        else
-            eval ${cmd} >/dev/null 2>&1
-            e=$?
-        fi
-    else
-        theme EXCEPTION "$# / $*"
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
-
-    return $e
+    eval ${cmd} >&/dev/null
+    return $?
 }
 function net:portping:usage() { echo "<hnh> <port>"; }
 function net:portping() {
     local -i e=${CODE_DEFAULT?}
+    [ $# -eq 2 ] || return $e
 
-    if [ $# -eq 2 ]; then
-        local hnh=$1
-        local port=$2
+    local hn=$1
+    local port=$2
 
-        cpf "Testing TCP connectivity to %{@host:%s}:%{@port:%s}..." ${hnh} ${port}
+    cpf "Testing TCP connectivity to %{@host:%s}:%{@port:%s}..." ${hn} ${port}
 
-        local fqdn
-        local tldid=${g_TLDID?}
-        #. If the name supplied does not end with a `.':
-        if [ "${hnh:$((${#hnh}-1))}" != '.' ]; then
-            fqdn=$(:dns:get ${tldid} fqdn ${hnh})
-            if [ $? -eq ${CODE_FAILURE?} ]; then
-                e=${CODE_FAILURE?}
-                theme HAS_FAILED "INVALID_FQDN"
-            fi
-        else
-            tldid='_'
-            fqdn=${hnh}
-        fi
-
-        if [ $e -ne ${CODE_FAILURE?} ]; then
-            if :net:portping ${tldid} ${fqdn} ${port}; then
-                theme HAS_PASSED "CONNECTED"
-                e=${CODE_SUCCESS?}
-            else
-                theme HAS_WARNED "NO_CONN"
-                e=${CODE_FAILURE?}
-            fi
-        fi
+    if :net:portping ${hn} ${port}; then
+        theme HAS_PASSED "CONNECTED"
+        e=${CODE_SUCCESS?}
+    else
+        theme HAS_WARNED "NO_CONN"
+        e=${CODE_FAILURE?}
     fi
 
     return $e

@@ -1,41 +1,94 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
-function cpfSetUp() {
+function cpfOneTimeSetUp() {
+    core:import cpf
+    assertTrue ${FUNCNAME?}/0 $?
+
     declare -g g_PLAYGROUND="/tmp/cpf-pg"
+    rm -rf ${g_PLAYGROUND?}
 }
 
-function cpfTearDown() {
-    #rm -rf ${g_PLAYGROUND?}
-    : noop
+function cpfOneTimeTearDown() {
+    rm -rf ${g_PLAYGROUND?}
 }
 
-function testCoreCpfPublic() {
-    local data
-    data="$(cpf "Hello World")"
-    assertTrue 'cpf.cpf/1.1' $?
-    assertEquals "${data}" "Hello World"
-    if [ ${SIMBOL_IN_COLOR} -eq 1 ]; then
-        assertEquals "$(cpf "%{ul:%s}" "Hello World")" "$(echo -e "\E[4mHello World\E[24m")"
-    else
-        assertEquals "$(cpf "%{ul:%s}" "Hello World")" "$(echo -e "Hello World")"
-    fi
-    #data="$(cpf "%s" "foo" "bar" 2> /dev/null )"
-    #assertFalse 'cpf.cpf/1.2' $?
+function testCoreCpfInitializePublic() {
+    cpf:initialize
+}
+
+function testCoreCpfPrintfPublic() {
+    local -a tester=(
+        '.%{d:dbg}.'
+        '.%{d:%%}.'
+        '.%%{d:%%}.'
+        '.%%{+d}.'
+        '.%%{-d}.'
+        '.%%{d:dbg}.'
+        '.%{d:dbg}.'
+        '.%{+d}dbg%{-d}.'
+        '.%{+d}%s%{-d}.|dbg'
+        '.%{d:@%s@}.|dbg'
+        '+%{d:-%s:}!|dbg'
+        '~%{+d}&%s&%{-d}~|dbg'
+        '.%{@dbg:debug}.'
+    )
+
+    local -a expect=(
+        '.<d>dbg</d>.'
+        '.<d>%</d>.'
+        '.%{d:%}.'
+        '.%{+d}.'
+        '.%{-d}.'
+        '.%{d:dbg}.'
+        '.<d>dbg</d>.'
+        '.<d>dbg</d>.'
+        '.<d>dbg</d>.'
+        '.<d>@dbg@</d>.'
+        '+<d>-dbg:</d>!'
+        '~<d>&dbg&</d>~'
+        '.<d><D>debug</D></d>.'
+    )
+
+    local expc
+    local rslt
+    local tstr
+
+    mock:write <<!
+SIMBOL_ESCAPE_SEQUENCES+=(
+    [+d]="<d>"  [-d]="</d>"
+)
+SIMBOL_OUTPUT_THEME+=(
+    [dbg]="%{d:<D>%s</D>}"
+)
+!
+
+    for ((i=0; i<${#tester[@]}; i++)); do
+        expc="${expect[$i]}"
+        IFS='|' read -ra tstr <<< "${tester[$i]}"
+
+        rslt="$(mock:wrapper cpf printf "${tstr[@]}")"
+        assertTrue ${FUNCNAME?}/$i.1 $?
+        assertEquals ${FUNCNAME?}/$i.2 "${expc}" "${rslt}"
+    done
+
+    mock:clear
 }
 
 function testCoreCpfModule_is_modifiedPrivate() {
-    ::cpf:module_is_modified $(core:module_path dns) dns
+    ::cpf:module_is_modified "$(core:module_path remote)" remote
     assertFalse '::cpf:is_modified/1.1' $?
 }
 
 function testCoreCpfModule_has_alertsPrivate() {
     local data
 
-    data=$(::cpf:module_has_alerts $(core:module_path remote) remote)
-    assertTrue '::cpf:has_alerts/1.1' $?
+    data=$(::cpf:module_has_alerts "$(core:module_path remote)" remote)
+    assertTrue "${FUNCNAME?}/1.1" $?
+    assertEquals "${FUNCNAME?}/1.2" "" "${data}"
 
-    data=$(::cpf:module_has_alerts  $(core:module_path dns) dns)
-    assertFalse '::cpf:has_alerts/1.2' $?
+    data=$(::cpf:module_has_alerts  "$(core:module_path git)" git)
+    assertFalse "${FUNCNAME?}/2.1" $?
+    assertEquals "${FUNCNAME?}/2.2" "" "${data}"
 }
 
 function testCoreCpfModulePrivate() {
@@ -45,14 +98,17 @@ function testCoreCpfModulePrivate() {
 function testCoreCpfFunction_has_alertsPrivate() {
     local data
 
-    data="$(::cpf:function_has_alerts $(core:module_path remote) remote cluster)"
-    assertTrue '::cpf:function_has_alerts/1.1' $?
+    data="$(::cpf:function_has_alerts "$(core:module_path remote)" remote cluster)"
+    assertTrue "${FUNCNAME?}/1.1" $?
+    assertEquals "${FUNCNAME?}/1.2" "" "${data}"
 
-    data="$(::cpf:function_has_alerts $(core:module_path dns) dns resolve)"
-    assertFalse '::cpf:function_has_alerts/1.2' $?
+    data="$(::cpf:function_has_alerts "$(core:module_path hgd)" hgd refresh)"
+    assertFalse "${FUNCNAME?}/2.1" $?
+    assertEquals "${FUNCNAME?}/2.2" "" "${data}"
 
-    data="$(::cpf:function_has_alerts $(core:module_path remote) remote clusterfoo)"
-    assertFalse '::cpf:function_has_alerts/1.3' $?
+    data="$(::cpf:function_has_alerts "$(core:module_path remote)" remote clusterfoo)"
+    assertFalse "${FUNCNAME?}/3.1" $?
+    assertEquals "${FUNCNAME?}/3.2" "" "${data}"
 }
 
 function testCoreCpfFunctionPrivate() {
@@ -85,20 +141,35 @@ function testCoreCpfThemePrivate() {
 }
 
 function testCoreCpfIndentPublic() {
-    local out
+    local -i cpf_indent
+    let cpf_indent=${CPF_INDENT}
     CPF_INDENT=0
+
+    local out
     out=$(cpfi foo)
     assertTrue 'cpf:indent/1.1' $?
-    assertEquals 'cpf:indent/1.1' "${out}" "foo"
+    assertEquals 'cpf:indent/1.2' "${out}" "foo"
     -=[
-    assertEquals 'cpf:indent/1.2' 1 ${CPF_INDENT}
+    assertEquals 'cpf:indent/2' 1 ${CPF_INDENT}
     out=$(cpfi foo)
-    assertEquals 'cpf:indent/1.2' "${out}" "$(printf "%$((CPF_INDENT * USER_CPF_INDENT_SIZE))s" "${USER_CPF_INDENT_STR}")foo"
+    assertEquals 'cpf:indent/3' "${out}" \
+        "$(printf\
+            "%$((CPF_INDENT * USER_CPF_INDENT_SIZE + ${#USER_CPF_INDENT_STR}))s"\
+            "${USER_CPF_INDENT_STR}")foo"
     -=[
+    assertEquals 'cpf:indent/4' 2 ${CPF_INDENT}
     -=[
+    assertEquals 'cpf:indent/4' 3 ${CPF_INDENT}
     -=[
-    assertEquals 'cpf:indent/1.3' 4 ${CPF_INDENT}
+    assertEquals 'cpf:indent/4' 4 ${CPF_INDENT}
     ]=-
+    assertEquals 'cpf:indent/4' 3 ${CPF_INDENT}
     ]=-
-    assertEquals 'cpf:indent/1.4' 2 ${CPF_INDENT}
+    assertEquals 'cpf:indent/5' 2 ${CPF_INDENT}
+    ]=-
+    assertEquals 'cpf:indent/4' 1 ${CPF_INDENT}
+    ]=-
+    assertEquals 'cpf:indent/6' 0 ${CPF_INDENT}
+
+    let CPF_INDENT=${cpf_indent}
 }

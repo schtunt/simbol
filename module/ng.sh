@@ -114,7 +114,7 @@ function ::ng:treecpf() {
         [host_bad]=firebrick3
     )
 
-    local prefix=$(printf " %$((${indent}*4))s%%{wh:|___ }" ' ')
+    local prefix=$(printf " %$((${indent}*4))s%%{w:|___ }" ' ')
 
     if [ ${g_FORMAT?} != 'dot' ]; then
         cpf "${prefix}%{@${cpfid}:%s}\n" "${child}"
@@ -557,7 +557,7 @@ function ng:host() {
                 ${FUNCNAME?} "$ng" ${hni}
             done
         else
-            if [ ${g_VERBOSE?} -eq 1 ]; then
+            if [ ${g_VERBOSE?} -eq ${TRUE?} ]; then
                 local -a didumean=( $(:ldap:search -2 netgroup nisNetgroupTriple~="\(${fqdn},,\)" nisNetgroupTriple) )
                 if [ ${#didumean[@]} -gt 0 ]; then
                     printf "? %s\n" ${didumean[@]}

@@ -263,6 +263,7 @@ function tutorial:hello() {
         if [ $# -eq 1 ] && [[ $1 == "WORLD" ]]; then
             whostr="WORLD!"
         else
+            #shellcheck disable=SC2034
             creatures=( "$@" )
             whostr="$(:util:join , creatures), and of course ${name}!"
         fi

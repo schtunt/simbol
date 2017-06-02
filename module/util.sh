@@ -152,130 +152,120 @@ function :util:time_i2s() {
 #. }=-
 #. Stat -={
 function :util:statmode() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=${CODE_FAILURE?}
+    [ $# -eq 1 ] || return $e
 
-    local filepath="${1}"
-    if [ $# -eq 1 -a -e "${filepath}" ]; then
-        stat --printf '%a' "${filepath}"
-        e=$?
-    fi
+    local filepath="$1"
+    [ -e "${filepath}" ] || return $e
+
+    stat --printf '%a' "${filepath}"
+    e=$?
 
     return $e
 }
 #. }=-
 #. Misc -={
 function :util:listify() {
-    local -i e=${CODE_FAILURE?}
+    core:raise_bad_fn_call_unless $# ge 2
 
-    if [ $# -gt 0 ]; then
-        #. Method 1
-        IFS=, read -a s <<< "$*"
-        echo ${s[@]}
-        e=${CODE_SUCCESS?}
+    # shellcheck disable=SC2162
+    IFS="$1" read -a s <<< "${*:2}"
+    local -i e=$?
 
-        #. Method 2
-        #IFS=, read -a s <<< $*
-        #echo ${s}
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+    echo "${s[@]}"
 
     return $e
 }
 
 function :util:uniq() {
-    local -i e=${CODE_FAILURE?}
+    core:raise_bad_fn_call_unless $# gt 0
 
-    if [ $# -gt 0 ]; then
-        tr ' ' '\n' <<< "${@}" | sort -u | tr '\n' ' '
-        e=$?
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
-
-    return $e
+    tr ' ' '\n' <<< "${*}" | sort -u | tr '\n' ' '
+    return $?
 }
 
 function :util:dups() {
-    local -i e=${CODE_FAILURE?}
+    core:raise_bad_fn_call_unless $# in 0
 
-    if [ $# -eq 0 ]; then
-        while read line; do
-            echo ${line}
-        done | sort -n | awk 'BEGIN{last=0};$1~/uidNumber/{if(last==$2){print$2};last=$2}' | sort -u
-        e=${CODE_SUCCESS?}
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+    while read -r line; do
+        echo "${line}"
+    done |
+    sort -n |
+    awk 'BEGIN{last=0};$1~/uidNumber/{if(last==$2){print$2};last=$2}' |
+    sort -u
 
-    return $e
+    return $?
 }
 
 function :util:undelimit() {
-    tr "${SIMBOL_DELIM?}" "\n"
+    core:raise_bad_fn_call_unless $# in 0 1
+
+    tr "${1:-${SIMBOL_DELIM?}}" "\n"
+    return $?
 }
 
 function :util:join() {
     #. Usage: array=( a b c ); :util:join $delim array
+
+    core:raise_bad_fn_call_unless $# in 2 3
+
     local -i e=${CODE_FAILURE?}
 
-    if [ $# -eq 2 -o $# -eq 3 ]; then
-        local -i len=$(core:len $2)
-
-        case ${len}:$# in
-            0:3)
-                if (( $3 > len )); then
-                    core:raise EXCEPTION_USER_ERROR 'Array overrun ${%s[*]:%d} when array length is only %d' "$2" $3 ${len}
-                else
-                    e=${CODE_SUCCESS?}
-                fi
-            ;;
-            *:3)
-                if (( $3 <= len )); then
-                    local IFS=$1
-                    eval "printf \"\${${2}[*]:${3}}\""
-                    e=$?
-                else
-                    core:raise EXCEPTION_USER_ERROR 'Array overrun ${%s[*]:%d} when array length is only %d' "$2" $3 ${len}
-                fi
-            ;;
-            0:2)
+    local -i len; let len=$(core:len $2)
+    case ${len}:$# in
+        0:3)
+            if (( $3 > len )); then
+                core:raise EXCEPTION_USER_ERROR\
+                    "Array overrun \${$2[*]:$3} when array length is only ${len}"
+            else
                 e=${CODE_SUCCESS?}
-            ;;
-            *:2)
+            fi
+        ;;
+        *:3)
+            if (( $3 <= len )); then
                 local IFS=$1
-                eval "printf \"\${${2}[*]}\""
+                eval "printf \"\${${2}[*]:${3}}\""
                 e=$?
-            ;;
-            *:*)
-                core:raise EXCEPTION_SHOULD_NOT_GET_HERE
-            ;;
-        esac
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+            else
+                core:raise EXCEPTION_USER_ERROR\
+                    "Array overrun \${$2[*]:$3} when array length is only ${len}"
+            fi
+        ;;
+        0:2)
+            e=${CODE_SUCCESS?}
+        ;;
+        *:2)
+            local IFS=$1
+            eval "printf \"\${${2}[*]}\""
+            e=$?
+        ;;
+        *:*)
+            core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+        ;;
+    esac
 
     return $e
 }
 
 function :util:zip.eval() {
     #. Usage: k=(a b c); v=(x y z); eval a=( $(zip.eval k v) )
-    if [ $# -eq 2 ]; then
-        local -i size=$(eval "echo \${#$1[@]}")
-        local -i i=0
-        echo '('
-        while [ $i -lt ${size} ]; do
-            eval echo "[\${$1[$i]}]=\${$2[$i]}"
-            ((i++))
-        done
-        echo ')'
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+
+    core:raise_bad_fn_call_unless $# in 2
+    local -i size; let size=$(eval "echo \${#$1[@]}")
+    local -i i=0
+    echo '('
+    while [ $i -lt ${size} ]; do
+        eval echo "[\${$1[$i]}]=\${$2[$i]}"
+        ((i++))
+    done
+    echo ')'
+
+    return $?
 }
 
 
 function :util:is_int() {
+    core:raise_bad_fn_call_unless $# in 1
     [[ $1 =~ ^-?[0-9]+$ ]]
     return $?
 }
@@ -301,7 +291,7 @@ function :util:markdown() {
     local -i e=${CODE_FAILURE?}
 
     if [ $# -gt 0 ]; then
-        if read -t 0 -N 0; then
+        if read -rt 0 -N 0; then
             local op=$1
             shift
 

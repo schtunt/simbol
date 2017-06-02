@@ -17,6 +17,14 @@ function oneTimeSetUp() {
     declare -g stderrF="${oD}/stderr"
 }
 
-# COPY-PASTE HERE
+function oneTimeTearDown() {
+    :
+}
 
+#. -={
+script=~/.simbol/.scm/share/unit/tests/hgd-static.sh
+#. }=-
+
+source ${script}
+SHUNIT_PARENT="${script}" source "${SHUNIT2?}"
 source ~/.simbol/var/libexec/shunit2

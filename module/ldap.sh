@@ -8,7 +8,6 @@ The simbol LDAP module
 #. https://access.redhat.com/simbol/documentation/en-US/Red_Hat_Directory_Server/8.2/html-single/Administration_Guide/index.html#Managing_Replication-Replicating-Password-Attributes
 g_MAXDATA=20380119031407Z
 
-core:import dns
 core:import util
 core:import vault
 
@@ -715,7 +714,7 @@ function ldap:search() {
                             e=${CODE_FAILURE?}
                         fi
                     done
-                    cpf
+                    echo
                 done <<< "${data}"
             else
                 theme HAS_FAILED "UNKNOWN ERROR"
@@ -756,7 +755,7 @@ function ldap:ngverify() {
                         hits=1
                     fi
                 done
-                [ ${hits} -eq 0 ] || cpf
+                [ ${hits} -eq 0 ] || echo
             done <<< "${data}"
         else
             theme HAS_FAILED "LDAP_CONNECT"

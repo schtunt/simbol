@@ -4,7 +4,10 @@ declare -g counter=2
 function coreCacheTester() {
     local -i e
 
+    #shellcheck disable=SC2034
     local l_CACHE_SIG='cache-test'
+
+    #shellcheck disable=SC2034
     local -i l_CACHE_TTL=$1
 
     core:global g.counter ${counter}
@@ -38,12 +41,14 @@ function coreCacheTester() {
 function testCoreUnsupportedAssociativeArrayAssignments() {
     local vetted
     vetted="$(md5sum <(git grep -E '[a-zA-Z0-9]+\+=\( *\['))"
-    assertEquals '0.0.1' '09a2684a0023bdd670ad455efbd74d8e' "${vetted%% *}"
+    assertEquals "${FUNCNAME[0]}/0"\
+        "fa0e5357ffa3f3f8f60054693f53f6d9"\
+        "${vetted%% *}"
 }
 
 function testCoreGlobalArithmeticFailure() {
     core:global g.num 1024
-    local -i v=$(core:global g.num)
+    local -i v; let v=$(core:global g.num)
     assertEquals "${FUNCNAME?}/1.1" 1024 $v
 
     core:global g.num += 'JOKER'
@@ -89,6 +94,7 @@ function testCoreGlobalAtomicity() {
 }
 
 function testCoreMockEnv() {
+    #shellcheck disable=SC2016
     assertTrue "${FUNCNAME?}/0" '[ ${#SIMBOL_USER_MOCKENV} -gt 0 ]'
 }
 
@@ -99,28 +105,38 @@ function testCoreMockWrite() {
 !
     local -i size
     size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default")
+    #shellcheck disable=SC2016
     assertTrue "${FUNCNAME?}/2.1" '[ ${size} -gt 0 ]'
+
     grep -q 'BATMAN' "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/2.2.1" $?
+
     grep -q 'JOKER' "${SIMBOL_USER_MOCKENV?}.default"
     assertFalse "${FUNCNAME?}/2.2.2" $?
+
     grep -q '0xDEADBEEF' "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/2.2.3" $?
-    size=$(cat "${SIMBOL_USER_MOCKENV?}.default"|wc -l)
+
+    size=$(wc -l < "${SIMBOL_USER_MOCKENV?}.default")
     assertEquals "${FUNCNAME?}/2.2.4" 1 ${size}
 
     mock:write <<!
         declare -A JOKER=( [k1]="0xDEADBEEF" )
 !
     size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default")
+    #shellcheck disable=SC2016
     assertTrue "${FUNCNAME?}/3.1" '[ ${size} -gt 0 ]'
+
     grep -q 'BATMAN' "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/3.2.1" $?
+
     grep -q 'JOKER' "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/3.2.2" $?
+
     grep -q '0xDEADBEEF' "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/3.2.3" $?
-    size=$(cat "${SIMBOL_USER_MOCKENV?}.default"|wc -l)
+
+    size=$(wc -l < "${SIMBOL_USER_MOCKENV?}.default")
     assertEquals "${FUNCNAME?}/3.2.4" 2 ${size}
 
     mock:clear
@@ -179,68 +195,65 @@ function testCoreMockDelete() {
 }
 
 function exitWith() {
-  g_CACHE_OUT || {
-    md5sum <<< "$(date +%N)" | cut -b 1-32
+  g_CACHE_OUT "$*" || {
+    date +%s.%N
     core:return $1
   } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
 
-function testCoreCacheExit() {
+function testCoreCacheExitDoesNotCacheNegatives() {
     #. Negative returns do not get cached...
-    for i in {1..2}; do
-        exitWith 1
-        assertEquals "0.1.1.$i" 1 $?
+    local o1
+    o1=$(exitWith 111)
+    assertEquals "${FUNCNAME?}/1.1" 111 $?
+    assertEquals ${FUNCNAME?}/"1.2" "" "${o1}"
 
-        exitWith 9
-        assertEquals "0.1.2.$i" 9 $?
+    local o2
+    o2=$(exitWith 111)
+    assertEquals "${FUNCNAME?}/2.1" 111 $?
+    assertEquals ${FUNCNAME?}/"2.2" "" "${o2}"
+}
 
-        exitWith 99
-        assertEquals "0.1.3.$i" 99 $?
-    done
-
+function testCoreCacheExitDoesCachePositives() {
     #. Positive ones do...
     local o1
     o1="$(exitWith 0)"
-    assertTrue "0.2.1" $?
+    assertTrue ${FUNCNAME?}/"2.1" $?
 
     local o2
     o2=$(exitWith 0)
-    assertTrue "0.2.2.1" $?
-    assertEquals "0.2.2.2" "${o1}" "${o2}"
+    assertTrue ${FUNCNAME?}/"2.2" $?
 
-    local o3
-    o3=$(exitWith 0)
-    assertTrue "0.2.3.1" $?
-    assertEquals "0.2.3.2" "${o1}" "${o3}"
+    assertEquals ${FUNCNAME?}/"2.3" "${o1}" "${o2}"
 }
 
 function testCoreCache() {
     local -i hit
 
-    assertEquals '0.1.1' 2 $counter
+    assertEquals "${FUNCNAME?}/1.1" 2 $counter
 
     for hit in {1..3}; do
         coreCacheTester 3 up
-        assertEquals "0.2.${hit}.1" 102 $counter
+        assertEquals "${FUNCNAME?}/2.${hit}.1" 102 $counter
         coreCacheTester 3 down
-        assertEquals "0.2.${hit}.2" 102 $counter
+        assertEquals "${FUNCNAME?}/2.${hit}.2" 102 $counter
     done
     sleep 2
 
     coreCacheTester 1 jump
-    assertEquals "0.3" 1102 $counter
+    assertEquals "${FUNCNAME?}/3" 1102 $counter
     for hit in {1..3}; do
         coreCacheTester 3 up
-        assertEquals "0.3.${hit}.1" 1102 $counter
+        assertEquals "${FUNCNAME?}/3.${hit}.1" 1102 $counter
         coreCacheTester 3 down
-        assertEquals "0.3.${hit}.2" 1102 $counter
+        assertEquals "${FUNCNAME?}/3.${hit}.2" 1102 $counter
     done
     sleep 4
 
     for hit in {1..3}; do
         coreCacheTester 3 down
-        assertEquals "0.4.${hit}.1" 1092 $counter
+        assertEquals "${FUNCNAME?}/4.${hit}.1" 1092 $counter
         coreCacheTester 3 up
-        assertEquals "0.4.${hit}.2" 1092 $counter
+        assertEquals "${FUNCNAME?}/4.${hit}.2" 1092 $counter
     done
 }
