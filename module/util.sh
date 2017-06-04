@@ -50,33 +50,29 @@ integer delay ${DEFAULT_DELAY?} <delay> d
 }
 
 function util:timeout() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=${CODE_DEFAULT?}
+    [ $# -ge 1 ] || return $e
 
-    if [ $# -ge 1 ]; then
-        e=${CODE_FAILURE?}
-        local -i delay=${FLAGS_delay?}; unset FLAGS_delay
-        local -i timeout=${FLAGS_timeout?}; unset FLAGS_timeout
-        local -i interval=${FLAGS_interval?}; unset FLAGS_interval
-        (
-            local -i t
-            ((t = timeout))
-            while ((t > 0)); do
-                sleep ${interval}
-                kill -0 $$ || exit 0
-                ((t -= interval))
-            done
+    local -i delay; let delay=${FLAGS_delay?}; unset FLAGS_delay
+    local -i timeout; let timeout=${FLAGS_timeout?}; unset FLAGS_timeout
+    local -i interval; let interval=${FLAGS_interval?}; unset FLAGS_interval
+    (
+        local -i t; let t=timeout
+        while ((t > 0)); do
+            sleep ${interval}
+            kill -0 $$ || exit 0
+            ((t -= interval))
+        done
 
-            # Be nice, post SIGTERM first.
-            # The 'exit 0' below will be executed if any preceeding command fails.
-            kill -s SIGTERM $$ && kill -0 $$ || exit 0
-            sleep $delay
-            kill -s SIGKILL $$
-        ) 2>/dev/null &
+        # Be nice, post SIGTERM first.
+        # The 'exit 0' below will be executed if any preceeding command fails.
+        kill -s SIGTERM $$ && kill -0 $$ || exit 0
+        sleep $delay
+        kill -s SIGKILL $$
+    ) 2>/dev/null &
 
-        exec "$@"
-    fi
-
-    return $e
+    #shellcheck disable=SC2093
+    exec "$@"
 }
 #. }=-
 #. Date -={
@@ -121,34 +117,28 @@ function :util:date_s2i() {
 }
 
 function :util:time_i2s() {
-    local -i e=${CODE_FAILURE?}
+    core:raise_bad_fn_call_unless $# eq 1
+    local -i e; let e=${CODE_SUCCESS?}
 
-    if [ $# -eq 1 ]; then
-        e=${CODE_SUCCESS?}
+    local -i secs=$1
 
-        local -i secs=$1
+    local -i days
+    (( days = secs / 86400 ))
+    (( secs %= 86400 ))
 
-        local -i days
-        (( days = secs / 86400 ))
-        (( secs %= 86400 ))
+    local -i hours
+    (( hours = secs / 3600 ))
+    (( secs %= 3600 ))
 
-        local -i hours
-        (( hours = secs / 3600 ))
-        (( secs %= 3600 ))
+    local -i mins
+    (( mins = secs / 60 ))
+    (( secs %= 60 ))
 
-        local -i mins
-        (( mins = secs / 60 ))
-        (( secs %= 60 ))
-
-        [ ${days} -eq 0 ] || printf "%s" "${days} days, "
-        printf "%02d:%02d:%02d\n" ${hours} ${mins} ${secs}
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+    [ ${days} -eq 0 ] || printf "%s" "${days} days, "
+    printf "%02d:%02d:%02d\n" ${hours} ${mins} ${secs}
 
     return $e
 }
-
 #. }=-
 #. Stat -={
 function :util:statmode() {
@@ -206,38 +196,37 @@ function :util:undelimit() {
 
 function :util:join() {
     #. Usage: array=( a b c ); :util:join $delim array
-
     core:raise_bad_fn_call_unless $# in 2 3
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=${CODE_FAILURE?}
 
-    local -i len; let len=$(core:len $2)
+    local -i len; let len=$(core:len "$2")
     case ${len}:$# in
         0:3)
             if (( $3 > len )); then
                 core:raise EXCEPTION_USER_ERROR\
                     "Array overrun \${$2[*]:$3} when array length is only ${len}"
             else
-                e=${CODE_SUCCESS?}
+                let e=${CODE_SUCCESS?}
             fi
         ;;
         *:3)
             if (( $3 <= len )); then
                 local IFS=$1
                 eval "printf \"\${${2}[*]:${3}}\""
-                e=$?
+                let e=$?
             else
                 core:raise EXCEPTION_USER_ERROR\
                     "Array overrun \${$2[*]:$3} when array length is only ${len}"
             fi
         ;;
         0:2)
-            e=${CODE_SUCCESS?}
+            let e=${CODE_SUCCESS?}
         ;;
         *:2)
             local IFS=$1
             eval "printf \"\${${2}[*]}\""
-            e=$?
+            let e=$?
         ;;
         *:*)
             core:raise EXCEPTION_SHOULD_NOT_GET_HERE
@@ -283,7 +272,8 @@ function :util:is_int() {
 #. }=-
 #. ANSI2HTML -={
 function :util:ansi2html() {
-    ${SIMBOL_CORE_LIBEXEC?}/ansi2html
+    "${SIMBOL_CORE_LIBEXEC?}/ansi2html"
+    return $?
 }
 #. }=-
 #. Markdown Scaffolding -={
