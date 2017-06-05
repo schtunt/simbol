@@ -245,16 +245,17 @@ function tutorial:hello() {
     local name=${FLAGS_name?}; unset FLAGS_name;
 
     #. Here is an int:
-    local -i repeat; let repeat=FLAGS_repeat; unset FLAGS_repeat;
+    core:decl_shflags.eval int repeat
 
     #. And here is a float:
     local snooze=${FLAGS_snooze?}; unset FLAGS_snooze;
 
     #. Here is a boolean, the ugliest of them all:
-    local -i greet; let greet=FLAGS_greet; ((greet=~greet+2)); unset FLAGS_greet
+    core:decl_shflags.eval bool greet
 
     local greeting="Hello"
-    if [ ${greet} -eq 0 ]; then
+    #shellcheck disable=SC2154,SC2086
+    if [ ${greet} -eq ${FALSE} ]; then
         greeting="Goodbye"
     fi
 
@@ -270,6 +271,7 @@ function tutorial:hello() {
     fi
 
     local -i i
+    #shellcheck disable=SC2154,SC2086
     for ((i=0; i<repeat; i++)); do
         cpf "${greeting} ${whostr}\n"
         sleep "${snooze}"

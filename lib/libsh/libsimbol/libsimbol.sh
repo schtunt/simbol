@@ -21,14 +21,32 @@ export SHFLAGS="${SIMBOL_USER_VAR_LIBSH}/shflags"
 # shellcheck disable=SC1090
 source "${SHFLAGS?}"
 
-function core:bool.eval() {
-    core:raise_bad_fn_call_unless $# in 1
+function core:decl_shflags_bool.eval() {
+    core:raise_bad_fn_call_unless $# gt 0
+    #requires shellcheck's `disable=SC2086,SC2154' in caller
 
-    cat <<-!EVAL
-        local -i $1;
-        let $1=\${FLAGS_$1};
-        unset FLAGS_$1;
-	!EVAL
+    local var
+    for var in "$@"; do
+        cat <<-!EVAL
+            local -i ${var};
+            let ${var}=\${FLAGS_${var}};
+            unset FLAGS_${var};
+		!EVAL
+    done
+}
+
+function core:decl_shflags_int.eval() {
+    core:raise_bad_fn_call_unless $# gt 0
+    #requires shellcheck's `disable=SC2086,SC2154' in caller
+
+    local var
+    for var in "$@"; do
+        cat <<-!EVAL
+            local -i ${var}
+            let ${var}=FLAGS_${var}
+            unset FLAGS_${var}
+		!EVAL
+    done
 }
 #. }=-
 #. 1.6  Core Utilities -={
@@ -853,10 +871,10 @@ declare -g fn_4d9d6c17eeae2754c9b49171261b93bd="${fn:-}"
     #. Process it all
     if FLAGS "${@}"; then #>& /dev/null
         #. GLOBAL_OPTS 3/4 -={
-        eval "$(core:bool.eval help)"; g_HELP=${help?}
-        eval "$(core:bool.eval verbose)"; g_VERBOSE=${verbose?}
-        eval "$(core:bool.eval debug)"; g_DEBUG=${debug?}
-        eval "$(core:bool.eval cached)"; g_CACHED=${cached?}
+        eval "$(core:decl_shflags_bool.eval help)"; g_HELP=${help?}
+        eval "$(core:decl_shflags_bool.eval verbose)"; g_VERBOSE=${verbose?}
+        eval "$(core:decl_shflags_bool.eval debug)"; g_DEBUG=${debug?}
+        eval "$(core:decl_shflags_bool.eval cached)"; g_CACHED=${cached?}
 
         if grep -qw -- -E <<< "${g_SSH_OPTS[*]}"; then
             case ${g_DEBUG?}:${g_VERBOSE?} in
@@ -868,7 +886,7 @@ declare -g fn_4d9d6c17eeae2754c9b49171261b93bd="${fn:-}"
         fi
 
         #. Last amendment to g_SSH_OPTS
-        g_SSH_OPTS+=( "${USER_SSH_OPTS[@]}" )
+        g_SSH_OPTS+=( "${USER_SSH_OPTS[@]:+${USER_SSH_OPTS[@]}}" )
 
         #. Everything else is straight-forward:
         g_LDAPHOST=${FLAGS_ldaphost?}; unset FLAGS_ldaphost
@@ -1047,7 +1065,7 @@ function :core:usage() {
     if [ ${#FUNCNAME[@]} -lt 4 ]; then
         cpf:printf "%{+bo}%{n:simbol}%{-bo} %{@version:%s}, %{w:bash framework}\n" ${SIMBOL_VERSION?}
         cpf:printf "Using %{@path:%s} %{@version:%s}" "${BASH}" "${BASH_VERSION}"
-        if [ ${#SIMBOL_SHELL} -eq 0 ]; then
+        if [ "${SIMBOL_SHELL:-NilOrNotSet}" == "NilOrNotSet" ]; then
             cpf:printf " %{@comment:(export SIMBOL_SHELL to override)}"
         else
             cpf:printf " %{r:(SIMBOL_SHELL override active)}"
@@ -1436,12 +1454,12 @@ function core:raise() {
     if [[ $- =~ x ]]; then
         : !!! Exiting raise function early as we are being traced !!!
     else
-        cpf:printf "%{+r}EXCEPTION%{bo:[%s->%s]}: %s%{-r}:\n" "$e" "$1" "${RAISE[$e]-[UNKNOWN EXCEPTION:$e]}" >&2
-        cpf:printf "\n%{+r}  !!! %{bo:%s}%{-r}\n\n" "${@:2}" >&2
+        cpf:printf "%{+r}EXCEPTION%{bo:[%s->%s]}: %s%{-r}\n" "$e" "$1" "${RAISE[$e]-[UNKNOWN EXCEPTION:$e]}" >&2
+        [ $# -le 2 ] || cpf:printf "\n%{+r}  !!! %{bo:%s}%{-r}\n\n" "${@:2}" >&2
 
         cpf:printf "%{+r}EXCEPTION%{bo:[Traceback]}%{-r}:\n" >&2
-        if [ ${#g_MODULE} -gt 0 ]; then
-            if [ ${#g_FUNCTION} -gt 0 ]; then
+        if [ "${g_MODULE:-NilOrNotSet}" != 'NilOrNotSet' ]; then
+            if [ "${g_FUNCTION:-NilOrNotSet}" != 'NilOrNotSet' ]; then
                 cpf:printf "Function %{c:${g_MODULE}:${g_FUNCTION}()}" 1>&2
                 echo "Critical failure in function ${g_MODULE}:${g_FUNCTION}()" >> "${SIMBOL_DEADMAN?}"
             else
@@ -1449,23 +1467,27 @@ function core:raise() {
                 echo "Critical failure in g_MODULE ${g_MODULE}" >> "${SIMBOL_DEADMAN?}"
             fi
         else
-            cpf:printf "File %{@path:$0}" 1>&2
             echo "Critical failure in file ${0}" >> "${SIMBOL_DEADMAN?}"
         fi
 
-        cpf:printf " %{r:failed with exception} %{g:$e}; %{c:traceback}:\n" 1>&2
-        local i=0
-        local code
-        local -i frames; let frames=${#BASH_LINENO[@]}
-        #. ((frames-2)): skips main, the last one in arrays
-        for ((i=frames-2; i>=0; i--)); do
-            cpf:printf "  File %{g:%s}, line %{g:%s}, in %{r:%s}\n" \
-                "${BASH_SOURCE[i+1]}" "${BASH_LINENO[i]}" "${FUNCNAME[i+1]}()" 1>&2
-
-            # Grab the source code of the line
-            code=$(sed -n "${BASH_LINENO[i]}{s/^ *//;s/%/%%/g;p}" "${BASH_SOURCE[i+1]}")
-            cpf:printf "    %{w:>>>} %{c:%s}\n" "${code}" 1>&2
-        done
+        -=-
+        -=[
+            local fn mf code
+            local -i i ln frames
+            let frames=${#BASH_LINENO[@]}
+            #. ((frames-2)): skips main, the last element in the arrays
+            for ((i=frames-2; i>=0; i--)); do
+                fn="${FUNCNAME[i+1]}()"
+                mf="${BASH_SOURCE[i+1]}"
+                let ln=${BASH_LINENO[i]}
+                cpfi "%{@function:%s}@%{@path:%s}:%{@int:%s}\n"\
+                    "${fn}" "${mf}" ${ln} 1>&2
+                -=[
+                    code="$(sed -n "${ln}{s/^ *//;s/%/%%/g;p}" "${mf}")"
+                    cpfi "[ %{@code:%s} ]\n" "${code}" 1>&2
+                ]=-
+            done
+        ]=-
     fi
 
     exit $e

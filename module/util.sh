@@ -49,13 +49,12 @@ integer delay ${DEFAULT_DELAY?} <delay> d
 !
 }
 
+#shellcheck disable=SC2086,SC2154
 function util:timeout() {
     local -i e; let e=CODE_DEFAULT
     [ $# -ge 1 ] || return $e
 
-    local -i delay; let delay=FLAGS_delay; unset FLAGS_delay
-    local -i timeout; let timeout=FLAGS_timeout; unset FLAGS_timeout
-    local -i interval; let interval=FLAGS_interval; unset FLAGS_interval
+    eval "$(core:decl_shflags_int.eval delay timeout interval)"
     (
         local -i t; let t=timeout
         while ((t > 0)); do
