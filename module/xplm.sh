@@ -43,7 +43,7 @@ function ::xplm:loadvirtenv() {
     core:raise_bad_fn_call_unless $# in 1 2
     core:raise_bad_fn_call_unless "$1" in pl py rb
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     case $1 in
         rb)
@@ -85,7 +85,7 @@ function ::xplm:loadvirtenv() {
 function :xplm:requires() {
     core:raise_bad_fn_call_unless $# in 2
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local plid="${1}"
     local required="${2}"
@@ -93,19 +93,19 @@ function :xplm:requires() {
         py)
             if ::xplm:loadvirtenv "${plid}"; then
                 python -c "import ${required}" 2>/dev/null &&
-                    let e=${CODE_SUCCESS?}
+                    let e=CODE_SUCCESS
             fi
         ;;
         rb)
             if ::xplm:loadvirtenv "${plid}"; then
                 ruby -e "require '${required//-/\/}'" 2>/dev/null &&
-                    let e=${CODE_SUCCESS?}
+                    let e=CODE_SUCCESS
             fi
         ;;
         pl)
             if ::xplm:loadvirtenv "${plid}"; then
                 perl -M$"{required}" -e ';' 2>/dev/null &&
-                    let e=${CODE_SUCCESS?}
+                    let e=CODE_SUCCESS
             fi
         ;;
     esac
@@ -117,7 +117,7 @@ function :xplm:requires() {
 function :xplm:versions() {
     core:raise_bad_fn_call_unless $# in 1
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local plid="${1}"
     local virtenv="${plid}env"
@@ -135,14 +135,14 @@ function :xplm:versions() {
         ;;
     esac
 
-    let e=${CODE_SUCCESS?}
+    let e=CODE_SUCCESS
 
     return $e
 }
 
 function xplm:versions:usage() { echo "<plid>"; }
 function xplm:versions() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 1 ]; then
         local plid="${1}"
@@ -153,10 +153,10 @@ function xplm:versions() {
             ;;
         esac
     elif [ $# -eq 0 ]; then
-        let e=${CODE_SUCCESS?}
+        let e=CODE_SUCCESS
         for plid in "${!g_PROLANG_ROOT[@]}"; do
             if ! :xplm:versions "${plid}"; then
-                let e=${CODE_FAILURE?}
+                let e=CODE_FAILURE
             fi
         done
     fi
@@ -168,20 +168,20 @@ function xplm:versions() {
 function :xplm:list() {
     core:raise_bad_fn_call_unless $# in 1
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local plid="${1}"
     case ${plid} in
         py)
             if ::xplm:loadvirtenv "${plid}"; then
                 pip list | sed 's/^/py /'
-                e=${PIPESTATUS[0]}
+                let e=PIPESTATUS[0]
             fi
         ;;
         rb)
             if ::xplm:loadvirtenv "${plid}"; then
                 gem list --local | sed 's/^/rb /'
-                e=${PIPESTATUS[0]}
+                let e=PIPESTATUS[0]
             fi
         ;;
         pl)
@@ -197,7 +197,7 @@ foreach \$module (@modules) {
 }
 !
 ) | sed 's/^/pl /'
-                let e=${PIPESTATUS[0]}
+                let e=PIPESTATUS[0]
             fi
         ;;
     esac
@@ -207,7 +207,7 @@ foreach \$module (@modules) {
 
 function xplm:list:usage() { echo "[<plid>]"; }
 function xplm:list() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -le 1 ] || return $e
 
     local -A prolangs=( [py]=0 [pl]=0 [rb]=0 )
@@ -242,24 +242,24 @@ function xplm:list() {
 function :xplm:search() {
     core:raise_bad_fn_call_unless $# gt 1
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
     local plid="${1}"
     case ${plid} in
         py)
             if ::xplm:loadvirtenv "${plid}"; then
                 pip search "${@:2}" | cat
-                let e=${PIPESTATUS[0]}
+                let e=PIPESTATUS[0]
             fi
         ;;
         rb)
             if ::xplm:loadvirtenv "${plid}"; then
                 gem search "${@:2}" | cat
-                let e=${PIPESTATUS[0]}
+                let e=PIPESTATUS[0]
             fi
         ;;
         pl)
             if ::xplm:loadvirtenv "${plid}"; then
-                let e=${CODE_NOTIMPL?}
+                let e=CODE_NOTIMPL
             fi
         ;;
     esac
@@ -269,7 +269,7 @@ function :xplm:search() {
 
 function xplm:search:usage() { echo "<plid> <search-str>"; }
 function xplm:search() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -gt 1 ] || return $e
 
     local plid="$1"
@@ -280,7 +280,7 @@ function xplm:search() {
         ;;
         *)
             theme HAS_FAILED "Unknown/unsupported language ${plid}"
-            let e=${CODE_FAILURE?}
+            let e=CODE_FAILURE
         ;;
     esac
 
@@ -292,7 +292,7 @@ function :xplm:install() {
     core:raise_bad_fn_call_unless $# ge 1
     core:raise_bad_fn_call_unless "$1" in pl py rb
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
     if [ $# -gt 1 ]; then
         local plid="${1}"
         local virtenv="${plid}env"
@@ -449,7 +449,7 @@ function :xplm:install() {
             fi
             #. }=-
         else
-            let e=${CODE_SUCCESS?}
+            let e=CODE_SUCCESS
         fi
     fi
 
@@ -457,7 +457,7 @@ function :xplm:install() {
 }
 function xplm:install:usage() { echo "<plid> [<pkg> [<pkg> [...]]]"; }
 function xplm:install() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -ge 1 ] || return $e
 
     if [ $# -gt 1 ]; then
@@ -469,7 +469,7 @@ function xplm:install() {
             ;;
             *)
                 theme HAS_FAILED "Unknown/unsupported language ${plid}"
-                let e=${CODE_FAILURE?}
+                let e=CODE_FAILURE
             ;;
         esac
     elif [ $# -eq 1 ]; then
@@ -499,7 +499,7 @@ function :xplm:purge() {
     core:raise_bad_fn_call_unless $# eq 1
     core:raise_bad_fn_call_unless "$1" in pl py rb
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local plid="${1}"
     case ${plid} in
@@ -511,7 +511,7 @@ function :xplm:purge() {
             #. Unnecessary VCS purge...
             set +f; rm -rf "${SIMBOL_USER_VAR_SCM:?}/${virtenv}"*; set -f
 
-            let e=${CODE_SUCCESS?}
+            let e=CODE_SUCCESS
         ;;
     esac
 
@@ -520,7 +520,7 @@ function :xplm:purge() {
 
 function xplm:purge:usage() { echo "<plid>"; }
 function xplm:purge() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 1 ] || return $e
 
     local plid="${1}"
@@ -542,7 +542,7 @@ function xplm:purge() {
 function :xplm:selfupdate() {
     core:raise_bad_fn_call_unless $# eq 1
 
-    local -i e; let e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     local plid="${1}"
     local virtenv="${plid}env"
@@ -555,13 +555,13 @@ function :xplm:selfupdate() {
             for vcs in ${vcses}; do
                 if cd "${xplmscm}/${vcs}" >&/dev/null; then
                     if ! git pull >> "${SIMBOL_USER}/var/log/${virtenv}.log" 2>&1; then
-                        let e=${CODE_FAILURE?}
+                        let e=CODE_FAILURE
                     fi
                 fi
             done
         ;;
         *)
-            let e=${CODE_FAILURE?}
+            let e=CODE_FAILURE
         ;;
     esac
 
@@ -569,7 +569,7 @@ function :xplm:selfupdate() {
 }
 function xplm:selfupdate:usage() { echo "<plid>"; }
 function xplm:selfupdate() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 1 ]; then
         local plid="${1}"
@@ -582,14 +582,14 @@ function xplm:selfupdate() {
             ;;
         esac
     elif [ $# -eq 0 ]; then
-        let e=${CODE_SUCCESS?}
+        let e=CODE_SUCCESS
         for plid in "${!g_PROLANG_ROOT[@]}"; do
             cpf "Updating %{y:%s} to the latest release..." "${plid}"
             if :xplm:selfupdate $"{plid}"; then
                 theme HAS_PASSED
             else
                 theme HAS_FAILED
-                let e=${CODE_FAILURE?}
+                let e=CODE_FAILURE
             fi
         done
     fi
@@ -601,7 +601,7 @@ function xplm:selfupdate() {
 function :xplm:shell() {
     core:raise_bad_fn_call_unless $# eq 2
 
-    local -i e; let e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local plid="${1}"
     local version="${2}"
@@ -626,7 +626,7 @@ function :xplm:shell() {
 }
 function xplm:shell:usage() { echo "<plid> [<version>]"; }
 function xplm:shell() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     #shellcheck disable=SC2166
     [ $# -eq 1 -o $# -eq 2 ] || return $e
 
@@ -639,7 +639,7 @@ function xplm:shell() {
         ;;
         *)
             theme HAS_FAILED "Unknown/unsupported language ${plid}"
-            let e=${CODE_FAILURE?}
+            let e=CODE_FAILURE
         ;;
     esac
 
@@ -651,7 +651,7 @@ function :xplm:run() {
     core:raise_bad_fn_call_unless $# gt 2
     core:raise_bad_fn_call_unless "$1" in pl py rb
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local plid="${1}"
     local version="${2}"
@@ -675,7 +675,7 @@ function :xplm:run() {
 }
 function xplm:run:usage() { echo "<plid> <script>"; }
 function xplm:run() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -ge 2 ] || return $e
 
     local plid="$1"
@@ -688,7 +688,7 @@ function xplm:run() {
         ;;
         *)
             theme HAS_FAILED "Unknown/unsupported language ${plid}"
-            let e=${CODE_FAILURE?}
+            let e=CODE_FAILURE
         ;;
     esac
 
@@ -698,7 +698,7 @@ function xplm:run() {
 #.   xplm:repl -={
 function :xplm:repl() {
     core:raise_bad_fn_call_unless $# eq 1
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local plid="${1}"
     case ${plid} in
@@ -720,7 +720,7 @@ function :xplm:repl() {
 }
 function xplm:repl:usage() { echo "<plid>"; }
 function xplm:repl() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 1 ] || return $e
 
     local plid="$1"
@@ -731,7 +731,7 @@ function xplm:repl() {
         ;;
         *)
             theme HAS_FAILED "Unknown/unsupported language ${plid}"
-            let e=${CODE_FAILURE?}
+            let e=CODE_FAILURE
         ;;
     esac
 

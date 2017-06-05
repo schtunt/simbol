@@ -16,7 +16,7 @@ core:requires netstat
 #.   remote:connect:passwordless -={
 function :remote:connect:passwordless() {
     # Verify if we can connect to box with a certain connection string
-    local -i e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
     local extra_SSH_OPTS="-o PasswordAuthentication=no -o StrictHostKeyChecking=no"
     local hcs="$1"
 
@@ -30,7 +30,7 @@ function :remote:connect:passwordless() {
 #. }=-
 #.   remote:connect() -={
 function :remote:connect() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
     core:raise_bad_fn_call_unless $# ge 1
 
     local hcs
@@ -61,7 +61,7 @@ boolean resolve   false  "resolve-first"  r
 }
 function remote:connect:usage() { echo "[<username>@]<hnh> [-- <cmd> [<args> [...]]]"; }
 function remote:connect() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -ge 1 ] || return $e
 
     local username=
@@ -93,7 +93,7 @@ function remote:connect() {
 #.   remote:copy() -={
 function remote:copy:usage() { echo "[[<user>@]<dst-hnh>:]<src-path> [[<user>@]<dst-hnh>:]<dst-path>"; }
 function remote:copy() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 2 ] || return $e
 
     local -A data
@@ -195,7 +195,7 @@ function ::remote:pipewrap.eval() {
 function :remote:sudo() {
     core:raise_bad_fn_call_unless $# ge 2
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     core:import vault
 
@@ -225,7 +225,7 @@ function :remote:sudo() {
 
 function remote:sudo:usage() { echo "<hnh> <cmd>"; }
 function remote:sudo() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -ge 2 ] || return $e
 
     local -r hcs="$1"
@@ -245,7 +245,7 @@ DEPR This function has been deprecated in favour of tmux.
 }
 function remote:cluster:usage() { echo "<hnh> [<hnh> [...]]"; }
 function remote:cluster() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -gt 0 ] || return $e
 
     if [ $# -eq 1 ]; then
@@ -328,7 +328,7 @@ function ::remote:tmux_attach() {
     core:raise_bad_fn_call_unless $# in 1
     local session=$1
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local -a windows=(
         $(tmux list-windows -a -t ${session}| awk -F': ' '{print$1}')
@@ -349,7 +349,7 @@ function ::remote:tmux_attach() {
 
 function ::remote:tmux() {
     core:raise_bad_fn_call_unless $# in 2
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local session=$1
     local hgd=$2
@@ -418,7 +418,7 @@ function remote:tmux:help() {
 }
 function remote:tmux:usage() { echo "<tmux-session> [<hgd:@+>]"; }
 function remote:tmux() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     #shellcheck disable=SC2166
     [ $# -eq 1 -o $# -eq 2 ] || return $e
 
@@ -478,7 +478,7 @@ function ::remote:thread:cleanup() {
     core:raise_bad_fn_call_unless $# in 1
     local -i pid; let pid=$1
 
-    local -i e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     rm -f "${SIMBOL_USER_VAR_TMP?}/thread.${pid}.sct"
     [ $? -eq ${CODE_SUCCESS?} ] || e=${CODE_FAILURE?}
@@ -512,7 +512,7 @@ function ::remote:thread:teardown() {
     core:raise_bad_fn_call_unless $# in 1
     local -i pid; let pid=$1
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     exec 3>&-
     exec 4>&-
@@ -638,7 +638,7 @@ function ::remote:ssh_thread.ipc() {
 #. }=-
 #. ::remote:mon.ipc() -={
 function ::remote:mon.ipc() {
-    local -i e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     local -i threads=$1
     local -i retries=$2
@@ -760,13 +760,13 @@ function remote:mon:usage() {
     printf -- "-- <arbitrary-command>\n"
 }
 function remote:mon() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -ge 2 ] || return $e
 
-    local -i timeout=${FLAGS_timeout:-8}; unset FLAGS_timeout
-    local -i threads=${FLAGS_threads:-32}; unset FLAGS_threads
-    local -i retries=${FLAGS_retries:-3}; unset FLAGS_retries
-    local -i sudo=${FLAGS_sudo:-0}; ((sudo=~sudo+2)); unset FLAGS_sudo
+    local -i timeout; let timeout=${FLAGS_timeout:-8}; unset FLAGS_timeout
+    local -i threads; let threads=${FLAGS_threads:-32}; unset FLAGS_threads
+    local -i retries; let retries=${FLAGS_retries:-3}; unset FLAGS_retries
+    local -i sudo; let sudo=${FLAGS_sudo:-0}; ((sudo=~sudo+2)); unset FLAGS_sudo
 
     #. so:stdout, se:stdout, xc:exit-code, md:metadata
     local output_raw="${FLAGS_output:-so,se,xc}"; unset FLAGS_output

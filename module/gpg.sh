@@ -24,18 +24,18 @@ gpg_bin="$(which gpg2)" || gpg_bin="$(which gpg)"
 function :gpg:version() {
     core:raise_bad_fn_call_unless $# in 0
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local gpg_version;
     if gpg_version="$(${gpg_bin} --version | head -n 1 | cut -d' ' -f3)"; then
         case "${gpg_version}" in
             2.0.*)
                 echo 20
-                let e=${CODE_SUCCESS?}
+                let e=CODE_SUCCESS
             ;;
             2.*)
                 echo 21
-                let e=${CODE_SUCCESS?}
+                let e=CODE_SUCCESS
             ;;
             *)
                 theme HAS_FAILED "GnuPG version not supported (v${gpg_version})"
@@ -68,7 +68,7 @@ function ::gpg:keys.eval() {
     #. - CODE_FAILURE if no keys exist
     core:raise_bad_fn_call_unless $# in 1 2
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local gpgkid="${2:-*}"
 
@@ -84,7 +84,7 @@ function ::gpg:keys.eval() {
                     )
                     if [ ${#gpgkid} -eq 10 ]; then
                         if ::gpg:keys.eval "$1" "${gpgkid}"; then
-                            let e=${CODE_SUCCESS?}
+                            let e=CODE_SUCCESS
                             break
                         fi
                     fi
@@ -118,7 +118,7 @@ function :gpg:create() {
     [ "${USER_VAULT_PASSPHRASE:-NilOrNotSet}" != "NilOrNotSet" ] ||
         core:raise EXCEPTION_BAD_FN_CALL "USER_VAULT_PASSPHRASE was not set"
 
-    local -i e; let e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     eval "$(::gpg:keys.eval 'data' '*')"
     [ ${#data[@]} -eq 0 ] || return $e
@@ -167,7 +167,7 @@ Passphrase: ${USER_VAULT_PASSPHRASE}
                 fi
                 mv "${gpgkp}.conf" "${gpgkp}.${gpgkid}.conf"
                 echo "${gpgkid}"
-                let e=${CODE_SUCCESS?}
+                let e=CODE_SUCCESS
             fi
         fi
     fi
@@ -183,7 +183,7 @@ Passphrase: ${USER_VAULT_PASSPHRASE}
 }
 
 function gpg:create() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 0 ] || return $e
 
     cpf "Generating an RSA/ELG-E GPG key for %{@user:%s}@%{@profile:%s}..." "${USER_USERNAME?}" "${SIMBOL_PROFILE%%@*}"
@@ -191,7 +191,7 @@ function gpg:create() {
     if [ ${#data[@]} -eq 0 ]; then
         local gpgkid
         if gpgkid=$(:gpg:create); then
-            let e=${CODE_SUCCESS?}
+            let e=CODE_SUCCESS
             theme HAS_PASSED "${gpgkid}"
         else
             theme HAS_FAILED
@@ -199,7 +199,7 @@ function gpg:create() {
     else
         #shellcheck disable=SC2154
         theme HAS_WARNED "KEY_EXISTS:${!data[*]}"
-        let e=${CODE_FAILURE?}
+        let e=CODE_FAILURE
     fi
 
     return $e
@@ -220,10 +220,10 @@ function :gpg:list() {
 }
 function gpg:list:usage() { echo "[<gpg-key-id>]"; }
 function gpg:list() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -le 1 ] || return $e
 
-    let e=${CODE_SUCCESS?}
+    let e=CODE_SUCCESS
 
     cpf "Inspecting GPG Key..."
 
@@ -235,7 +235,7 @@ function gpg:list() {
             theme HAS_WARNED "NO_KEYS"
         else
             theme HAS_FAILED "NO_SUCH_KEY"
-            let e=${CODE_FAILURE?}
+            let e=CODE_FAILURE
         fi
     fi
 
@@ -246,7 +246,7 @@ function gpg:list() {
 function :gpg:delete() {
     core:raise_bad_fn_call_unless $# in 1
 
-    local -i e; let e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
     local gpgkid="$1"
 
     eval "$(::gpg:keys.eval 'data' "${gpgkid}")"
@@ -274,13 +274,13 @@ function :gpg:delete() {
             fi
         done
     else
-        let e=${CODE_FAILURE?}
+        let e=CODE_FAILURE
         core:log WARNING "There is no secret key ${gpgkid} to delete."
     fi
 
     #. Delete public key
     if ! ${gpg_bin} -q --batch --yes --delete-key "${gpgkid}" 2>/dev/null; then
-        let e=${CODE_FAILURE?}
+        let e=CODE_FAILURE
         core:log WARNING "There is no public key ${gpgkid} to delete"
     fi
 
@@ -291,7 +291,7 @@ function :gpg:delete() {
     rm -f "${gpgkp}.conf" || core:log WARNING "There is no ${gpgkp}.conf to delete"
 
     if [ -e "${gpgkp}.${gpgkid}.sec" -o -e "${gpgkp}.${gpgkid}.pub" -o -e "${gpgkp}.${gpgkid}.conf" ]; then
-        let e=${CODE_FAILURE?}
+        let e=CODE_FAILURE
     fi
 
     return $e
@@ -299,14 +299,14 @@ function :gpg:delete() {
 
 function gpg:delete:usage() { echo "<gpg-key-id>"; }
 function gpg:delete() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 1 ] || return $e
 
     local gpgkid=$1
     cpf "Removing GPG key ${gpgkid}..."
 
     if :gpg:delete "${gpgkid}"; then
-        let e=${CODE_SUCCESS?}
+        let e=CODE_SUCCESS
         theme HAS_PASSED "${gpgkid}"
     else
         theme HAS_FAILED "${gpgkid}. Check ${SIMBOL_LOG}"
@@ -320,7 +320,7 @@ function gpg:delete() {
 function :gpg:encrypt() {
     core:raise_bad_fn_call_unless $# in 2
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local input="${1}"
     local output="${2}"
@@ -353,7 +353,7 @@ function :gpg:decrypt() {
     [ "${USER_VAULT_PASSPHRASE:-NilOrNotSet}" != "NilOrNotSet" ] ||
         core:raise EXCEPTION_BAD_FN_CALL "USER_VAULT_PASSPHRASE was not set"
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local input="${1}"
     local output="${2}"

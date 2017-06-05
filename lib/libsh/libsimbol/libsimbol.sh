@@ -37,7 +37,7 @@ function core:len() {
 }
 
 function :core:age() {
-    local -i e=${CODE_FAILURE}
+    local -i e; let e=CODE_FAILURE
 
     local -i elapsed=-1
 
@@ -73,7 +73,7 @@ function core:global() {
     local key
     IFS='.' read -r context key <<< "${1}"
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local globalstore
     local lockfile="${SIMBOL_USER_VAR_RUN?}/.core-global.lock.$$"
@@ -263,9 +263,9 @@ function core:softimport() {
                 if ( set -x; source "${SIMBOL_USER_MOD}/${modulepath}"; exit $? ) >& "${ouch}"; then
                     source "${SIMBOL_USER_MOD}/${modulepath}"
                     rm -f "${ouch}"
-                    let e=${CODE_IMPORT_GOOOD?}
+                    let e=CODE_IMPORT_GOOOD
                 else
-                    let e=${CODE_IMPORT_ERROR?}
+                    let e=CODE_IMPORT_ERROR
                 fi
             else
                 e=${CODE_IMPORT_UNDEF?}
@@ -314,7 +314,7 @@ function core:import() {
 }
 
 function core:imported() {
-    local -i e=${CODE_FAILURE}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         local module=$1
@@ -331,7 +331,7 @@ function core:imported() {
 }
 
 function core:module_path() {
-    local -i e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     local path
     if [ $# -eq 1 ]; then
@@ -354,15 +354,15 @@ function core:module_path() {
 }
 
 function core:module_enabled() {
-    local -i enabled=${FALSE?}
+    local -i enabled; let enabled=FALSE
 
     if [ $# -eq 1 ]; then
         local module="$1"
 
         if [ -e "${SIMBOL_CORE_MOD?}/${module//\./\/}.sh" ]; then
-            [ ${CORE_MODULES[${module}]} -eq 0 ] || let enabled=${TRUE?}
+            [ ${CORE_MODULES[${module}]} -eq 0 ] || let enabled=TRUE
         elif [ -e "${SIMBOL_USER_MOD?}/${module//\./\/}.sh" ]; then
-            [ ${USER_MODULES[${module}]} -eq 0 ] || let enabled=${TRUE?}
+            [ ${USER_MODULES[${module}]} -eq 0 ] || let enabled=TRUE
         else
             core:raise EXCEPTION_SHOULD_NOT_GET_HERE\
                 "No such module found: \`${module}'"
@@ -375,7 +375,7 @@ function core:module_enabled() {
 }
 
 function core:modules() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local -a modules
     if [ $# -eq 0 ]; then
@@ -395,10 +395,10 @@ function core:modules() {
 
         if [ ${enabled} -eq 2 -a -f "${SIMBOL_USER_MOD}/${module//\./\/}.sh" ]; then
             echo "${module}"
-            let e=${CODE_SUCCESS?}
+            let e=CODE_SUCCESS
         elif [ ${enabled} -eq 1 -a -f "${SIMBOL_CORE_MOD}/${module//\./\/}.sh" ]; then
             echo "${module}"
-            let e=${CODE_SUCCESS?}
+            let e=CODE_SUCCESS
         fi
 
         if [ "${module//./}" == "${module}" ]; then
@@ -412,7 +412,7 @@ function core:modules() {
                         echo "${submodule}"
                     fi
                 done
-                let e=${CODE_SUCCESS?}
+                let e=CODE_SUCCESS
             elif [ ${enabled} -eq 1 -a -d "${SIMBOL_CORE_MOD}/${module}" ]; then
                 for submodule in $(find "${SIMBOL_CORE_MOD}/${module}" -type f -name '*.sh' -printf "%f\n" | cut -d. -f1); do
                     submodule="${module}.${submodule}"
@@ -422,7 +422,7 @@ function core:modules() {
                         echo "${submodule}"
                     fi
                 done
-                let e=${CODE_SUCCESS?}
+                let e=CODE_SUCCESS
             fi
         fi
     done
@@ -432,7 +432,7 @@ function core:modules() {
 }
 
 function core:docstring() {
-    local -i e=${CODE_FAILURE}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         local module=$1
@@ -452,7 +452,7 @@ function core:docstring() {
                 let e=$?
             fi
         elif [ ${CORE_MODULES[${module}]-9} -eq 0 -o ${USER_MODULES[${module}]-9} -eq 0 ]; then
-            let e=${CODE_FAILURE} #. Disabled
+            let e=CODE_FAILURE #. Disabled
         fi
     fi
 
@@ -460,7 +460,7 @@ function core:docstring() {
 }
 
 function :core:requires() {
-    local -i e=${CODE_FAILURE}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         e=${CODE_SUCCESS}
@@ -480,7 +480,7 @@ function core:requires() {
     #.
     #.     core:requires awk
     #.     core:requires PERL LWP::Protocol::https
-    local -i e=${CODE_SUCCESS}
+    local -i e; let e=CODE_SUCCESS
 
     local caller
     case "${FUNCNAME[1]}" in
@@ -499,24 +499,24 @@ function core:requires() {
             required="$1"
             if ! :core:requires "${required}"; then
                 core:log NOTICE "${caller} missing required executable ${required}"
-                let e=${CODE_FAILURE?}
+                let e=CODE_FAILURE
             fi
         ;;
         *:ALL)
-            let e=${CODE_SUCCESS}
+            let e=CODE_SUCCESS
             for required in "${@:2}"; do
                 if ! :core:requires "${required}"; then
-                    let e=${CODE_FAILURE}
+                    let e=CODE_FAILURE
                     core:log NOTICE "${caller} missing required executable ${required}"
                     break
                 fi
             done
         ;;
         *:ANY)
-            let e=${CODE_FAILURE}
+            let e=CODE_FAILURE
             for required in "${@:2}"; do
                 if :core:requires "${required}"; then
-                    let e=${CODE_SUCCESS}
+                    let e=CODE_SUCCESS
                     break
                 fi
             done
@@ -534,12 +534,12 @@ function core:requires() {
                         core:log NOTICE "${caller} missing required perl module ${required}"
                         if ! :xplm:install ${plid} ${required}; then
                             core:log ERR "${caller} installation of perl module ${required} FAILED"
-                            let e=${CODE_FAILURE?}
+                            let e=CODE_FAILURE
                         fi
                     fi
                 done
             else
-                let e=${CODE_FAILURE?}
+                let e=CODE_FAILURE
             fi
         ;;
         *:PYTHON)
@@ -552,7 +552,7 @@ function core:requires() {
                         core:log NOTICE "${caller} installing required python module ${required}"
                         if ! :xplm:install ${plid} ${required}; then
                             core:log ERR "${caller} installation of python module ${required} FAILED"
-                            let e=${CODE_FAILURE?}
+                            let e=CODE_FAILURE
                         fi
                     fi
                 done
@@ -570,7 +570,7 @@ function core:requires() {
                         core:log NOTICE "${caller} installing required ruby module ${required}"
                         if ! :xplm:install ${plid} ${required}; then
                             core:log ERR "${caller} installation of ruby module ${required} FAILED"
-                            let e=${CODE_FAILURE?}
+                            let e=CODE_FAILURE
                         fi
                     fi
                 done
@@ -584,7 +584,7 @@ function core:requires() {
                 for required in "${@:2}"; do
                     if ! :vault:read "${SIMBOL_USER_ETC}/simbol.vault" "${required}"; then
                         core:log NOTICE "${caller} missing required secret ${required}"
-                        let e=${CODE_FAILURE}
+                        let e=CODE_FAILURE
                     fi
                 done
             fi
@@ -710,14 +710,14 @@ function :core:cachefile() {
     echo "${cachefile}"
 
     #. Return code is 0 if the files exists, and 1 otherwise
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
     [ ! -r "${cachefile}" ] || e=${CODE_SUCCESS?}
 
     return $e
 }
 
 function :core:cache() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         local cachefile="$1"
@@ -739,7 +739,7 @@ function :core:cached() {
 
     : ${g_CACHED?}
     : "${g_CACHE_USED?}"
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ ${g_CACHED} -eq ${TRUE?} ]; then
         #. TTL < 0 means don't cache
@@ -757,7 +757,7 @@ function :core:cached() {
                 if [ ${ttl} -gt 0 ] && [ ${age} -ge ${ttl} ] || [ ${age} -eq -1 ]; then
                     #. Cache Miss (Expiry)
                     rm -f "${cachefile}"
-                    let e=${CODE_FAILURE?}
+                    let e=CODE_FAILURE
                     core:log DEBUG "Cache Miss: {ttl:${ttl}, age:${age}}"
                 else
                     #. Cache Hit
@@ -794,7 +794,7 @@ function ::core:execute:private() {
 }
 
 function ::core:flags.eval() {
-    local -i e; let e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     #. Extract the first 2 non-flag tokens as module and function
     #. All remaining tokens are added to the new argv array
@@ -881,7 +881,7 @@ $(declare -p g_HELP g_VERBOSE g_DEBUG g_CACHED g_LDAPHOST g_FORMAT g_SSH_OPTS)
 #. }=-
 set -- ${FLAGS_ARGV?}
 !
-        let e=${CODE_SUCCESS}
+        let e=CODE_SUCCESS
     else
         cat <<!
 g_DUMP="$(FLAGS "$@" 2>&1|sed -e '1,2 d' -e 's/^/    /')"
@@ -899,10 +899,10 @@ $(for key in "${extra[@]}"; do echo "${key}=\"${!key}\""; done)
 }
 
 function :core:execute() {
-    local -i e=${CODE_USAGE_MODS}
+    local -i e; let e=CODE_USAGE_MODS
 
     if [ $# -ge 1 ]; then
-        let e=${CODE_USAGE_MOD}
+        let e=CODE_USAGE_MOD
 
         if [ $# -ge 2 ]; then
             declare -g g_MODULE=$1
@@ -1001,7 +1001,7 @@ function ::core:dereference.eval() {
 
 #shellcheck disable=SC2086
 function :core:functions() {
-    local -i e=${CODE_FAILURE}
+    local -i e; let e=CODE_FAILURE
     if [ $# -eq 2 ]; then
         local fn_type=$1
         local module=$2
@@ -1214,7 +1214,7 @@ function core:wrapper() {
         exit 1
     fi
 
-    local -i e=${CODE_USAGE_MODS}
+    local -i e; let e=CODE_USAGE_MODS
 
     local setdata
     setdata="$(::core:flags.eval "${@}")"
@@ -1456,7 +1456,7 @@ function core:raise() {
         cpf:printf " %{r:failed with exception} %{g:$e}; %{c:traceback}:\n" 1>&2
         local i=0
         local code
-        local -i frames=${#BASH_LINENO[@]}
+        local -i frames; let frames=${#BASH_LINENO[@]}
         #. ((frames-2)): skips main, the last one in arrays
         for ((i=frames-2; i>=0; i--)); do
             cpf:printf "  File %{g:%s}, line %{g:%s}, in %{r:%s}\n" \
@@ -1489,11 +1489,11 @@ function mock:write() {
 function mock:save() {
     core:raise_bad_fn_call_unless $# in 0 1 2
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
     local context="${1:-default}"
     local savefile="/tmp/mock-${context}-${2:-$$}.sh"
     if cp "${SIMBOL_USER_MOCKENV?}.${context}" "${savefile}"; then
-        let e=${CODE_SUCCESS?}
+        let e=CODE_SUCCESS
         echo "${savefile}"
     fi
 

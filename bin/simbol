@@ -25,7 +25,7 @@ fi
 #. Check bash version
 #shellcheck disable=SC2086
 if ! [ ${BASH_VERSINFO[0]?} -ge 4 ] && [ ${BASH_VERSINFO[1]?} -ge 3 ]; then
-    let e=${CODE_E02?}
+    let e=CODE_E02
     echo "ERROR: Your version of BASH is too old; export SIMBOL_SHELL to override system bash; [e:$e]."
     exit $e
 fi
@@ -33,7 +33,7 @@ fi
 #. Check simbol profile
 if [ "${SIMBOL_PROFILE:-NilOrNotSet}" == 'NilOrNotSet' ]; then
     if ! SIMBOL_PROFILE="$("${HOME?}/.simbol/bin/activate")"; then
-        let e=${CODE_E03?}
+        let e=CODE_E03
         echo "ERROR: No simbol profiles active, either create a new one, or activate an existing one; [e:$e]."
         exit $e
     fi
@@ -53,7 +53,7 @@ case $? in
     ;;
     *)
         echo "ERROR: Your version of BASH is not too old, but fails sanity checks."
-        let e=${CODE_E04?}
+        let e=CODE_E04
     ;;
 esac
 

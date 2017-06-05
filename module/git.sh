@@ -11,7 +11,7 @@ core:requires git
 function :git:basedir() {
     core:raise_bad_fn_call_unless $# in 1
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local cwd; cwd="$(pwd)"
     local filename; filename="$(readlink -m "${1}")"
@@ -31,7 +31,7 @@ function :git:basedir() {
 
     if [ ${found} -eq 1 ]; then
         echo "${gitbasedir} ${filename/${gitbasedir}\//./}"
-        let e=${CODE_SUCCESS?}
+        let e=CODE_SUCCESS
     fi
 
     return $e
@@ -40,7 +40,7 @@ function :git:basedir() {
 #. git:size -={
 function git:size:usage() { echo "[<git-path:pwd>]"; }
 function git:size() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -le 1 ] || return $e
 
     local cwd; cwd="$(pwd)"
@@ -55,7 +55,7 @@ function git:size() {
         fi
     else
         theme ERR_USAGE "Not a git repository:${1:-${cwd}}"
-        let e=${CODE_FAILURE?}
+        let e=CODE_FAILURE
     fi
 
     return $e
@@ -64,10 +64,10 @@ function git:size() {
 #. git:usage -={
 function git:usage:usage() { echo "[<git-path:pwd>]"; }
 function git:usage() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -le 1 ] || return $e
 
-    let e=${CODE_FAILURE?}
+    let e=CODE_FAILURE
 
     local cwd; cwd="$(pwd)"
     read -r gitbasedir gitrelpath <<< "$(:git:basedir "${1:-${cwd}}")"
@@ -101,11 +101,11 @@ function git:usage() {
             fi
         else
             theme ERR_USAGE "Error: could not chdir to ${1}"
-            let e=${CODE_FAILURE?}
+            let e=CODE_FAILURE
         fi
     else
         theme ERR_USAGE "Error: that path is not within a git repository."
-        let e=${CODE_FAILURE?}
+        let e=CODE_FAILURE
     fi
 
     return $e
@@ -114,10 +114,10 @@ function git:usage() {
 #. git:rm -={
 function git:rm:usage() { echo "<git-path-glob> [<git-path-glob> [...]]"; }
 function git:rm() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -ge 1 ] || return $e
 
-    let e=${CODE_FAILURE?}
+    let e=CODE_FAILURE
 
     local cwd; cwd="$(pwd)"
     for filename in "${@}"; do
@@ -141,7 +141,7 @@ function git:rm() {
 #. git:vacuum -={
 function git:vacuum:usage() { echo "<git-repo-dir>"; }
 function git:vacuum() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 1 ] || return $e
 
     local repo_dir="$1"
@@ -159,7 +159,7 @@ function git:vacuum() {
         fi
     else
         theme ERR_USAGE "Error: could not chdir to \`${repo_dir}'"
-        let e=${CODE_FAILURE?}
+        let e=CODE_FAILURE
     fi
 
     return $e
@@ -168,7 +168,7 @@ function git:vacuum() {
 #. git:file -={
 function git:file:usage() { echo "<path-glob>"; }
 function git:file() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 1 ] || return $e
 
     local gitbasedir gitrelpath
@@ -182,10 +182,10 @@ function git:file() {
                 echo
             fi
         done | grep --color '\[.*\] --';
-        let e=${CODE_SUCCESS?}
+        let e=CODE_SUCCESS
     else
         theme ERR_USAGE "Error: This is not a git repository"
-        let e=${CODE_FAILURE?}
+        let e=CODE_FAILURE
     fi
 
     return $e
@@ -194,14 +194,14 @@ function git:file() {
 #. git:rebasesearchstr -={
 function git:rebasesearchstr:usage() { echo "<file-path>"; }
 function git:rebasesearchstr() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 1 ] || return $e
 
     local file="$1"
     local -a sha1s=( $(git:file "${file}"|awk '{print$1}' ) )
     local sha1search; sha1search="$(sed -e 's/ /\\\|/g' <<< "${sha1s[*]}")"
     echo ":%s/^pick \\(${sha1search}\\)/f    \\1/"
-    let e=${CODE_SUCCESS?}
+    let e=CODE_SUCCESS
 
     return $e
 }
@@ -209,7 +209,7 @@ function git:rebasesearchstr() {
 #. git:reauthor -={
 function git:reauthor:usage() { echo "<git-commit-sha1> \"Full Name <email@address.com>\""; }
 function git:reauthor() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 2 ] || return $e
 
     local sha1="$1"
@@ -219,7 +219,7 @@ function git:reauthor() {
     #shellcheck disable=SC2086
     while [ $e -eq ${CODE_SUCCESS?} ]; do
         git commit --amend --author="$new" --reuse-message=HEAD
-        git rebase --continue || let e=${CODE_FAILURE?}
+        git rebase --continue || let e=CODE_FAILURE
     done
 
     return $e
@@ -228,7 +228,7 @@ function git:reauthor() {
 #. git:split -={
 function git:split:usage() { echo "<git-commit-sha1>"; }
 function git:split() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 1 ] || return $e
 
     local sha1="$1"
@@ -241,7 +241,7 @@ function git:split() {
             git add "${file}"
             git commit "${file}" -m "... ${file}"
         done
-        git rebase --continue || let e=${CODE_FAILURE?}
+        git rebase --continue || let e=CODE_FAILURE
     done
 
     return $e
@@ -249,10 +249,10 @@ function git:split() {
 #. }=-
 #. git:commitall -={
 function git:commitall() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -le 1 ] || return $e
 
-    let e=${CODE_FAILURE?}
+    let e=CODE_FAILURE
 
     local repo="${1:-${PWD?}}"
     local gitbasedir gitrelpath
@@ -264,7 +264,7 @@ function git:commitall() {
                 git commit "${file}" -m "... ${file}"
             done
 
-            let e=${CODE_SUCCESS?}
+            let e=CODE_SUCCESS
         fi
     fi
 
@@ -274,7 +274,7 @@ function git:commitall() {
 #. git:server -={
 function git:serve:usage() { echo "<iface> [<git-repo-dir>]"; }
 function git:serve() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     #shellcheck disable=SC2166
     [ $# -eq 1 -o $# -eq 2 ] || return $e
 
@@ -289,7 +289,7 @@ function git:serve() {
         let e=$?
     else
         theme ERR_USAGE "Error: This is not a git repository"
-        let e=${CODE_FAILURE?}
+        let e=CODE_FAILURE
     fi
 
     return $e
@@ -299,7 +299,7 @@ function git:serve() {
 function ::git:mkci() {
     core:raise_bad_fn_call_unless $# ge 2
 
-    local -i e; let e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     local branch="$1"
     { git checkout -b "${branch}" || git checkout "${branch}"; } 2>/dev/null
@@ -318,7 +318,7 @@ function ::git:mkci() {
 #. git:playground -={
 function git:playground:usage() { echo "<git-repo-dir>"; }
 function git:playground() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 1 ] || return $e
 
     if [ ! -d "$1" ]; then
@@ -336,17 +336,17 @@ function git:playground() {
             for fN in n{W,X,Y,Z}; do
                 echo ${fN^^} > ${fN}
             done
-            let e=${CODE_SUCCESS?}
+            let e=CODE_SUCCESS
             theme HAS_PASSED
         else
             theme ERR_USAGE "Directory $1 already exists; cowardly refusing to create playground."
-            let e=${CODE_FAILURE?}
+            let e=CODE_FAILURE
         fi
 
         #git log --graph --all
     else
         theme ERR_USAGE "Directory $1 already exists; cowardly refusing to create playground."
-        let e=${CODE_FAILURE?}
+        let e=CODE_FAILURE
     fi
 
     return $e
@@ -356,7 +356,7 @@ function git:playground() {
 function git:gource:usage() { echo "<git-repo-dir>"; }
 function git:gource() {
     core:requires gource
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -le 1 ] || return $e
 
     local repo_dir="${1:-${SITE_CORE?}}"
@@ -371,7 +371,7 @@ function git:gource() {
 #. git:remail -={
 function git:remail:usage() { echo "<old-name> <new-name> <new-mail>"; }
 function git:remail() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 3 ] || return $e
 
     local fullname="$1"
@@ -397,7 +397,7 @@ fi" HEAD
 #. Debugging/Academic -={
 function _:git:add:usage() { echo "<git-repo-dir> <file>"; }
 function _:git:add() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 2 ]; then
         if cd "$1" >&/dev/null; then
@@ -423,7 +423,7 @@ function _:git:add() {
 
 function _:git:rf:usage() { echo "<git-repo-dir> <new-branch-name> <branch-point-sha1>"; }
 function _:git:rf() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 3 ]; then
         if cd "$1" >&/dev/null; then
@@ -439,7 +439,7 @@ function _:git:rf() {
 
 function _:git:rf:usage() { echo "<git-repo-dir> <file-hash>"; }
 function _:git:rf() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 2 ]; then
         if cd "$1" >&/dev/null; then

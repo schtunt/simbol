@@ -8,7 +8,7 @@ Core networking module
 function :net:fix() {
     #. input  10.1.2.123/24
     #. output 10.1.2.0/24
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         local ip mask
@@ -36,7 +36,7 @@ function :net:fix() {
 function :net:b2nm() {
     #. input  24
     #. output 0xffffff00
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         local -i -r nmb=$1
@@ -56,7 +56,7 @@ function :net:b2nm() {
 function :net:b2hm() {
     #. input  24
     #. output 0x000000ff
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         local -i -r hmb=$1
@@ -76,7 +76,7 @@ function :net:b2hm() {
 function :net:h2s() {
     #. input  0xff00ff00
     #. output 255.0.255.0
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         local -ir ip=${1}
@@ -102,7 +102,7 @@ function :net:h2s() {
 function :net:s2h() {
     #. input  255.0.255.0
     #. output 0xff00ff00
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         local -r ips=$1
@@ -126,7 +126,7 @@ function :net:i2s() {
     core:requires ANY ip ifconfig
     core:raise_bad_fn_call_unless $# in 1
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local -r iface=$1
     local ipdump
@@ -149,7 +149,7 @@ function :net:i2s() {
 function :net:hosts() {
     #. input  123.123.123.123/12
     #. output (a list of all hosts in the subnet)
-    local -i e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     if [ $# -eq 1 ]; then
         [ "${1//[^.]/}" == '...' ] || e=${CODE_FAILURE?}
@@ -177,7 +177,7 @@ function :net:hosts() {
 }
 function net:hosts:usage() { echo "<ip-subnet>"; }
 function net:hosts() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 1 ]; then
         local subnet="$1"
@@ -206,7 +206,7 @@ function net:hosts() {
 function :net:firsthost() {
     #. input  123.123.123.0/24
     #. ouput  123.123.123.1
-    local -i e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     [ "${1//[^.]/}" == '...' ] || e=${CODE_FAILURE?}
     [ "${1//[^\/]/}" == '/' ] || [ "${1//[^\/]/}" == '' ] || e=${CODE_FAILURE?}
@@ -235,7 +235,7 @@ function :net:portpersist() {
     local -i port; let port=$2
     local -i attempts; let attempts=$3
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local -i i=0
     while ((i < attempts)) && ((e == ${CODE_FAILURE?})); do
@@ -249,7 +249,7 @@ function :net:portpersist() {
 #. }=-
 #. net:localportping -={
 function :net:localportping() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         local -i lport=$1
@@ -268,7 +268,7 @@ function :net:localportping() {
 #. }=-
 #. net:freelocalport -={
 function :net:freelocalport() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     freeport=0
     for port in "$@"; do
@@ -310,7 +310,7 @@ function :net:portping() {
 }
 function net:portping:usage() { echo "<hnh> <port>"; }
 function net:portping() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -eq 2 ] || return $e
 
     local hn=$1
@@ -333,7 +333,7 @@ function net:portping() {
 function :net:myip:cached() { echo 3; }
 function :net:myip() {
   g_CACHE_OUT "$*" || {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 0 ]; then
         local myip

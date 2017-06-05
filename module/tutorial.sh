@@ -234,7 +234,7 @@ function tutorial:hello:usage() {
 
 #. Mandatory - the function itself
 function tutorial:hello() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -gt 0 ] || return $e
 
     : let e=CODE_DEFAULT #. signals to simbol that user is in need of help
@@ -245,13 +245,13 @@ function tutorial:hello() {
     local name=${FLAGS_name?}; unset FLAGS_name;
 
     #. Here is an int:
-    local -i repeat=${FLAGS_repeat?}; unset FLAGS_repeat;
+    local -i repeat; let repeat=FLAGS_repeat; unset FLAGS_repeat;
 
     #. And here is a float:
     local snooze=${FLAGS_snooze?}; unset FLAGS_snooze;
 
     #. Here is a boolean, the ugliest of them all:
-    local -i greet=${FLAGS_greet?}; ((greet=~greet+2)); unset FLAGS_greet
+    local -i greet; let greet=FLAGS_greet; ((greet=~greet+2)); unset FLAGS_greet
 
     local greeting="Hello"
     if [ ${greet} -eq 0 ]; then
@@ -275,7 +275,7 @@ function tutorial:hello() {
         sleep "${snooze}"
     done
 
-    let e=${CODE_SUCCESS?}
+    let e=CODE_SUCCESS
 
     return $e
 }

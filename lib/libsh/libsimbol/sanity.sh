@@ -2,7 +2,7 @@
 #shellcheck disable=SC2166
 
 function validate_bash() {
-    local -i e; let e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     local vv="${SIMBOL_USER_VAR_TMP?}/.simbol-bash-${BASH_VERSION}.verified"
     [ ! -e "${vv}" ] || return $e

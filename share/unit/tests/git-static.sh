@@ -107,7 +107,7 @@ function testCoreGitCommitallPublic() {
     assertTrue "${FUNCNAME?}/0" $?
 
     #. look for individual commits
-    local -i committed=$(git log --pretty=format:'%s'|grep -c '^\.\.\.')
+    local -i committed; let committed=$(git log --pretty=format:'%s'|grep -c '^\.\.\.')
     assertEquals "${FUNCNAME?}/1" 101 ${committed}
 }
 #. }=-

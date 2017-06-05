@@ -13,7 +13,7 @@ core:import xplm
 
 #. py:list -={
 function py:list() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:list py "$@"
     e=$?
@@ -24,7 +24,7 @@ function py:list() {
 #. py:install -={
 function py:install:usage() { echo "[<pkg> [<pkg> [...]]]"; }
 function py:install() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:install py "$@"
     e=$?
@@ -34,7 +34,7 @@ function py:install() {
 #. }=-
 #. py:purge -={
 function py:purge() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:purge py "$@"
     e=$?
@@ -44,7 +44,7 @@ function py:purge() {
 #. }=-
 #. py:shell -={
 function py:shell() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:shell py "$@"
     e=$?
@@ -55,7 +55,7 @@ function py:shell() {
 #. py:search -={
 function py:search:usage() { echo "<search-str>"; }
 function py:search() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:search py "$@"
     e=$?
@@ -65,7 +65,7 @@ function py:search() {
 #. }=-
 #. py:repl -={
 function py:repl() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:repl py "$@"
     e=$?
@@ -75,7 +75,7 @@ function py:repl() {
 #. }=-
 #. py:run -={
 function py:run() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:run py "$@"
     e=$?

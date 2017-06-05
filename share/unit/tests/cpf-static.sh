@@ -160,7 +160,7 @@ function testCoreCpfThemePrivate() {
 #. testCoreCpfIndentPublic -={
 function testCoreCpfIndentPublic() {
     local -i cpf_indent
-    let cpf_indent=${CPF_INDENT}
+    let cpf_indent=CPF_INDENT
     CPF_INDENT=0
 
     local out

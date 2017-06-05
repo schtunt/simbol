@@ -85,7 +85,7 @@ SIMBOL_OUTPUT_THEME+=(
 
 #. cpf:module -={
 function ::cpf:module_is_modified() {
-    local -i e=${FALSE?}
+    local -i e; let e=FALSE
 
     local module_path="$1"
     local module=$2
@@ -95,7 +95,7 @@ function ::cpf:module_is_modified() {
     #shellcheck disable=SC2086
     [ ${PIPESTATUS[0]} -eq ${CODE_SUCCESS?} ] || core:raise EXCEPTION_SHOULD_NOT_GET_HERE
 
-    [ ${amended} -eq 0 ] || let e=${TRUE?}
+    [ ${amended} -eq 0 ] || let e=TRUE
 
     return $e
 }
@@ -116,7 +116,7 @@ function ::cpf:module() {
     #shellcheck disable=SC2086
     [ ${enabled} -eq ${TRUE?} ] || return ${CODE_FAILURE?}
 
-    local -i amended=${FALSE?}
+    local -i amended; let amended=FALSE
 
     local module_path; module_path="$(core:module_path "${module}")"
     local fmt

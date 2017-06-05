@@ -15,7 +15,7 @@ core:requires netstat
 
 #. tunnel:status -={
 function :tunnel:pid() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         #. XXX - Not using $1?
@@ -43,7 +43,7 @@ function :tunnel:pid() {
     return $e
 }
 function tunnel:status() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 0 ]; then
         cpf "Checking ssh control master..."
@@ -73,7 +73,7 @@ function tunnel:status() {
 #. tunnel:start -={
 #. XXX do not $(:tunnel:start) - it hangs !?!?!
 function :tunnel:start() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 2 ]; then
         local -i pid
@@ -97,7 +97,7 @@ function :tunnel:start() {
 
 function tunnel:start:usage() { echo "<hcs> [<port:22>]"; }
 function tunnel:start() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 2 ]; then
         local -r hcs=${1}
@@ -125,7 +125,7 @@ function tunnel:start() {
 #. }=-
 #. tunnel:stop -={
 function :tunnel:stop() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         local -i pid=0
@@ -150,7 +150,7 @@ function :tunnel:stop() {
 
 function tunnel:stop:usage() { echo "<hcs>"; }
 function tunnel:stop() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 1 ]; then
         local -r hcs="${1}"
@@ -172,7 +172,7 @@ function tunnel:stop() {
 #. }=-
 #. tunnel:create -={
 function :tunnel:create() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -ge 5 ]; then
         local laddr="${1}"
@@ -227,14 +227,14 @@ function tunnel:create:usage() {
     echo "[-l|--local-addr <local-addr>] <local-port> [-r|--remote-addr <remote-addr>] <remote-port> <hcs> [<hcs> [...]]";
 }
 function tunnel:create() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     local raddr=${FLAGS_remote:-localhost}; unset FLAGS_remote
     local laddr=${FLAGS_local:-localhost};  unset FLAGS_local
 
     if [ $# -ge 3 ]; then
-        local -i lport=${1}
-        local -i rport=${2}
+        local -i lport; let lport=1
+        local -i rport; let rport=2
         local -a hcss=( "${@:3}" )
         local pid
         pid=$(:tunnel:pid)

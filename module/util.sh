@@ -50,12 +50,12 @@ integer delay ${DEFAULT_DELAY?} <delay> d
 }
 
 function util:timeout() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -ge 1 ] || return $e
 
-    local -i delay; let delay=${FLAGS_delay?}; unset FLAGS_delay
-    local -i timeout; let timeout=${FLAGS_timeout?}; unset FLAGS_timeout
-    local -i interval; let interval=${FLAGS_interval?}; unset FLAGS_interval
+    local -i delay; let delay=FLAGS_delay; unset FLAGS_delay
+    local -i timeout; let timeout=FLAGS_timeout; unset FLAGS_timeout
+    local -i interval; let interval=FLAGS_interval; unset FLAGS_interval
     (
         local -i t; let t=timeout
         while ((t > 0)); do
@@ -77,7 +77,7 @@ function util:timeout() {
 #. }=-
 #. Date -={
 function :util:date_i2s() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         #. Convert seconds to datestamp
@@ -93,7 +93,7 @@ function :util:date_i2s() {
 }
 
 function :util:date_s2i() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         local YYYY=${1:0:4}
@@ -118,7 +118,7 @@ function :util:date_s2i() {
 
 function :util:time_i2s() {
     core:raise_bad_fn_call_unless $# eq 1
-    local -i e; let e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     local -i secs=$1
 
@@ -142,7 +142,7 @@ function :util:time_i2s() {
 #. }=-
 #. Stat -={
 function :util:statmode() {
-    local -i e; let e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
     [ $# -eq 1 ] || return $e
 
     local filepath="$1"
@@ -198,7 +198,7 @@ function :util:join() {
     #. Usage: array=( a b c ); :util:join $delim array
     core:raise_bad_fn_call_unless $# in 2 3
 
-    local -i e; let e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local -i len; let len=$(core:len "$2")
     case ${len}:$# in
@@ -207,7 +207,7 @@ function :util:join() {
                 core:raise EXCEPTION_USER_ERROR\
                     "Array overrun \${$2[*]:$3} when array length is only ${len}"
             else
-                let e=${CODE_SUCCESS?}
+                let e=CODE_SUCCESS
             fi
         ;;
         *:3)
@@ -221,7 +221,7 @@ function :util:join() {
             fi
         ;;
         0:2)
-            let e=${CODE_SUCCESS?}
+            let e=CODE_SUCCESS
         ;;
         *:2)
             local IFS=$1
@@ -278,7 +278,7 @@ function :util:ansi2html() {
 #. }=-
 #. Markdown Scaffolding -={
 function :util:markdown() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -gt 0 ]; then
         if read -rt 0 -N 0; then

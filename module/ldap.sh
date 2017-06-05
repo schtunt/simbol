@@ -40,7 +40,7 @@ function :ldap:host() {
     #.
     #. Throws an exception otherwise.
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local user_ldaphost=
     if [ $# -eq 1 ]; then
@@ -83,7 +83,7 @@ function :ldap:host_rw() {
     #. Returns a random LDAP host from the pool, that offer rw functionality
     #. Assumes all hosts are functional
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local user_ldaphost_rw
     if [ "${g_LDAPHOST?}" -lt 0 ]; then
@@ -103,7 +103,7 @@ function :ldap:host_rw() {
 #. ldap:authentication -={
 declare -g g_PASSWD_CACHED=
 function :ldap:authenticate() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ ${#g_PASSWD_CACHED} -eq 0 ]; then
         g_PASSWD_CACHED="$(:vault:read LDAP)"
@@ -140,7 +140,7 @@ function :ldap:authenticate() {
 
 function ldap:mkldif:usage() { echo "add|modify|replace|delete user|group|netgroup <name> <attr1> <val1> [<val2> [...]] [- <attr2> ...]"; }
 function ldap:mkldif() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -ge 4 ]; then
         vimcat <<< "$(::ldap:mkldif "$@")" >&2
@@ -154,7 +154,7 @@ function ::ldap:mkldif() {
     This function generates an ldif; which is suitable for feeding into
     ldapmodify.
 !
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -gt 3 ]; then
         local action=$1
@@ -219,7 +219,7 @@ function ::ldap:mkldif() {
 }
 
 function :ldap:modify() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -ge 3 ]; then
         local context=$1
@@ -285,7 +285,7 @@ function :ldap:add() {
 :<<:
 ...
 :
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -ge 3 ]; then
         if :ldap:authenticate; then
@@ -346,20 +346,20 @@ function ldap:checksum:usage() { echo "[<ldaphostid> <ldaphostid> [<ldaphostid> 
 function ldap:checksum() {
     core:requires ANY colordiff diff
 
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     local lhi
     local -a ldaphostids
     if [ $# -eq 0 ]; then
-        local -i e=${CODE_SUCCESS?}
+        local -i e; let e=CODE_SUCCESS
         ldaphostids=( ${!USER_LDAPHOSTS[@]} )
     elif [ $# -ge 2 ]; then
-        local -i e=${CODE_SUCCESS?}
+        local -i e; let e=CODE_SUCCESS
         for lhi in "$@"; do
             if [ ${lhi} -lt ${#USER_LDAPHOSTS[@]} ]; then
                 ldaphostids+=( ${lhi} )
             else
-                local -i e=${CODE_FAILURE?}
+                local -i e; let e=CODE_FAILURE
             fi
         done
     fi
@@ -472,7 +472,7 @@ function ldap:checksum() {
 #. ldap:search -={
 function :ldap:search.eval() {
     #. This function searches for a single object
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -ge 2 ]; then
         local -i lhi=$1
@@ -573,11 +573,11 @@ function :ldap:search() {
     #. Usage:
     #.       IFS="${SIMBOL_DELOM?}" read -a fred <<< "$(:ldap:search <lhi> netgroup cn=jboss_prd nisNetgroupTriple)"
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -gt 2 ]; then
         local bdn
-        local -i lhi=${1}
+        local -i lhi; let lhi=1
         local ldaphost=$(:ldap:host ${lhi})
 
         case $2 in
@@ -683,7 +683,7 @@ function ldap:search() {
     #. fail.  This can be fixed, but at relatively great expense as each
     #. attribute will result in a dedicated ldap query.
 
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -gt 1 ]; then
         local bdn
@@ -748,7 +748,7 @@ function ldap:ngverify() {
     #. fail.  This can be fixed, but at relatively great expense as each
     #. attribute will result in a dedicated ldap query.
 
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 0 ]; then
         local bdn=${USER_NDN?}

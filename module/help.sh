@@ -7,7 +7,7 @@ Core help module
 
 #. help:all -={
 function help:all() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 0 ]; then
         local _profile
@@ -31,7 +31,7 @@ function help:all() {
 #. help:module -={
 function help:module:usage() { echo "<module> [<function>]"; }
 function help:module() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 1 ]; then
         :core:usage ${1}
