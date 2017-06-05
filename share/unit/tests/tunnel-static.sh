@@ -32,19 +32,19 @@ function tunnelOneTimeTearDown() {
 
 #. testCoreTunnelStartPublic -={
 function testCoreTunnelStartPublic() {
-    core:wrapper tunnel start host-8c.unit-tests.mgmt.simbol >${stdoutF?} 2>${stderrF?}
+    core:wrapper tunnel start host-8c.unit-tests.mgmt.simbol >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
 }
 #. }=-
 #. testCoreTunnelStartInternal -={
 function testCoreTunnelStartInternal() {
     :tunnel:start host-8c.unit-tests.mgmt.simbol 22
-    assertEquals "${FUNCNAME?}/2" ${CODE_E01?} $?
+    assertFalse "${FUNCNAME?}/1" $?
 }
 #. }=-
 #. testCoreTunnelStartPublic -={
 function testCoreTunnelStartPublic() {
-    core:wrapper tunnel start host-8c.unit-tests.mgmt.simbol >${stdoutF?} 2>${stderrF?}
+    core:wrapper tunnel start host-8c.unit-tests.mgmt.simbol >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
 }
 #. }=-
@@ -60,61 +60,60 @@ function testCoreTunnelCreateInternal() {
     assertTrue "${FUNCNAME?}/3" $?
 
     :tunnel:create host-8c.unit-tests.mgmt.simbol localhost 8000 localhost 22
-    assertEquals "${FUNCNAME?}/4" ${CODE_E01?} $?
+    assertFalse "${FUNCNAME?}/4" $?
 }
 #. }=-
 #. testCoreTunnelCreatePublic -={
 function testCoreTunnelCreatePublic() {
     core:wrapper tunnel create host-8c.unit-tests.mgmt.simbol\
-        -l localhost 8000 -r localhost 22 >${stdoutF?} 2>${stderrF?}
-    assertEquals "${FUNCNAME?}/4" ${CODE_E01?} $?
+        -l localhost 8000 -r localhost 22 >"${stdoutF?}" 2>"${stderrF?}"
+    assertFalse "${FUNCNAME?}/1" $?
 }
 #. }=-
 #. testCoreTunnelStatusPublic -={
 function testCoreTunnelStatusPublic() {
-    core:wrapper tunnel status host-8c.unit-tests.mgmt.simbol >${stdoutF?} 2>${stderrF?}
+    core:wrapper tunnel status host-8c.unit-tests.mgmt.simbol >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/0" $?
 }
 #. }=-
 #. testCoreTunnelPidInternal -={
 function testCoreTunnelPidInternal() {
-    g_PID=$(:tunnel:pid host-8c.unit-tests.mgmt.simbol)
+    local g_PID; let g_PID=$(:tunnel:pid host-8c.unit-tests.mgmt.simbol)
     assertTrue "${FUNCNAME?}/1" $?
 
-    [ ${g_PID} -gt 0 ]
-    assertTrue "${FUNCNAME?}/1" $?
+    (( g_PID > 0 ))
+    assertTrue "${FUNCNAME?}/2" $?
 }
 #. }=-
 #. testCoreTunnelListInternal -={
 function testCoreTunnelListInternal() {
-    local ports
-    ports=$(:tunnel:list ${g_PID})
+    local -i pid; let pid=${g_PID}
+    local -i ports; let ports=$(:tunnel:list ${g_PID})
     assertTrue "${FUNCNAME?}/1" $?
 
-    [ ${ports} -eq 8000 ]
+    (( ports == 8000 ))
     assertTrue "${FUNCNAME?}/2" $?
 }
 
 #. }=-
 #. testCoreTunnelStopInternal -={
 function testCoreTunnelStopInternal() {
-    local -i pid
-    pid=$(:tunnel:stop host-8c.unit-tests.mgmt.simbol)
+    local -i pid; pid=$(:tunnel:stop host-8c.unit-tests.mgmt.simbol)
     assertTrue "${FUNCNAME?}/0" $?
 
-    [ ${pid} -eq ${g_PID} ]
+    (( pid == g_PID ))
     assertTrue "${FUNCNAME?}/1" $?
 
-    pid=$(:tunnel:stop host-8c.unit-tests.mgmt.simbol)
+    let pid=$(:tunnel:stop host-8c.unit-tests.mgmt.simbol)
     assertFalse "${FUNCNAME?}/2" $?
 
-    [ ${pid} -eq 0 ]
-    assertTrue "${FUNCNAME?}/4" $?
+    (( pid == 0 ))
+    assertTrue "${FUNCNAME?}/3" $?
 }
 #. }=-
 #. testCoreTunnelStopPublic -={
 function testCoreTunnelStopPublic() {
-    core:wrapper tunnel stop host-8c.unit-tests.mgmt.simbol >${stdoutF?} 2>${stderrF?}
+    core:wrapper tunnel stop host-8c.unit-tests.mgmt.simbol >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
 }
 #. }=-
