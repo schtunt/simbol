@@ -5,7 +5,7 @@ Core help module
 
 #. Help -={
 
-#. help:all -={
+#.   help:all -={
 function help:all() {
     local -i e; let e=CODE_DEFAULT
 
@@ -15,33 +15,34 @@ function help:all() {
         for _profile in USER_MODULES CORE_MODULES; do
             #. Initialize the ${profile} variable
             eval "$(::core:dereference.eval _profile)"
+
             local module
             #shellcheck disable=SC2154
             for module in "${!profile[@]}"; do
-                :core:usage ${module}
+                :core:usage "${module}"
             done
             echo
         done
-        e=${CODE_SUCCESS?}
+        let e=CODE_SUCCESS
     fi
 
     return $e
 }
 #. }=-
-#. help:module -={
+#.   help:module -={
 function help:module:usage() { echo "<module> [<function>]"; }
 function help:module() {
     local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 1 ]; then
-        :core:usage ${1}
+        :core:usage "$1"
         e=$?
     elif [ $# -eq 2 ]; then
-        if core:softimport ${1}; then
-            :core:usage ${1} ${2} --long
-            e=$?
+        if core:softimport "$1"; then
+            :core:usage "$1" "$2" --long
+            let e=$?
         else
-            e=${CODE_FAILURE?}
+            let e=CODE_FAILURE
         fi
     fi
 
