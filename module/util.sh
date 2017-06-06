@@ -153,6 +153,35 @@ function :util:statmode() {
     return $e
 }
 #. }=-
+#. Lock -={
+function :util:lockfile() {
+    core:raise_bad_fn_call_unless $# in 2
+    local -i e; let e=CODE_SUCCESS
+
+    local -i pid; let pid=$1
+    local -i lid; let lid=$2
+    printf "${SIMBOL_USER_VAR_TMP?}/lock.%d.%d.sct" ${pid} ${lid}
+
+    return $e
+}
+
+function :util:lock() {
+    local action=$1
+    local -i lid; let lid=$2
+    local -i pid; let pid=$3
+    local lockdir; let lockdir="$(:util:lockfile ${pid} ${lid})"
+    case ${action} in
+        on)
+            while ! mkdir "${lockdir}" &>/dev/null; do
+                sleep 0.1
+            done
+        ;;
+        off)
+            rmdir "${lockdir}"
+        ;;
+    esac
+}
+#. }=-
 #. Misc -={
 function :util:listify() {
     core:raise_bad_fn_call_unless $# ge 2
