@@ -1,7 +1,5 @@
 #. format: profile|module|function|context|stdin|arguments|stdout|stderr|exitcode
 #. Networking Module -={
-core|net|b2nm|internal||33|||1
-core|net|b2hm|internal||33|||1
 core|net|b2nm|internal||32|0xffffffff||0
 core|net|b2hm|internal||32|0x00000000||0
 core|net|b2nm|internal||24|0xffffff00||0
