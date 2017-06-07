@@ -67,6 +67,7 @@ SIMBOL_OUTPUT_THEME+=(
 
     [version]='%{+bo}v%{g:%s}%{-bo}'
     [path]='%{g:%s}'
+    [code]='%{+bo}%{c:%s}%{-bo}'
     [user]='%{b:%s@}'
     [host]='%{y:@%s}'
 
@@ -87,20 +88,24 @@ SIMBOL_OUTPUT_THEME+=(
 function ::cpf:module_is_modified() {
     local -i e; let e=FALSE
 
-    local module_path="$1"
+    local module_path=$1
     local module=$2
 
     core:cd "${module_path}"
-    local -i amended; let amended=$(git status --porcelain "${module}.sh"|wc -l)
-    #shellcheck disable=SC2086
-    [ ${PIPESTATUS[0]} -eq ${CODE_SUCCESS?} ] || core:raise EXCEPTION_SHOULD_NOT_GET_HERE
 
-    [ ${amended} -eq 0 ] || let e=TRUE
+    # Can't use `let' since we consider 0 to be a valid assignment value
+    local -i amended
+    if amended=$(git status --porcelain "${module}.sh"|wc -l; let e=PIPESTATUS[0]; exit $e); then
+        (( amended == 0 )) || let e=TRUE
+    else
+        core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+    fi
+
 
     return $e
 }
 function ::cpf:module_has_alerts() {
-    core:raise_bad_fn_call_unless $# in 2
+    core:raise_bad_fn_call_unless $# eq 2
 
     local module_path="$1"
     local module="$2"
@@ -109,7 +114,7 @@ function ::cpf:module_has_alerts() {
     return $?
 }
 function ::cpf:module() {
-    core:raise_bad_fn_call_unless $# in 1
+    core:raise_bad_fn_call_unless $# eq 1
 
     local -r module=$1
     local -i enabled; let enabled="$(core:module_enabled "${module}")"
@@ -174,8 +179,9 @@ function ::cpf:function() {
 #. }=-
 #. cpf:indent -={
 declare -gi CPF_INDENT; let CPF_INDENT=0
-eval 'function -=[() { local -i e=$?;  ((CPF_INDENT++)); return $e; }'
-eval 'function ]=-() { local -i e=$?; ((CPF_INDENT--)); return $e; }'
+eval 'function -=-() { local -i e=$?; let CPF_INDENT=0; return $e; }'
+eval 'function -=[() { local -i e=$?; let CPF_INDENT++; return $e; }'
+eval 'function ]=-() { local -i e=$?; let CPF_INDENT--; return $e; }'
 function cpf:indent() {
     [ ${CPF_INDENT?} -gt 0 ] || return
 
@@ -200,98 +206,101 @@ function ::cpf:is_fmt() {
 
 #. cpf:theme -={
 function ::cpf:theme() {
-    local e=1
+    core:raise_bad_fn_call_unless $# eq 2
+    local -i e; let e=CODE_FAILURE
 
-    if [ $# -eq 2 ]; then
-        local op=${1:0:1}
-        local th=${1:1:${#1}}
-        local arg="${2}"
-        local fmt="%s"
-        case ${op} in
-            !)
-                case ${th} in
-                    module) ::cpf:module "${arg}";;
-                    function)
-                        IFS=: read -r module fn <<< "${arg}"
-                        ::cpf:function "${module}" "${fn}"
-                    ;;
-                    *) core:raise EXCEPTION_BAD_FN_CALL 2;;
-                esac
-            ;;
-            @)
-                local symbol=
-                case ${th} in
-                    netgroup)            symbol='+';;
-                    netgroup_empty)      symbol='+';;
-                    netgroup_missing)    symbol='+';;
-                    netgroup_direct)     symbol='+';;
-                    netgroup_indirect)   symbol='+';;
-                    filer)               symbol='@';;
-                    host)                symbol='@';;
-                    host_bad)            symbol='@';;
-                    ip)                  symbol='#';;
-                    group)               symbol='%';;
-                esac
+    local op=${1:0:1}
+    local th=${1:1:${#1}}
+    local arg="$2"
+    local fmt="%s"
+    case ${op} in
+        !)
+            case ${th} in
+                module) ::cpf:module "${arg}";;
+                function)
+                    IFS=: read -r module fn <<< "${arg}"
+                    ::cpf:function "${module}" "${fn}"
+                ;;
+                *) core:raise EXCEPTION_BAD_FN_CALL 2;;
+            esac
+        ;;
+        @)
+            local symbol=
+            case ${th} in
+                netgroup)            symbol='+';;
+                netgroup_empty)      symbol='+';;
+                netgroup_missing)    symbol='+';;
+                netgroup_direct)     symbol='+';;
+                netgroup_indirect)   symbol='+';;
+                filer)               symbol='@';;
+                host)                symbol='@';;
+                host_bad)            symbol='@';;
+                ip)                  symbol='#';;
+                group)               symbol='%';;
+            esac
 
-                #. If a symbol is defined
-                if [ ${#symbol} -gt 0 ]; then
-                    #. If the argument is a literal, for example %{@host:myhost}, and NOT %{@host:%s}
-                    if ! ::cpf:is_fmt "${arg}"; then
-                        #. Add the symbol in now, and unset the symbol variable back to null
-                        arg="${symbol}${arg}"
-                    fi
-                else
-                    symbol='0'
+            #. If a symbol is defined
+            if [ ${#symbol} -gt 0 ]; then
+                #. If the argument is a literal, for example %{@host:myhost}, and NOT %{@host:%s}
+                if ! ::cpf:is_fmt "${arg}"; then
+                    #. Add the symbol in now, and unset the symbol variable back to null
+                    arg="${symbol}${arg}"
                 fi
+            else
+                symbol='0'
+            fi
 
-                case ${th} in
-                    err|crit|fail)       fmt="%{r:${fmt}}";;
-                    warn)                fmt="%{y:${fmt}}";;
-                    info)                fmt="%{w:${fmt}}";;
-                    pass)                fmt="%{g:${fmt}}";;
-                    note)                fmt="%{m:${fmt}}";;
-                    link)                fmt="%{b:${fmt}}";;
-                    loc)                 fmt="%{c:${fmt}}";;
-                    netgroup)            fmt="%{c:${fmt}}";;
-                    netgroup_empty)      fmt="%{+bo}%{n:${fmt}}%{-bo}";;
-                    netgroup_missing)    fmt="%{+bo}%{r:${fmt}}%{-bo}";;
-                    netgroup_direct)     fmt="%{+bo}%{c:${fmt}}%{-bo}";;
-                    netgroup_indirect)   fmt="%{c:${fmt}}";;
-                    code)                fmt="%{c:${fmt}}";;
-                    filer)               fmt="%{m:${fmt}}";;
-                    timestamp)           fmt="%{g:${fmt}}";;
-                    comment)             fmt="%{n:${fmt}}";;
-                    query)               fmt="%{m:${fmt}}";;
-                    profile)             fmt="%{y:${fmt}}";;
-                    hash)                fmt="%{b:${fmt}}";;
-                    fqdn)                fmt="%{y:${fmt}}";;
-                    host)                fmt="%{y:${fmt}}";;
-                    service)             fmt="%{r:${fmt}}";;
-                    port)                fmt="%{g:${fmt}}";;
-                    host_bad)            fmt="%{r:${fmt}}";;
-                    ip)                  fmt="%{b:${fmt}}";;
-                    cmd)                 fmt="%{c:${fmt}}";;
-                    subnet)              fmt="%{c:${fmt}}";;
-                    hgd)                 fmt="%{+bo}%{m:${fmt}}%{-bo}";;
-                    group)               fmt="%{m:${fmt}}";;
-                    int)                 fmt="%{g:${fmt}}";;
-                    fn)                  fmt="%{c:${fmt}}";;
-                    mod)                 fmt="%{y:${fmt}}";;
-                    pkg)                 fmt="%{p:${fmt}}";;
-                    lang)                fmt="%{c:${fmt}}";;
-                    bad_path)            fmt="%{r:${fmt}}";;
-                    key)                 fmt="%{y:${fmt}}";;
-                    val)                 fmt="%{g:${fmt}}";;
-                    *)                   core:raise EXCEPTION_BAD_FN_CALL "What is ${th}?";;
-                esac
+            case ${th} in
+                err|crit|fail)       fmt="%{r:${fmt}}";;
+                warn)                fmt="%{y:${fmt}}";;
+                info)                fmt="%{w:${fmt}}";;
+                pass)                fmt="%{g:${fmt}}";;
+                note)                fmt="%{m:${fmt}}";;
+                link)                fmt="%{b:${fmt}}";;
+                loc)                 fmt="%{c:${fmt}}";;
+                netgroup)            fmt="%{c:${fmt}}";;
+                netgroup_empty)      fmt="%{+bo}%{n:${fmt}}%{-bo}";;
+                netgroup_missing)    fmt="%{+bo}%{r:${fmt}}%{-bo}";;
+                netgroup_direct)     fmt="%{+bo}%{c:${fmt}}%{-bo}";;
+                netgroup_indirect)   fmt="%{c:${fmt}}";;
+                code)                fmt="%{c:${fmt}}";;
+                filer)               fmt="%{m:${fmt}}";;
+                timestamp)           fmt="%{g:${fmt}}";;
+                comment)             fmt="%{n:${fmt}}";;
+                query)               fmt="%{m:${fmt}}";;
+                profile)             fmt="%{y:${fmt}}";;
+                hash)                fmt="%{b:${fmt}}";;
+                fqdn)                fmt="%{y:${fmt}}";;
+                host)                fmt="%{y:${fmt}}";;
+                service)             fmt="%{r:${fmt}}";;
+                port)                fmt="%{g:${fmt}}";;
+                host_bad)            fmt="%{r:${fmt}}";;
+                ip)                  fmt="%{b:${fmt}}";;
+                cmd)                 fmt="%{c:${fmt}}";;
+                subnet)              fmt="%{c:${fmt}}";;
+                hgd)                 fmt="%{+bo}%{m:${fmt}}%{-bo}";;
+                group)               fmt="%{m:${fmt}}";;
+                int)                 fmt="%{g:${fmt}}";;
+                fn)                  fmt="%{c:${fmt}}";;
+                mod)                 fmt="%{y:${fmt}}";;
+                pkg)                 fmt="%{p:${fmt}}";;
+                lang)                fmt="%{c:${fmt}}";;
+                bad_path)            fmt="%{r:${fmt}}";;
+                key)                 fmt="%{y:${fmt}}";;
+                val)                 fmt="%{g:${fmt}}";;
+                *)                   core:raise EXCEPTION_BAD_FN_CALL "What is ${th}?";;
+            esac
 
-                echo "${symbol}" "${fmt}" "${arg}"
-            ;;
-            *) core:raise EXCEPTION_BAD_FN_CALL "Unknown operator \`%s'" "${op}";;
-        esac
-    else
-        core:raise EXCEPTION_BAD_FN_CALL "What is your problem?"
-    fi
+            echo "${symbol}" "${fmt}" "${arg}"
+
+            let e=CODE_SUCCESS
+        ;;
+        *)
+            core:raise EXCEPTION_BAD_FN_CALL "Unknown operator \`%s'" "${op}"
+        ;;
+    esac
+
+    return $e
 }
 #. }=-
 #. cpf:printf -={
@@ -318,6 +327,8 @@ function cpf:printf() {
     local -a stack=()
     local stacksize=0
     local output=''
+
+    local -i i
 
     while IFS= read -rn1 char; do
         case "${char}/${context}/${stacksize}" in
@@ -428,8 +439,7 @@ function cpf:printf() {
 #. theme -={
 function theme() {
     local -i e=$?
-
-    [ $# -gt 0 ] | return $e
+    [ $# -gt 0 ] || return $e
 
     local dvc="${FD_STDOUT?}"
     local item="$1"
@@ -460,7 +470,7 @@ function theme() {
         TODO:*)         c='y'; s='TODO';           dvc="${FD_STDERR}";;
         FIXME:*)        c='r'; s='FIXME';          dvc="${FD_STDERR}";;
 
-        *:*) core:raise EXCEPTION_BAD_FN_CALL 1
+        *:*) core:raise EXCEPTION_BAD_FN_CALL "Invalid token \`${item}:${2:--}'";;
     esac
 
     if [ $# -eq 1 ]; then

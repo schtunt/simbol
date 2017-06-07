@@ -189,7 +189,7 @@ function testCoreCpfIndentPublic() {
     ]=-
     assertEquals "${FUNCNAME?}/A" 0 ${CPF_INDENT}
 
-    let CPF_INDENT=${cpf_indent}
+    let CPF_INDENT=cpf_indent
 }
 #. }=-
 #. }=-
