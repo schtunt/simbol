@@ -21,32 +21,32 @@ export SHFLAGS="${SIMBOL_USER_VAR_LIBSH}/shflags"
 # shellcheck disable=SC1090
 source "${SHFLAGS?}"
 
-function core:decl_shflags_bool.eval() {
-    core:raise_bad_fn_call_unless $# gt 0
+function core:decl_shflags.eval() {
     #requires shellcheck's `disable=SC2086,SC2154' in caller
+    core:raise_bad_fn_call_unless $# gt 1
 
-    local var
-    for var in "$@"; do
-        cat <<-!EVAL
-            local -i ${var};
-            let ${var}=\${FLAGS_${var}};
-            unset FLAGS_${var};
-		!EVAL
-    done
-}
-
-function core:decl_shflags_int.eval() {
-    core:raise_bad_fn_call_unless $# gt 0
-    #requires shellcheck's `disable=SC2086,SC2154' in caller
-
-    local var
-    for var in "$@"; do
-        cat <<-!EVAL
-            local -i ${var}
-            let ${var}=FLAGS_${var}
-            unset FLAGS_${var}
-		!EVAL
-    done
+    local key_type=$1
+    case "${key_type}" in
+        bool|int)
+            for key in "${@:2}"; do
+                cat <<-!EVAL
+                    local -i ${key};
+                    let ${key}=FLAGS_${key};
+                    unset FLAGS_${key};
+				!EVAL
+            done
+        ;;
+        str|float)
+            for key in "${@:2}"; do
+                cat <<-!EVAL
+                    local -i ${key};
+                    ${key}="\${FLAGS_${key}}";
+                    unset FLAGS_${key};
+				!EVAL
+            done
+        ;;
+        *) core:raise EXCEPTION_BAD_FN_CALL "Invalid type \`${key_type}'" ;;
+    esac
 }
 #. }=-
 #. 1.6  Core Utilities -={
@@ -195,10 +195,10 @@ test ! -f ~/.simbolrc || source ~/.simbolrc
 : "${USER_EMAIL?}"
 
 #. GLOBAL_OPTS 1/4 -={
-declare -i g_HELP; let g_HELP=${FALSE?}
-declare -i g_VERBOSE; let g_VERBOSE=${FALSE?}
-declare -i g_DEBUG; let g_DEBUG=${FALSE?}
-declare -i g_CACHED; let g_CACHED=${TRUE?}
+declare -i g_HELP; let g_HELP=FALSE
+declare -i g_VERBOSE; let g_VERBOSE=FALSE
+declare -i g_DEBUG; let g_DEBUG=FALSE
+declare -i g_CACHED; let g_CACHED=TRUE
 declare -i g_LDAPHOST; let g_LDAPHOST=-1
 declare g_FORMAT="ansi"
 declare g_DUMP
@@ -223,7 +223,7 @@ function core:log() {
     local -i level
     case ${code} in
         EMERG|ALERT|CRIT|ERR|WARNING|NOTICE|INFO|DEBUG)
-            let level=${SIMBOL_LOG_NAMES[${code}]}
+            let level=SIMBOL_LOG_NAMES[code]
         ;;
         *)
             core:raise EXCEPTION_BAD_FN_CALL "Unknown code \`${code}'"
@@ -319,52 +319,47 @@ function core:softimport() {
 }
 
 function core:import() {
+    core:raise_bad_fn_call_unless $# gt 0
+    local -i e; let e=CODE_SUCCESS
+
     local module
     for module in "$@"; do
-        core:softimport "${module}"
-        if [ $? -ne ${CODE_SUCCESS?} ]; then
+        if ! core:softimport "${module}"; then
             core:raise_on_failed_softimport "${module}"
-            : break
         fi
     done
 
-    return ${CODE_SUCCESS?}
+    return $e
 }
 
 function core:imported() {
+    core:raise_bad_fn_call_unless $# eq 1
     local -i e; let e=CODE_FAILURE
 
-    if [ $# -eq 1 ]; then
-        local module=$1
-        if [ ! -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
-            e=${g_SIMBOL_IMPORTED_EXIT[${module}]}
-        else
-            core:raise EXCEPTION_SHOULD_NOT_GET_HERE
-        fi
+    local module=$1
+    if [ ! -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
+        e=${g_SIMBOL_IMPORTED_EXIT[${module}]}
     else
-        core:raise EXCEPTION_BAD_FN_CALL
+        core:raise EXCEPTION_SHOULD_NOT_GET_HERE
     fi
 
-    return ${e}
+    return $e
 }
 
 function core:module_path() {
+    core:raise_bad_fn_call_unless $# eq 1
     local -i e; let e=CODE_SUCCESS
 
     local path
-    if [ $# -eq 1 ]; then
-        local module="$1"
+    local module="$1"
 
-        if [ -e "${SIMBOL_CORE_MOD?}/${module//\./\/}.sh" ]; then
-            path="${SIMBOL_SCM?}/module"
-        elif [ -e "${SIMBOL_USER_MOD?}/${module//\./\/}.sh" ]; then
-            path="${SIMBOL_USER_MOD?}"
-        else
-            core:raise EXCEPTION_SHOULD_NOT_GET_HERE\
-                "No such module found: \`${module}'"
-        fi
+    if [ -e "${SIMBOL_CORE_MOD?}/${module//\./\/}.sh" ]; then
+        path="${SIMBOL_SCM?}/module"
+    elif [ -e "${SIMBOL_USER_MOD?}/${module//\./\/}.sh" ]; then
+        path="${SIMBOL_USER_MOD?}"
     else
-        core:raise EXCEPTION_BAD_FN_CALL
+        core:raise EXCEPTION_SHOULD_NOT_GET_HERE\
+            "No such module found: \`${module}'"
     fi
 
     echo "${path}"
@@ -372,21 +367,18 @@ function core:module_path() {
 }
 
 function core:module_enabled() {
+    core:raise_bad_fn_call_unless $# eq 1
     local -i enabled; let enabled=FALSE
 
-    if [ $# -eq 1 ]; then
-        local module="$1"
+    local module="$1"
 
-        if [ -e "${SIMBOL_CORE_MOD?}/${module//\./\/}.sh" ]; then
-            [ ${CORE_MODULES[${module}]} -eq 0 ] || let enabled=TRUE
-        elif [ -e "${SIMBOL_USER_MOD?}/${module//\./\/}.sh" ]; then
-            [ ${USER_MODULES[${module}]} -eq 0 ] || let enabled=TRUE
-        else
-            core:raise EXCEPTION_SHOULD_NOT_GET_HERE\
-                "No such module found: \`${module}'"
-        fi
+    if [ -e "${SIMBOL_CORE_MOD?}/${module//\./\/}.sh" ]; then
+        [ ${CORE_MODULES[${module}]} -eq 0 ] || let enabled=TRUE
+    elif [ -e "${SIMBOL_USER_MOD?}/${module//\./\/}.sh" ]; then
+        [ ${USER_MODULES[${module}]} -eq 0 ] || let enabled=TRUE
     else
-        core:raise EXCEPTION_BAD_FN_CALL
+        core:raise EXCEPTION_SHOULD_NOT_GET_HERE\
+            "No such module found: \`${module}'"
     fi
 
     return ${enabled}
@@ -512,7 +504,7 @@ function core:requires() {
     #fi
 
     local required;
-    case $#:${1} in
+    case $#:$1 in
         1:*)
             required="$1"
             if ! :core:requires "${required}"; then
@@ -616,11 +608,10 @@ function core:requires() {
                 fi
             done
         ;;
-        *) core:raise EXCEPTION_BAD_FN_CALL "$*";;
+        *) core:raise EXCEPTION_BAD_FN_CALL "Invalid token \`$#:$1'";;
     esac
 
-    test $e -eq ${CODE_SUCCESS?} && return $e || exit $e
-    return $e
+    (( e == CODE_SUCCESS )) && return $e || exit $e
 }
 #. }=-
 #. 1.12 Caching -={
@@ -640,7 +631,8 @@ function core:return() { return $1; }
 
 function g_CACHE_OUT() {
     : "${l_CACHE_SIG:="${FUNCNAME[1]}"}"
-    g_CACHE_FILE="$(:core:cachefile "${l_CACHE_SIG}" "$*")"
+    local key="$*"
+    g_CACHE_FILE="$(:core:cachefile "${l_CACHE_SIG}" "${key}")"
     :core:cached "${g_CACHE_FILE}"
     return $?
 }
@@ -694,10 +686,12 @@ candidate, whereas date is a bad candidate.
 !
 
 function :core:cachefile() {
+    core:raise_bad_fn_call_unless $# in 1 2
+
     #. Constructs and prints a cachefile path
     local effective_format="${g_FORMAT?}"
 
-    local cachefile=${SIMBOL_USER_VAR_CACHE?}
+    local cachefile="${SIMBOL_USER_VAR_CACHE?}"
 
     if [ $# -eq 2 ]; then
         #. Automaticly named cachefile...
@@ -720,8 +714,6 @@ function :core:cachefile() {
         cachefile+=+${g_VERBOSE?}
         cachefile+=+${1}
         effective_format='sig'
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
     fi
 
     cachefile+=".${effective_format}"
@@ -729,31 +721,28 @@ function :core:cachefile() {
 
     #. Return code is 0 if the files exists, and 1 otherwise
     local -i e; let e=CODE_FAILURE
-    [ ! -r "${cachefile}" ] || e=${CODE_SUCCESS?}
+    [ ! -r "${cachefile}" ] || let e=CODE_SUCCESS
 
     return $e
 }
 
 function :core:cache() {
+    core:raise_bad_fn_call_unless $# eq 1
     local -i e; let e=CODE_FAILURE
 
-    if [ $# -eq 1 ]; then
-        local cachefile="$1"
+    local cachefile="$1"
 
-        :> "${cachefile}"
-        chmod 600 "${cachefile}"
-        tee -a "${cachefile}"
+    :> "${cachefile}"
+    chmod 600 "${cachefile}"
+    tee -a "${cachefile}"
 
-        e=${CODE_SUCCESS?}
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+    let e=CODE_SUCCESS
 
     return $e
 }
 
 function :core:cached() {
-    core:raise_bad_fn_call_unless $# in 1
+    core:raise_bad_fn_call_unless $# eq 1
 
     : ${g_CACHED?}
     : "${g_CACHE_USED?}"
@@ -798,6 +787,8 @@ function :core:cached() {
 : ${USER_USERNAME:=$(whoami)}
 
 function ::core:execute:internal() {
+    core:raise_bad_fn_call_unless $# ge 2
+
     local module="$1"
     local fn="$2"
     ":${module}:${fn}" "${@:3}"
@@ -805,6 +796,8 @@ function ::core:execute:internal() {
 }
 
 function ::core:execute:private() {
+    core:raise_bad_fn_call_unless $# ge 2
+
     local module="$1"
     local fn="$2"
     "::${module}:${fn}" "${@:3}"
@@ -871,10 +864,10 @@ declare -g fn_4d9d6c17eeae2754c9b49171261b93bd="${fn:-}"
     #. Process it all
     if FLAGS "${@}"; then #>& /dev/null
         #. GLOBAL_OPTS 3/4 -={
-        eval "$(core:decl_shflags_bool.eval help)"; g_HELP=${help?}
-        eval "$(core:decl_shflags_bool.eval verbose)"; g_VERBOSE=${verbose?}
-        eval "$(core:decl_shflags_bool.eval debug)"; g_DEBUG=${debug?}
-        eval "$(core:decl_shflags_bool.eval cached)"; g_CACHED=${cached?}
+        eval "$(core:decl_shflags.eval bool help)"; g_HELP=${help?}
+        eval "$(core:decl_shflags.eval bool verbose)"; g_VERBOSE=${verbose?}
+        eval "$(core:decl_shflags.eval bool debug)"; g_DEBUG=${debug?}
+        eval "$(core:decl_shflags.eval bool cached)"; g_CACHED=${cached?}
 
         if grep -qw -- -E <<< "${g_SSH_OPTS[*]}"; then
             case ${g_DEBUG?}:${g_VERBOSE?} in
@@ -917,83 +910,76 @@ $(for key in "${extra[@]}"; do echo "${key}=\"${!key}\""; done)
 }
 
 function :core:execute() {
+    core:raise_bad_fn_call_unless $# ge 2
     local -i e; let e=CODE_USAGE_MODS
 
-    if [ $# -ge 1 ]; then
-        let e=CODE_USAGE_MOD
+    declare -g g_MODULE=$1
+    declare -g g_FUNCTION=$2
 
-        if [ $# -ge 2 ]; then
-            declare -g g_MODULE=$1
-            declare -g g_FUNCTION=$2
+    if [ "$(type -t "${g_MODULE}:${g_FUNCTION}")" == "function" ]; then
+        local -i sic
+        case ${g_FORMAT} in
+            html|email|ansi)
+                [ -t 1 ]
+                #shellcheck disable=SC2181
+                let sic=$((~$?+2))
+            ;;
+            dot|text|png)
+                let sic=0
+            ;;
+            *) core:raise EXCEPTION_SHOULD_NOT_GET_HERE "Format checks should have already taken place!";;
+        esac
 
-            if [ "$(type -t "${g_MODULE}:${g_FUNCTION}")" == "function" ]; then
-                local -i sic
-                case ${g_FORMAT} in
-                    html|email|ansi)
-                        [ -t 1 ]
-                        #shellcheck disable=SC2181
-                        let sic=$((~$?+2))
-                    ;;
-                    dot|text|png)
-                        let sic=0
-                    ;;
-                    *) core:raise EXCEPTION_SHOULD_NOT_GET_HERE "Format checks should have already taken place!";;
-                esac
+        cpf:initialize ${sic}
+        "${g_MODULE}:${g_FUNCTION}" "${@:3}"
+        let e=$?
 
-                cpf:initialize ${sic}
-                "${g_MODULE}:${g_FUNCTION}" "${@:3}"
-                let e=$?
+        if [ ${sic} -eq 1 ]; then
+            if [ "$(type -t "${g_MODULE}:${g_FUNCTION}:alert")" == "function" ]; then
+                cpf:printf "%{r:ALERTS}%{@profile:%s} %{@g_MODULE:%s} %{@function:%s}:\n"\
+                    "${SIMBOL_PROFILE?}" "${g_MODULE}" "${g_FUNCTION}"
+                while read -ra line; do
+                    local alert="${line[0]}"
+                    theme "${alert}" "${line:1}"
+                done < <( "${g_MODULE}:${g_FUNCTION}:alert" )
+                cpf:printf
+            fi
 
-                if [ ${sic} -eq 1 ]; then
-                    if [ "$(type -t "${g_MODULE}:${g_FUNCTION}:alert")" == "function" ]; then
-                        cpf:printf "%{r:ALERTS}%{@profile:%s} %{@g_MODULE:%s} %{@function:%s}:\n"\
-                            "${SIMBOL_PROFILE?}" "${g_MODULE}" "${g_FUNCTION}"
-                        while read -ra line; do
-                            local alert="${line[0]}"
-                            theme "${alert}" "${line:1}"
-                        done < <( "${g_MODULE}:${g_FUNCTION}:alert" )
-                        cpf:printf
-                    fi
+            #shellcheck disable=SC2086
+            if [ -f "${g_CACHE_USED?}" -a ${g_VERBOSE?} -eq ${TRUE?} ]; then
+                cpf:printf
+                local age
+                local cachefile
+                cpf:printf "%{@comment:#. Cached Data} %{r:%s}\n" "-=["
+                while read -r cachefile; do
+                    let age=$(:core:age "${cachefile}")
 
-                    #shellcheck disable=SC2086
-                    if [ -f "${g_CACHE_USED?}" -a ${g_VERBOSE?} -eq ${TRUE?} ]; then
-                        cpf:printf
-                        local age
-                        local cachefile
-                        cpf:printf "%{@comment:#. Cached Data} %{r:%s}\n" "-=["
-                        while read -r cachefile; do
-                            let age=$(:core:age "${cachefile}")
-
-                            case $(::core:cache:cachetype "${cachefile}") in
-                                output)
-                                    cpf:printf "    %{b:%s} is %{@int:%ss} old..." "$(basename "${cachefile}")" "${age}"
-                                ;;
-                                file)
-                                    cpf:printf "    %{@path:%s} is %{@int:%ss} old..." "${cachefile}" "${age}"
-                                ;;
-                            esac
-                            theme WARN "CACHED"
-                        done < "${g_CACHE_USED}"
-                        cpf:printf "%{@comment:#.} %{r:%s}\n" "]=-"
-                    fi
-                fi
-
-                if [ ${sic} -eq 1 -a $e -eq 0 -a ${SECONDS} -ge 30 ]; then
-                    theme INFO "Execution time was ${SECONDS} seconds"
-                fi
-            else
-                theme ERR_INTERNAL "Function ${g_MODULE}:${g_FUNCTION} not defined!"
+                    case $(::core:cache:cachetype "${cachefile}") in
+                        output)
+                            cpf:printf "    %{b:%s} is %{@int:%ss} old..." "$(basename "${cachefile}")" "${age}"
+                        ;;
+                        file)
+                            cpf:printf "    %{@path:%s} is %{@int:%ss} old..." "${cachefile}" "${age}"
+                        ;;
+                    esac
+                    theme WARN "CACHED"
+                done < "${g_CACHE_USED}"
+                cpf:printf "%{@comment:#.} %{r:%s}\n" "]=-"
             fi
         fi
+
+        if [ ${sic} -eq 1 -a $e -eq 0 -a ${SECONDS} -ge 30 ]; then
+            theme INFO "Execution time was ${SECONDS} seconds"
+        fi
     else
-        core:raise EXCEPTION_BAD_FN_CALL "Expected 1 or more arguments"
+        theme ERR_INTERNAL "Function ${g_MODULE}:${g_FUNCTION} not defined!"
     fi
 
     return $e
 }
 
 function core:cd() {
-    cd "$1" || core:raise EXCEPTION_PERMANENT_ERROR "No such directory \`$1'"
+    cd "${1:-}" || core:raise EXCEPTION_PERMANENT_ERROR "No such directory \`$1'"
 }
 
 function :core:git() {
@@ -1003,6 +989,8 @@ function :core:git() {
 }
 
 function ::core:dereference.eval() {
+    core:raise_bad_fn_call_unless $# eq 1
+
     #. NOTE: you myst eval the output of this function!
     #. take $1, and make it equal to ${$1}
     #.
@@ -1019,37 +1007,37 @@ function ::core:dereference.eval() {
 
 #shellcheck disable=SC2086
 function :core:functions() {
+    core:raise_bad_fn_call_unless $# eq 2
+
     local -i e; let e=CODE_FAILURE
-    if [ $# -eq 2 ]; then
-        local fn_type=$1
-        local module=$2
-        case ${fn_type} in
-            public)
-                declare -F |
-                    awk -F'[ ]' '$3~/^'${module}':/{print$3}' |
-                    awk -F ':+' '{print$2}' |
-                    sort -u
-                e=${CODE_SUCCESS}
-            ;;
-            private)
-                declare -F |
-                    awk -F'[ ]' '$3~/^:'${module}':/{print$3}' |
-                    awk -F ':+' '{print$3}' |
-                    sort -u
-                e=${CODE_SUCCESS}
-            ;;
-            internal)
-                declare -F |
-                    awk -F'[ ]' '$3~/^::'${module}':/{print$3}' |
-                    awk -F ':+' '{print$3}' |
-                    sort -u
-                e=${CODE_SUCCESS}
-            ;;
-            *) core:raise EXCEPTION_BAD_FN_CALL;;
-        esac
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+    local fn_type=$1
+    local module=$2
+    case ${fn_type} in
+        public)
+            declare -F |
+                awk -F'[ ]' '$3~/^'${module}':/{print$3}' |
+                awk -F ':+' '{print$2}' |
+                sort -u
+            let e=CODE_SUCCESS
+        ;;
+        private)
+            declare -F |
+                awk -F'[ ]' '$3~/^:'${module}':/{print$3}' |
+                awk -F ':+' '{print$3}' |
+                sort -u
+            let e=CODE_SUCCESS
+        ;;
+        internal)
+            declare -F |
+                awk -F'[ ]' '$3~/^::'${module}':/{print$3}' |
+                awk -F ':+' '{print$3}' |
+                sort -u
+            let e=CODE_SUCCESS
+        ;;
+        *)
+            core:raise EXCEPTION_BAD_FN_CALL "Unknown function type \`${fn_type}'"
+        ;;
+    esac
 
     return $e
 }
@@ -1434,9 +1422,9 @@ function core:raise_bad_fn_call_unless() {
 }
 
 function core:raise_on_failed_softimport() {
-    local module="$1"
-    core:raise_bad_fn_call_unless $# in 1
+    core:raise_bad_fn_call_unless $# eq 1
 
+    local module="$1"
     local ouch="${SIMBOL_USER_VAR_TMP}/softimport.${module}.ouch"
     if [ -e "${ouch}" ]; then
         cat "${ouch}"
@@ -1455,15 +1443,15 @@ function core:raise() {
         : !!! Exiting raise function early as we are being traced !!!
     else
         cpf:printf "%{+r}EXCEPTION%{bo:[%s->%s]}: %s%{-r}\n" "$e" "$1" "${RAISE[$e]-[UNKNOWN EXCEPTION:$e]}" >&2
-        [ $# -le 2 ] || cpf:printf "\n%{+r}  !!! %{bo:%s}%{-r}\n\n" "${@:2}" >&2
+        [ $# -lt 2 ] || cpf:printf "\n%{+r}  !!! %{bo:%s}%{-r}\n\n" "${@:2}" >&2
 
         cpf:printf "%{+r}EXCEPTION%{bo:[Traceback]}%{-r}:\n" >&2
         if [ "${g_MODULE:-NilOrNotSet}" != 'NilOrNotSet' ]; then
             if [ "${g_FUNCTION:-NilOrNotSet}" != 'NilOrNotSet' ]; then
-                cpf:printf "Function %{c:${g_MODULE}:${g_FUNCTION}()}" 1>&2
+                cpf:printf "Function %{c:${g_MODULE}:${g_FUNCTION}()}\n" 1>&2
                 echo "Critical failure in function ${g_MODULE}:${g_FUNCTION}()" >> "${SIMBOL_DEADMAN?}"
             else
-                cpf:printf "g_MODULE %{c:${g_MODULE}}" 1>&2
+                cpf:printf "g_MODULE %{c:${g_MODULE}}\n" 1>&2
                 echo "Critical failure in g_MODULE ${g_MODULE}" >> "${SIMBOL_DEADMAN?}"
             fi
         else
