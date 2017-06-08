@@ -18,14 +18,14 @@ function remoteSetUp() {
         }
 
         function cp() {
-            cat <<-!SCP >> ${g_SSH_MOCK?}.cp
+            cat <<-!SCP >> "${g_SSH_MOCK?}.cp"
                 \$@
 			!SCP
 			return \$?
         }
 
         function rsync() {
-            cat <<-!SCP >> ${g_SSH_MOCK?}.rsync
+            cat <<-!SCP >> "${g_SSH_MOCK?}.rsync"
                 \$@
 			!SCP
 			return \$?
@@ -317,16 +317,16 @@ function testCoreRemoteCopyPublicRemoteFileToDirectory() {
     local fn="/etc/cards"
 
     mock:wrapper remote copy \
-        ${hn}:${fn} ${SIMBOL_USER_VAR_CACHE?}/\
+        ${hn}:${fn} "${SIMBOL_USER_VAR_CACHE?}/"\
     >"${stdoutF?}" 2>"${stderrF?}"
 
-    grep -qFw -- '-ae ssh' ${g_SSH_MOCK?}.rsync
+    grep -qFw -- '-ae ssh' "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.1" $?
 
-    grep -qFw -- "${SIMBOL_USER_VAR_CACHE?}/" ${g_SSH_MOCK?}.rsync
+    grep -qFw -- "${SIMBOL_USER_VAR_CACHE?}/" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.2" $?
 
-    grep -qFw -- "${hn}:${fn}" ${g_SSH_MOCK?}.rsync
+    grep -qFw -- "${hn}:${fn}" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.3" $?
 }
 #. }=-
@@ -336,16 +336,16 @@ function testCoreRemoteCopyPublicRemoteFileToFile() {
     local fn="/etc/cards"
 
     mock:wrapper remote copy\
-        ${hn}:${fn} ${SIMBOL_USER_VAR_CACHE?}/deck\
+        ${hn}:${fn} "${SIMBOL_USER_VAR_CACHE?}/deck"\
     >"${stdoutF?}" 2>"${stderrF?}"
 
-    grep -qFw -- '-ae ssh' ${g_SSH_MOCK?}.rsync
+    grep -qFw -- '-ae ssh' "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.1" $?
 
-    grep -qFw -- "${SIMBOL_USER_VAR_CACHE?}/deck" ${g_SSH_MOCK?}.rsync
+    grep -qFw -- "${SIMBOL_USER_VAR_CACHE?}/deck" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.2" $?
 
-    grep -qFw -- "${hn}:${fn}" ${g_SSH_MOCK?}.rsync
+    grep -qFw -- "${hn}:${fn}" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.3" $?
 }
 #. }=-
@@ -366,16 +366,16 @@ function testCoreRemoteCopyPublicRemoteFileToRemoteFile() {
     grep -qFw -- '-ae ssh' "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.2" $?
 
-    grep -qFw -- "${hnFrom?}:${fn}" ${g_SSH_MOCK?}.rsync
+    grep -qFw -- "${hnFrom?}:${fn}" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.3" $?
 
-    grep -qE -- "${SIMBOL_USER_VAR_TMP?}/.*/${fn}\>" ${g_SSH_MOCK?}.rsync
+    grep -qE -- "${SIMBOL_USER_VAR_TMP?}/.*/${fn}\>" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.4" $?
 
-    grep -qFw -- "${hnFrom}:${fn}" ${g_SSH_MOCK?}.rsync
+    grep -qFw -- "${hnFrom}:${fn}" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.5" $?
 
-    grep -qFw -- "${hnTo}:${fn}" ${g_SSH_MOCK?}.rsync
+    grep -qFw -- "${hnTo}:${fn}" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.6" $?
 }
 #. }=-
@@ -390,23 +390,22 @@ function testCoreRemoteCopyPublicRemoteDirectoryToRemoteDirectory() {
         ${hnFrom}:${fn} ${hnTo}:${fn}\
     >"${stdoutF?}" 2>"${stderrF?}"
 
-    local -i cmds
-    cmds=$(wc -l < ${g_SSH_MOCK?}.rsync)
+    local -i cmds; let cmds=$(wc -l < "${g_SSH_MOCK?}.rsync")
     assertEquals "${FUNCNAME?}/1.1" 2 ${cmds}
 
-    grep -qFw -- '-ae ssh' ${g_SSH_MOCK?}.rsync
+    grep -qFw -- '-ae ssh' "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.2" $?
 
-    grep -qFw -- "${hnFrom?}:${fn}" ${g_SSH_MOCK?}.rsync
+    grep -qFw -- "${hnFrom?}:${fn}" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.3" $?
 
-    grep -qE -- "${SIMBOL_USER_VAR_TMP?}/.*/${fn}" ${g_SSH_MOCK?}.rsync
+    grep -qE -- "${SIMBOL_USER_VAR_TMP?}/.*/${fn}" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.4" $?
 
-    grep -qFw -- "${hnFrom}:${fn}" ${g_SSH_MOCK?}.rsync
+    grep -qFw -- "${hnFrom}:${fn}" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.5" $?
 
-    grep -qFw -- "${hnTo}:${fn}" ${g_SSH_MOCK?}.rsync
+    grep -qFw -- "${hnTo}:${fn}" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.6" $?
 }
 #. }=-
@@ -420,14 +419,13 @@ function testCoreRemoteCopyPublicRemoteDirectoryToDirectory() {
         ${hnFrom}:${fn} ${fn}\
     >"${stdoutF?}" 2>"${stderrF?}"
 
-    local -i cmds
-    cmds=$(wc -l < ${g_SSH_MOCK?}.rsync)
+    local -i cmds; let cmds=$(wc -l < "${g_SSH_MOCK?}.rsync")
     assertEquals "${FUNCNAME?}/1.1" 1 ${cmds}
 
-    grep -qFw -- '-ae ssh' ${g_SSH_MOCK?}.rsync
+    grep -qFw -- '-ae ssh' "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.2" $?
 
-    grep -qFw -- "${hnFrom}:${fn}" ${g_SSH_MOCK?}.rsync
+    grep -qFw -- "${hnFrom}:${fn}" "${g_SSH_MOCK?}.rsync"
     assertTrue "${FUNCNAME?}/1.3" $?
 }
 #. }=-
@@ -441,8 +439,7 @@ function testCoreRemoteCopyPublicDirectoryToRemoteDirectory() {
         ${fn} ${hnFrom}:${fn}\
     >"${stdoutF?}" 2>"${stderrF?}"
 
-    local -i cmds
-    cmds=$(wc -l < ${g_SSH_MOCK?}.rsync)
+    local -i cmds; let cmds=$(wc -l < "${g_SSH_MOCK?}.rsync")
     assertEquals "${FUNCNAME?}/1.1" 1 ${cmds}
 }
 #. }=-
@@ -485,8 +482,11 @@ function testCoreRemoteThreadTeardown() {
     read -r -u4 c
     assertTrue "${FUNCNAME?}/2.3" $?
 
+    #shellcheck disable=SC2086
     assertEquals "${FUNCNAME?}/3.1" $a 111
+    #shellcheck disable=SC2086
     assertEquals "${FUNCNAME?}/3.2" $b 222
+    #shellcheck disable=SC2086
     assertEquals "${FUNCNAME?}/3.3" $c 333
 
     ::remote:thread:teardown ${pid}

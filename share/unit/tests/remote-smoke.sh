@@ -7,6 +7,7 @@ function remoteSetUp() {
 }
 
 #. Remote -={
+
 #. testCoreRemoteConnectPasswordlessInternal -={
 function testCoreRemoteConnectPasswordlessInternal() {
     mock:write <<-!MOCK
@@ -22,12 +23,13 @@ function testCoreRemoteConnectPasswordlessInternal() {
 	!DNSMASQ
 
     local hn="batman.gotham.com"
-    local user=$(id -un)
+    local user; user="$(id -un)"
 
     # First run will run into a host key validation prompt; so here we first
     # force the acception of the host key to make the next run successful.
-    ssh ${g_SSH_OPTS?} -o StrictHostKeyChecking=no ${user}@${hn} --\
-        whoami #>${stdoutF?} 2>${stderrF?}
+    #shellcheck disable=SC2154
+    ssh "${g_SSH_OPTS[@]}" -o StrictHostKeyChecking=no "${user}@${hn}" --\
+        whoami #>"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1.1" $?
 
     grep -qF "$(whoami)" "${stdoutF?}"
@@ -40,7 +42,7 @@ function testCoreRemoteConnectPasswordlessInternal() {
     :remote:connect:passwordless ${hn}
     assertTrue "${FUNCNAME?}/2" $?
 
-    :remote:connect:passwordless ${user}@${hn}
+    :remote:connect:passwordless "${user}@${hn}"
     assertTrue "${FUNCNAME?}/3" $?
 
     :remote:connect:passwordless hostdoesnotexist
@@ -81,7 +83,7 @@ function testCoreRemoteCopyPublic() {
     #    ${SIMBOL_USER_VAR_CACHE?}
     #FIXME: Enabled once fixed -={
     #/\
-    #>${stdoutF?} 2>${stderrF?}
+    #>"${stdoutF?}" 2>"${stderrF?}"
     #assertTrue 'remote:copy/1.1' $?
     #[ -f ${SIMBOL_USER_VAR_CACHE?}/hosts ]
     #assertTrue 'remote:copy/1.2' $?
@@ -96,28 +98,28 @@ function testCoreRemoteCopyPublic() {
     #. }=-
 
     #. Remote File to File
-    rm -f ${SIMBOL_USER_VAR_CACHE}/hosts.explicit
+    rm -f "${SIMBOL_USER_VAR_CACHE}/hosts.explicit"
     core:wrapper remote copy -T _\
         host-8c.unit-tests.mgmt.simbol:/etc/hosts\
-        ${SIMBOL_USER_VAR_CACHE}/hosts.explicit\
-    >${stdoutF?} 2>${stderrF?}
+        "${SIMBOL_USER_VAR_CACHE}/hosts.explicit"\
+    >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/2.1" $?
 
-    [ -f ${SIMBOL_USER_VAR_CACHE}/hosts.explicit ]
+    [ -f "${SIMBOL_USER_VAR_CACHE}/hosts.explicit" ]
     assertTrue "${FUNCNAME?}/2.2" $?
 
     #. Remote File to Remote File
     core:wrapper remote copy -T _\
         host-89.unit-tests.mgmt.simbol:/etc/hosts\
         host-8f.unit-tests.mgmt.simbol:/tmp/89-hosts\
-    >${stdoutF?} 2>${stderrF?}
+    >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/3" $?
 
     #. Remote Directory to Remote Directory
     core:wrapper remote copy -T _\
         host-89.unit-tests.mgmt.simbol:/etc/rc.d/\
         host-8f.unit-tests.mgmt.simbol:/tmp/89-rc.d/\
-    >${stdoutF?} 2>${stderrF?}
+    >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/4" $?
 
     #. Remote Directory to Directory
@@ -125,14 +127,14 @@ function testCoreRemoteCopyPublic() {
     core:wrapper remote copy -T _\
         host-89.unit-tests.mgmt.simbol:/etc/rc.d/\
         /tmp/89-rc.d/\
-    >${stdoutF?} 2>${stderrF?}
+    >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/5" $?
 
     #. Directory to Remote Directory
     core:wrapper remote copy -T _\
         /etc/rc.d/\
         host-8f.unit-tests.mgmt.simbol:/tmp/test-rc.d/\
-    >${stdoutF?} 2>${stderrF?}
+    >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
 }
 #. }=-
@@ -159,19 +161,19 @@ function tmux() { echo "\$*"; }
 function cpf() { :; }
 !
 
-    mock:wrapper remote ::tmux _ s '|(#10.0.0.0/29)' >${stdoutF?} 2>${stderrF?}
+    mock:wrapper remote ::tmux _ s '|(#10.0.0.0/29)' >"${stdoutF?}" 2>"${stderrF?}"
 
     local -i count
-    count=$(grep -cE '10\.0\.0\.' ${stdoutF?})
+    let count=$(grep -cE '10\.0\.0\.' "${stdoutF?}")
     assertEquals "${FUNCNAME?}/1.1" 6 ${count}
 
-    count=$(grep -cFw 'new-session' ${stdoutF?})
+    let count=$(grep -cFw 'new-session' "${stdoutF?}")
     assertEquals "${FUNCNAME?}/1.2" 1 ${count}
 
-    count=$(grep -cFw 'attach-session' ${stdoutF?})
+    let count=$(grep -cFw 'attach-session' "${stdoutF?}")
     assertEquals "${FUNCNAME?}/1.3" 1 ${count}
 
-    count=$(grep -cFw 'kill-session' ${stdoutF?})
+    let count=$(grep -cFw 'kill-session' "${stdoutF?}")
     assertEquals "${FUNCNAME?}/1.4" 1 ${count}
 
     mock:clear
@@ -179,17 +181,17 @@ function cpf() { :; }
 #. }=-
 #. testCoreRemoteMonIpcPublic -={
 function testCoreRemoteMonIpcPublic() {
-    local hostname="$(hostname)"
-    core:wrapper remote mon '|(#127.0.0.1)' -- hostname >${stdoutF?} 2>${stderrF?}
+    local hn; hn="$(hostname)"
+    core:wrapper remote mon '|(#127.0.0.1)' -- hostname >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1.1" $?
 
-    grep -qFw "${hostname}" ${stdoutF?}
+    grep -qFw "${hn}" "${stdoutF?}"
     assertTrue "${FUNCNAME?}/1.2" $?
 }
 #. }=-
 #. testCoreRemoteSsh_threadIpcPrivate -={
 function testCoreRemoteSsh_threadIpcPrivate() {
-    local hn=$(hostname -f)
+    local hn; hn="$(hostname -f)"
 
     ::remote:thread:setup
     assertTrue "${FUNCNAME?}/1.1" $?
@@ -198,23 +200,23 @@ function testCoreRemoteSsh_threadIpcPrivate() {
     assertTrue "${FUNCNAME?}/1.2" $?
 
     local hcs
-    while ! read -u 4 -d $'\0' hcs; do sleep 0.1; done
+    while ! read -ru 4 -d $'\0' hcs; do sleep 0.1; done
     assertEquals "${FUNCNAME?}/1.3.1" "${hn}" "${hcs}"
 
     local stdout
-    while ! read -u 4 -d $'\0' stdout; do sleep 0.1; done
+    while ! read -ru 4 -d $'\0' stdout; do sleep 0.1; done
     assertEquals "${FUNCNAME?}/1.3.2" '0xDEADBEEF' "${stdout}"
 
     local stderr
-    while ! read -u 4 -d $'\0' stderr; do sleep 0.1; done
-    #assertEquals "${FUNCNAME?}/1.3.3" '0xDEADBEEF' "${stderr}"
+    while ! read -ru 4 -d $'\0' stderr; do sleep 0.1; done
+    assertEquals "${FUNCNAME?}/1.3.3" '' "${stderr}"
 
     local ee
-    while ! read -u 4 -d $'\0' ee; do sleep 0.1; done
+    while ! read -ru 4 -d $'\0' ee; do sleep 0.1; done
     assertEquals "${FUNCNAME?}/1.3.4" 0 "${ee}"
 
     local metadata_raw
-    while ! read -u 4 -d $'\0' metadata_raw; do sleep 0.1; done
+    while ! read -ru 4 -d $'\0' metadata_raw; do sleep 0.1; done
     assertEquals "${FUNCNAME?}/1.3.5" "tries=1;" "${metadata_raw}"
 
     ::remote:thread:teardown
@@ -222,10 +224,4 @@ function testCoreRemoteSsh_threadIpcPrivate() {
 }
 #. }=-
 
-#testCoreRemoteClusterPublic
-#testCoreRemoteTmuxPublic
-#testCoreRemotePipewrapEvalPrivate
-#testCoreRemoteSerialmonPrivate
-#testCoreRemoteSerialmonInternal
-#testCoreRemoteMonInternal
 #. }=-

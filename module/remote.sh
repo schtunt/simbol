@@ -24,8 +24,8 @@ function :remote:connect:passwordless() {
     local extra_SSH_OPTS="-o PasswordAuthentication=no -o StrictHostKeyChecking=no"
 
     local -i rv
-    #shellcheck disable=SC2029
-    let rv=$(ssh "${g_SSH_OPTS?}" "${extra_SSH_OPTS?}" "${hcs}" -- echo -n "${NOW?}" 2> /dev/null)
+    #shellcheck disable=SC2029,SC2086,SC2154
+    let rv=$(ssh ${g_SSH_OPTS[*]} "${extra_SSH_OPTS?}" "${hcs}" -- echo -n "${NOW?}" 2> /dev/null)
 
     (( $? == CODE_SUCCESS )) && (( rv == NOW ))
     return $?
@@ -42,7 +42,7 @@ function :remote:connect() {
         hcs="$1"
     fi
 
-    local ssh_options="${g_SSH_OPTS?}"
+    local ssh_options="${g_SSH_OPTS[*]}"
     if [ $# -eq 1 ]; then
         #. User wants to ssh into a shell
         ssh_options+=" -ttt"
@@ -270,61 +270,59 @@ function remote:cluster() {
 }
 
 function ::remote:tmux_setup.eval() {
-    if [ $# -eq 3 ]; then
-        local session=$1
-        echo "#. Session ${session} -={"
+    core:raise_bad_fn_call_unless $# in 3
 
-        local -i panes=$2
-        echo "#. + ${panes} panes in total"
+    local session=$1
+    echo "#. Session ${session} -={"
 
-        local -i ppw=$3
-        echo "#. + ${ppw} panes per window"
+    local -i panes=$2
+    echo "#. + ${panes} panes in total"
 
-        local -i leftovers
-        ((leftovers=panes%ppw))
+    local -i ppw=$3
+    echo "#. + ${ppw} panes per window"
 
-        local -i windows
-        ((windows=panes/ppw))
+    local -i leftovers
+    ((leftovers=panes%ppw))
 
-        if [ ${leftovers} -gt 0 ]; then
-            ((windows++))
-            echo "#.   + last-window has ${leftovers} panes"
-        fi
-        echo "#. + ${windows} windows"
-        echo "#. }=-"
+    local -i windows
+    ((windows=panes/ppw))
 
-        echo "#. Session Creation"
-        echo "tmux new-session -d -s ${session}"
-
-        echo "#. Window Creation"
-        local -i wid=1
-        local wname=${session}:w${wid}
-        echo "tmux rename-window -t ${session} ${wname}"
-        for ((wid=2; wid<windows+1; wid++)); do
-            wname=${session}:w${wid}
-            echo "tmux new-window -d -n ${wname}"
-        done
-
-        echo "#. pane creation"
-        for ((pid=0; pid<panes; pid++)); do
-            if ((pid % ppw == 0)); then
-                wname=${session}:w$((pid/ppw+1))
-                echo "tmux select-layout -t ${session}:${wname} tiled >/dev/null"
-                echo "tmux select-window -t ${session}:${wname} #. Pane $pid, Window ${wname}"
-            else
-                echo "tmux split-window #. Pane $pid"
-                echo "tmux select-layout -t ${session}:${wname} tiled >/dev/null"
-            fi
-        done
-
-        echo "#. View Preparation and Session Connection"
-        wid=1
-        wname=${session}:w${wid}
-        echo "tmux select-window -t ${session}:${wname}"
-        echo "tmux select-pane -t ${session}:${wname}.0"
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
+    if [ ${leftovers} -gt 0 ]; then
+        ((windows++))
+        echo "#.   + last-window has ${leftovers} panes"
     fi
+    echo "#. + ${windows} windows"
+    echo "#. }=-"
+
+    echo "#. Session Creation"
+    echo "tmux new-session -d -s ${session}"
+
+    echo "#. Window Creation"
+    local -i wid=1
+    local wname="${session}:w${wid}"
+    echo "tmux rename-window -t ${session} ${wname}"
+    for ((wid=2; wid<windows+1; wid++)); do
+        wname="${session}:w${wid}"
+        echo "tmux new-window -d -n \"${wname}\""
+    done
+
+    echo "#. pane creation"
+    for ((pid=0; pid<panes; pid++)); do
+        if ((pid % ppw == 0)); then
+            wname="${session}:w$((pid/ppw+1))"
+            echo "tmux select-layout -t \"${session}:${wname}\" tiled >/dev/null"
+            echo "tmux select-window -t \"${session}:${wname}\" #. Pane $pid, Window ${wname}"
+        else
+            echo "tmux split-window #. Pane $pid"
+            echo "tmux select-layout -t \"${session}:${wname}\" tiled >/dev/null"
+        fi
+    done
+
+    echo "#. View Preparation and Session Connection"
+    let wid=1
+    wname="${session}:w${wid}"
+    echo "tmux select-window -t \"${session}:${wname}\""
+    echo "tmux select-pane -t \"${session}:${wname}.0\""
 }
 
 function ::remote:tmux_attach() {
@@ -455,15 +453,15 @@ function remote:tmux() {
 }
 #. }=-
 
-declare -i LOCK_ID; let LOCK_ID=123
+declare -gi LOCK_ID; let LOCK_ID=123
 #. ::remote:thread:cleanup() -={
 function ::remote:thread:cleanup() {
-    core:raise_bad_fn_call_unless $# in 1
-    local -i pid; let pid=$1
+    core:raise_bad_fn_call_unless $# in 2
+    local -i lid; let lid=$1
+    local -i pid; let pid=$2
 
-    local -i e
-    :util:lock off ${LOCK_ID?} ${pid}
-    let e=$?
+    local -i e; let e=CODE_SUCCESS
+    :util:lock off ${lid} ${pid}
 
     rm -f "${SIMBOL_USER_VAR_TMP?}/thread.${pid}.sct" || let e=CODE_FAILURE
 
@@ -496,7 +494,7 @@ function ::remote:thread:teardown() {
     exec 4>&-
 
     ::remote:thread:cleanup ${LOCK_ID?} ${pid}
-    e=$?
+    let e=$?
 
     return $e
 }
@@ -600,7 +598,7 @@ function ::remote:ssh_thread.ipc() {
     local -a argv
     argv=( "${@:4}" )
 
-    cmd="ssh -xTTT ${g_SSH_OPTS?}\
+    cmd="ssh -xTTT ${g_SSH_OPTS[*]}\
         -o ConnectionAttempts=${retries}\
         -o ConnectTimeout=${timeout}\
         -o PasswordAuthentication=no\
@@ -743,10 +741,9 @@ function remote:mon() {
     local -i e; let e=CODE_DEFAULT
     [ $# -ge 2 ] || return $e
 
-    local -i timeout; let timeout=${FLAGS_timeout:-8}; unset FLAGS_timeout
-    local -i threads; let threads=${FLAGS_threads:-32}; unset FLAGS_threads
-    local -i retries; let retries=${FLAGS_retries:-3}; unset FLAGS_retries
-    local -i sudo; let sudo=${FLAGS_sudo:-0}; ((sudo=~sudo+2)); unset FLAGS_sudo
+    #requires shellcheck's `disable=SC2086,SC2154' in caller
+    eval "$(core:decl_shflags.eval int timeout threads retries)"
+    #eval "$(core:decl_shflags.eval bool sudo)"
 
     #. so:stdout, se:stdout, xc:exit-code, md:metadata
     local output_raw="${FLAGS_output:-so,se,xc}"; unset FLAGS_output
@@ -777,7 +774,7 @@ function remote:mon() {
     fi
     #. }=-
 
-    let e=${CODE_FAILURE?}
+    let e=CODE_FAILURE
 
     local -r hgd="$1"
     cpf "Resolving HGD:%{@hgd:%s}..." "${hgd}"
