@@ -9,8 +9,8 @@
 #.
 #.     It examines two environment variables:
 #.
- :         ${CONTEXT?}
- :         ${MODULE?}
+ :         "${CONTEXT?}"
+ :         "${MODULE?}"
 #.
 #. See the short code below to figure out how those are used.
 
@@ -90,10 +90,12 @@ function citm:kcov() {
 
             case ${module} in
                 core)
-                    kcov coverage "${kcov_opts[@]}" simbol unit core
+                    #FIXME: kcov coverage "${kcov_opts[@]}" simbol unit core
+                    simbol unit core
                 ;;
                 *)
-                    kcov coverage "${kcov_opts[@]}" simbol unit test core ${MODULE}
+                    #FIXME: kcov coverage "${kcov_opts[@]}" simbol unit test core ${MODULE}
+                    simbol unit test core "${MODULE}"
                 ;;
             esac
             e=$?
@@ -124,7 +126,7 @@ if [ $# -eq 1 ]; then
                 share/unit/files/apt.conf\
                 /etc/apt/apt.conf.d/99SiteUnitTest                 ;((EXIT|=$?))
 
-            citm:apt_get_install_for ${MODULE}                     ;((EXIT|=$?))
+            citm:apt_get_install_for "${MODULE}"                   ;((EXIT|=$?))
         ;;
 
         install)
@@ -150,7 +152,7 @@ if [ $# -eq 1 ]; then
                 ;;
 
                 execute:*)
-                    citm:kcov run ${MODULE}                        ;((EXIT|=$?))
+                    citm:kcov run "${MODULE}"                      ;((EXIT|=$?))
                     echo
 
                     citm:kcov report                               ;((EXIT|=$?))
