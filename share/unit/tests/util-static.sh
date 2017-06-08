@@ -22,16 +22,16 @@ function utilOneTimeTearDown() {
 function testCoreUtilUndelimitInternal() {
     # shellcheck disable=SC2034
     local -a array=( b a d b a b e )
-    :util:join , array >${stdoutF?} 2>${stderrF?}
+    :util:join , array >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
-    assertEquals "${FUNCNAME?}/2" "$(cat ${stdoutF})" 'b,a,d,b,a,b,e'
+    assertEquals "${FUNCNAME?}/2" 'b,a,d,b,a,b,e' "$(cat "${stdoutF}")"
 }
 #. }=-
 #. testCoreUtilJoinInternal -={
 function testCoreUtilJoinInternal() {
     local string="b${SIMBOL_DELIM?}a${SIMBOL_DELIM?}d${SIMBOL_DELIM?}"
     string+="b${SIMBOL_DELIM?}a${SIMBOL_DELIM?}b${SIMBOL_DELIM?}e"
-    echo "${string}" | :util:undelimit >${stdoutF?} 2>${stderrF?}
+    echo "${string}" | :util:undelimit >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
     assertEquals "${FUNCNAME?}/2" "$(cat <<!
 b
@@ -42,13 +42,13 @@ a
 b
 e
 !
-)" "$(cat ${stdoutF?})"
+)" "$(cat "${stdoutF?}")"
 }
 #. }=-
 #. testCoreUtilJoinInternalWithDelim -={
 function testCoreUtilJoinInternalWithDelim() {
     local string="b,a,d,b,a,b,e"
-    echo "${string}" | :util:undelimit , >${stdoutF?} 2>${stderrF?}
+    echo "${string}" | :util:undelimit , >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
     assertEquals "${FUNCNAME?}/1" "$(cat <<!
 b
@@ -59,7 +59,7 @@ a
 b
 e
 !
-)" "$(cat ${stdoutF?})"
+)" "$(cat "${stdoutF?}")"
 }
 #. }=-
 #. testCoreUtilZipEvalInternal -={
@@ -70,14 +70,14 @@ function testCoreUtilZipEvalInternal() {
     # shellcheck disable=SC2034
     local -a v=( {A..D} )
 
-    :util:zip.eval k v >${stdoutF?} 2>${stderrF?}
+    :util:zip.eval k v >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
-    assertEquals "${FUNCNAME?}/2" "$(cat ${stdoutF})" "(
+    assertEquals "${FUNCNAME?}/2" "(
 [a]=A
 [b]=B
 [c]=C
 [d]=D
-)"
+)" "$(cat "${stdoutF?}")"
 }
 #. }=-
 #. testCoreUtilAnsi2htmlInternal -={
@@ -96,10 +96,37 @@ function testCoreUtilAnsi2htmlInternal() {
         done
 
         echo #New line
-    done | :util:ansi2html >${stdoutF?} 2>${stderrF?}
+    done | :util:ansi2html >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
 
     #. TODO: Validate html syntax
+}
+#. }=-
+#. testCoreUtilLockfileInternal -={
+function testCoreUtilLockfileInternal() {
+    local lf; lf=$(mock:wrapper util :lockfile 111 222)
+    assertTrue "${FUNCNAME?}/1.1" $?
+
+    local ex; ex="${SIMBOL_USER_VAR_TMP?}/lock.111.222.sct"
+    assertEquals "${FUNCNAME?}/1.2" "${ex}" "${lf}"
+}
+#. }=-
+#. testCoreUtilLockInternal -={
+function testCoreUtilLockInternal() {
+    local lf="${SIMBOL_USER_VAR_TMP?}/lock.222.111.sct"
+    rm -rf "${lf}"
+
+    mock:wrapper util :lock on 111 222
+    assertTrue "${FUNCNAME?}/1.1" $?
+
+    test -d "${lf}"
+    assertTrue "${FUNCNAME?}/1.2" $?
+
+    mock:wrapper util :lock off 111 222
+    assertTrue "${FUNCNAME?}/2.1" $?
+
+    test -d "${lf}"
+    assertFalse "${FUNCNAME?}/2.2" $?
 }
 #. }=-
 #. }=-

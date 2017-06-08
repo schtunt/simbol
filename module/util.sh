@@ -54,7 +54,7 @@ function util:timeout() {
     local -i e; let e=CODE_DEFAULT
     [ $# -ge 1 ] || return $e
 
-    eval "$(core:decl_shflags_int.eval delay timeout interval)"
+    eval "$(core:decl_shflags.eval int delay timeout interval)"
     (
         local -i t; let t=timeout
         while ((t > 0)); do
@@ -77,21 +77,19 @@ function util:timeout() {
 #. Date -={
 function :util:date_i2s() {
     local -i e; let e=CODE_FAILURE
+    core:raise_bad_fn_call_unless $# eq 1
 
-    if [ $# -eq 1 ]; then
-        #. Convert seconds to datestamp
-        date --utc --date "1970-01-01 $1 sec" "+%Y%m%d%H%M%S"
-        e=$?
-        #. FIXME: Mac OS X needs this line instead:
-        #. FIXME: date -u -j "010112001970.$1" "+%Y%m%d%H%M%S"
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+    #. Convert seconds to datestamp
+    date --utc --date "1970-01-01 $1 sec" "+%Y%m%d%H%M%S"
+    e=$?
+    #. FIXME: Mac OS X needs this line instead:
+    #. FIXME: date -u -j "010112001970.$1" "+%Y%m%d%H%M%S"
 
     return $e
 }
 
 function :util:date_s2i() {
+    core:raise_bad_fn_call_unless $# in 1 2
     local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
@@ -104,12 +102,10 @@ function :util:date_s2i() {
 
         #. Convert datestamp to seconds
         date --utc --date "${YYYY?}-${mm}-${dd} ${HH?}:${MM?}:${SS?}" "+%s"
-        e=$?
+        let e=$?
     elif [ $# -eq 2 ]; then
         date --utc --date "${1} ${2}" "+%s"
-        e=$?
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
+        let e=$?
     fi
 
     return $e
@@ -158,18 +154,22 @@ function :util:lockfile() {
     core:raise_bad_fn_call_unless $# in 2
     local -i e; let e=CODE_SUCCESS
 
-    local -i pid; let pid=$1
-    local -i lid; let lid=$2
-    printf "${SIMBOL_USER_VAR_TMP?}/lock.%d.%d.sct" ${pid} ${lid}
+    local -i lid; let lid=$1
+    local -i pid; let pid=$2
+    printf "${SIMBOL_USER_VAR_TMP?}/lock.%d.%d.sct" ${lid} ${pid}
 
     return $e
 }
 
 function :util:lock() {
+    core:raise_bad_fn_call_unless $# in 3
+    local -i e; let e=CODE_SUCCESS
+
     local action=$1
     local -i lid; let lid=$2
     local -i pid; let pid=$3
-    local lockdir; let lockdir="$(:util:lockfile ${pid} ${lid})"
+
+    local lockdir; lockdir="$(:util:lockfile ${pid} ${lid})"
     case ${action} in
         on)
             while ! mkdir "${lockdir}" &>/dev/null; do
@@ -177,9 +177,12 @@ function :util:lock() {
             done
         ;;
         off)
-            rmdir "${lockdir}"
+            rmdir "${lockdir}" >&/dev/null
+            let e=$?
         ;;
     esac
+
+    return $e
 }
 #. }=-
 #. Misc -={
@@ -306,29 +309,26 @@ function :util:ansi2html() {
 #. }=-
 #. Markdown Scaffolding -={
 function :util:markdown() {
+    core:raise_bad_fn_call_unless $# gt 0
     local -i e; let e=CODE_FAILURE
 
-    if [ $# -gt 0 ]; then
-        if read -rt 0 -N 0; then
-            local op=$1
-            shift
+    if read -rt 0 -N 0; then
+        local op=$1
+        shift
 
-            {
-                case ${op} in
-                    h1) printf "# %s\n\n" "$@";;
-                    h2) printf "# %s\n\n" "$@";;
-                    h3) printf "# %s\n\n" "$@";;
-                    h4) printf "# %s\n\n" "$@";;
-                    h5) printf "# %s\n\n" "$@";;
-                    h6) printf "# %s\n\n" "$@";;
-                esac
-                cat
-                echo "###### vim:syntax=markdown"
-            } | vimcat
-            e=$?
-        fi
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
+        {
+            case ${op} in
+                h1) printf "# %s\n\n" "$@";;
+                h2) printf "# %s\n\n" "$@";;
+                h3) printf "# %s\n\n" "$@";;
+                h4) printf "# %s\n\n" "$@";;
+                h5) printf "# %s\n\n" "$@";;
+                h6) printf "# %s\n\n" "$@";;
+            esac
+            cat
+            echo "###### vim:syntax=markdown"
+        } | vimcat
+        let e=$?
     fi
 
     return $e
