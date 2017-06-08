@@ -18,8 +18,9 @@ function :net:fix() {
     IFS=/ read -r ip mask <<< "${1}"
 
     local -i ip_bits; let ip_bits=$(:net:s2h "${ip}")
-    local -i mask_bits; let mask_bits=$(:net:b2nm "${mask}")
-
+    local -i mask_bits
+    #shellcheck disable=SC2034
+    let mask_bits=$(:net:b2nm "${mask}")
     local nw_hex; let nw_hex='ip_bits & mask_bits'
 
     local nw; nw=$(:net:h2s $nw_hex)
@@ -204,7 +205,7 @@ function :net:firsthost() {
         :net:h2s "0x${fh}"
         let e=$?
     else
-        core:raise EXCEPTION_BAD_FN_CALL
+        core:raise EXCEPTION_BAD_FN_CALL "Invalid ip/subnet: \`%s'" "$1"
     fi
 
     return $e
@@ -266,7 +267,7 @@ function :net:freelocalport() {
     while (( e != CODE_SUCCESS )); do
         (( port='1024 + ( RANDOM % ( (1<<16)-1-1024 ) )' ))
         if ! :net:localportping ${port}; then
-            let freeport=${port}
+            let freeport=port
             let e=CODE_SUCCESS
             break
         fi
