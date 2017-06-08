@@ -8,18 +8,16 @@ The module does X, Y and Z
 
 function :template:funk:cached() { echo 3; }
 function :template:funk() {
+  core:raise_bad_fn_call_unless $# in 2
+
   #local l_CACHE_SIG="optional-custom-sinature-hash:template:funk/$3";
   #local -i l_CACHE_TTL=0
   g_CACHE_OUT "$*" || {
-    local -i e=${CODE_FAILURE?}
-
-    if [ $# -eq 2 ]; then
-        echo "*** main function logic ***"
-        e=$?
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
-  } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
+    local -i e; let e=CODE_FAILURE
+    echo "*** main function logic ***"
+    e=$?
+    core:return $e
+  } > "${g_CACHE_FILE?}"; g_CACHE_IN; return $?
 }
 
 function template:funk:alert() {
@@ -40,21 +38,21 @@ function template:funk:help() {
 <mandatory> [<optional:default>]
 !
 }
-function template:funk:cachefile() { echo $1; }
+function template:funk:cachefile() { echo "$1"; }
 function template:funk:cached() { echo 10; }
 function template:funk:usage() { echo "<mandatory> [<optional:default>]"; }
 function template:funk() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
+    [ $# -le 1 ] || return $e
 
-    if [ $# -le 1 ]; then
-        local mandatory=${1}
-        local optional="${2:-default}"
-        :template:funk "${mandatory}" "${optional}"
-        if [ $e -eq ${CODE_SUCCESS?} ]; then
-            theme HAS_PASSED
-        else
-            theme HAS_FAILED
-        fi
+    local mandatory=${1}
+    local optional="${2:-default}"
+    if :template:funk "${mandatory}" "${optional}"; then
+        let e=CODE_SUCCESS
+        theme HAS_PASSED
+    else
+        let e=CODE_FAILURE
+        theme HAS_FAILED
     fi
 
     return $e
