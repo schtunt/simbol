@@ -36,58 +36,53 @@ core:softimport ng
 #. HGD Resolvers -={
 function ::hgd:validate() {
     local -i e; let e=CODE_FAILURE
+    core:raise_bad_fn_call_unless $# eq 1
+    let e=CODE_SUCCESS
 
-    if [ $# -eq 1 ]; then
-        let e=CODE_SUCCESS
+    local -i balance=0
+    local -i opset=0
 
-        local -i balance=0
-        local -i opset=0
+    local -i i
+    local ch
+    for (( i=0; i<${#1}; i++ )); do
+        ch="${1:$i:1}"
+        case "${ch}" in
+            '(')
+                if (( opset == 1 )); then
+                    let balance++
+                    let opset=0
+                else
+                    let e=1
+                fi
+            ;;
+            ')')
+                let balance--
+                (( balance == 0 )) || let e=2
+            ;;
+            '|'|'!'|'&')
+                if (( opset == 0 )); then
+                    let opset=1
+                else
+                    let e=3
+                fi
+            ;;
+            *)
+                (( balance > 0 )) || let e=4
+            ;;
+        esac
 
-        local -i i
-        local ch
-        for (( i=0; i<${#1}; i++ )); do
-            ch="${1:$i:1}"
-            case "${ch}" in
-                '(')
-                    if [ ${opset} -eq 1 ]; then
-                        ((balance++))
-                        opset=0
-                    else
-                        let e=1
-                    fi
-                ;;
-                ')')
-                    ((balance--))
-                    [ ${balance} -ge 0 ] || e=2
-                ;;
-                '|'|'!'|'&')
-                    if [ ${opset} -eq 0 ]; then
-                        opset=1
-                    else
-                        let e=3
-                    fi
-                ;;
-                *)
-                    [ ${balance} -gt 0 ] || e=4
-                ;;
-            esac
+        (( e == CODE_SUCCESS )) || break
+    done
 
-            # shellcheck disable=SC2086
-            [ $e -eq ${CODE_SUCCESS?} ] || break
-        done
-
-        if [ $e -eq 0 ]; then
-            [ ${balance} -eq 0 ] || e=5
-        fi
-    else
-        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 1 expected"
+    if (( e == 0 )) && (( balance > 0 )); then
+        let e=5
     fi
 
     return $e
 }
 
 function ::hgd:explode() {
-    core:raise_bad_fn_call_unless $# in 1
+    core:raise_bad_fn_call_unless $# eq 1
 
     # FIXME: This method is poorly named
 
@@ -488,16 +483,13 @@ function hgd:refresh() {
 #. HGD Delete -={
 function :hgd:delete() {
     local -i e; let e=CODE_FAILURE
+    core:raise_bad_fn_call_unless $# eq 1
 
-    if [ $# -eq 1 ]; then
-        local session=$1
-        if [ -s "${g_HGD_CACHE?}" ] && grep -qE "^\<${session}\>" "${g_HGD_CACHE?}"; then
-            if sed -e "/^\<${session}\>/d" -i "${g_HGD_CACHE?}"; then
-                let e=CODE_SUCCESS
-            fi
+    local session=$1
+    if [ -s "${g_HGD_CACHE?}" ] && grep -qE "^\<${session}\>" "${g_HGD_CACHE?}"; then
+        if sed -e "/^\<${session}\>/d" -i "${g_HGD_CACHE?}"; then
+            let e=CODE_SUCCESS
         fi
-    else
-        core:raise EXCEPTION_BAD_FN_CALL "$# arguments given, 1 expected"
     fi
 
     return $e
@@ -506,14 +498,13 @@ function :hgd:delete() {
 function hgd:delete:usage(){ echo "<session>"; }
 function hgd:delete() {
     local -i e; let e=CODE_DEFAULT
+    [ $# -ge 1 ] || return $e
+    let e=CODE_SUCCESS
 
-    if [ $# -ge 1 ]; then
-        let e=CODE_SUCCESS
-        local session
-        for session in "${@}"; do
-            :hgd:delete "${session}" || let e=CODE_FAILURE
-        done
-    fi
+    local session
+    for session in "$@"; do
+        :hgd:delete "${session}" || let e=CODE_FAILURE
+    done
 
     return $e
 }
