@@ -2,71 +2,84 @@
 core:import util
 core:import gpg
 
-declare -g g_GPGKID
 
-function testCoreVaultImport() {
-    core:softimport vault
-    assertTrue 0.0 $?
+#. Vault -={
+function vaultOneTimeSetUp() {
+    export vault=${SIMBOL_USER_VAR_CACHE?}/mock-etc/simbol.vault
+    export SIMBOL_PROFILE=UNITTEST
+    export GNUPGHOME="${SIMBOL_USER_VAR_CACHE?}/dot.gnupg"
+    export GNUPG_TEST_D="${SIMBOL_USER_VAR_TMP?}/gpg-test-data"
+    export USER_VAULT_PASSPHRASE="SoSecrative"
+
+    export SIMBOL_USER_ETC=${SIMBOL_USER_VAR_CACHE?}/mock-etc
+    mkdir -p ${SIMBOL_USER_ETC}
+    core:import vault
+
+    rm -rf "${GNUPGHOME?}"
+    mkdir "${GNUPGHOME?}"
+    chmod 700 "${GNUPGHOME?}"
+
+    rm -rf "${GNUPG_TEST_D?}"
+    mkdir -p "${GNUPG_TEST_D?}"
+
+    mock:clear
+    mock:write <<-!MOCK
+	declare SIMBOL_USER_ETC=${SIMBOL_USER_VAR_CACHE?}/mock-etc
+!MOCK
+
+    mock:wrapper gpg list >"${stdoutF?}" 2>"${stderrF?}"
+    assertTrue "${FUNCNAME?}/1" $?
+    grep -q NO_KEYS "${stdoutF?}"
+    assertTrue "${FUNCNAME?}/2" $?
+
+    gpgkid=$(mock:wrapper gpg :create 2>"${stderrF?}")
+    assertTrue "${FUNCNAME?}/3" $?
+    assertEquals "${FUNCNAME?}/4" 10 ${#gpgkid}
+    cat "${stderrF?}"
+    export gpgkid
 }
 
 function vaultSetUp() {
-    case ${g_MODE?} in
-        prime)
-            : noop
-        ;;
-        execute)
-            export SIMBOL_PROFILE=UNITTEST
-            g_GPGKID=$(:gpg:create)
-        ;;
-        *)
-            exit 127
-        ;;
-    esac
+   assertTrue "{FUNCNAME}/1" $?
+
 }
 
 function vaultTearDown() {
-    local vault="${1:-${g_VAULT?}}"
-    local vault_tmp=$(::vault:getTempFile ${vault} killme)
-    local vault_ts=$(::vault:getTempFile ${vault} timestamp)
-    local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
-
-    case ${g_MODE?} in
-        prime)
-            : noop
-        ;;
-        execute)
-            :gpg:delete ${g_GPGKID} >${stdoutF?} 2>${stderrF?}
-            rm -f ${vault}
-            rm -f ${vault_bu}
-        ;;
-        *)
-            return 127
-        ;;
-    esac
+    : noop
 }
 
-function testCoreVaultCreatePublic() {
-    core:import vault
-    assertTrue 0.0 $?
+function vaultOneTimeTearDown() {
+    mock:wrapper gpg :list '*' >"${stdoutF?}" 2>"${stderrF?}"
+    local -a gpgkid=( $(cat "${stdoutF?}") )
+    if [ ${#gpgkid[@]} -gt 0 ]; then
+        mock:wrapper gpg :delete "${gpgkid[0]}" >"${stdoutF?}" 2>"${stderrF?}"
+    fi
 
-    local vault=${1:-${g_VAULT?}}
+    rm -rf "${GNUPGHOME?}"
+    rm -rf "${GNUPG_TEST_D?}"
+    rm -rf "${SIMBOL_USER_ETC}/mock-etc"
+    rm -rf "${vault}"
+
+    mock:clear
+}
+
+#. testCoreVaultCreatePublic -={
+function testCoreVaultCreatePublic() {
     local vault_tmp=$(::vault:getTempFile ${vault} killme)
     local vault_ts=$(::vault:getTempFile ${vault} timestamp)
     local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
 
     rm -f ${vault}
-    core:wrapper vault create >${stdoutF?} 2>${stderrF?}
-    assertTrue 0.1 $?
+    core:wrapper vault :create ${vault} >${stdoutF?} 2>${stderrF?}
+    assertTrue "${FUNCNAME}/1" $?
 
     test -e ${vault}
-    assertTrue 0.2 $?
+    assertTrue "${FUNCNAME}/2" $?
 }
-
+#. }=-
+#. testCoreVaultCleanPrivate -={
 function testCoreVaultCleanPrivate() {
-    core:import vault
-    assertTrue 0.0 $?
-
-    local vault="${1:-${g_VAULT?}}"
+    local vault="${1:-${vault?}}"
     local vault_tmp=$(::vault:getTempFile ${vault} killme)
     local vault_ts=$(::vault:getTempFile ${vault} timestamp)
     local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
@@ -79,174 +92,159 @@ function testCoreVaultCleanPrivate() {
         chmod 7777 ${f}
     done
 
-    ::vault:clean
-    assertTrue 0.1 $?
-    assertEquals 0.6 600 $(:util:statmode ${vault})
+    ::vault:clean >"${stdoutF?}" 2>"${stderrF?}"
+    assertTrue "${FUNCNAME}/1" $?
+    assertEquals "${FUNCNAME}/2" 600 "$(:util:statmode "${vault}")"
 
     test ! -e ${vault_ts}
-    assertTrue 0.2 $?
+    assertTrue "${FUNCNAME}/3" $?
 
     test ! -e ${vault_tmp}
-    assertTrue 0.3 $?
+    assertTrue "${FUNCNAME}/4" $?
 
     #. Back-up should not be removed, just fixed
     test -e ${vault_bu}
-    assertTrue 0.4 $?
-    assertEquals 0.6 400 $(:util:statmode ${vault_bu})
+    assertTrue "${FUNCNAME}/5" $?
+    assertEquals "${FUNCNAME}/6" 400 "$(:util:statmode "${vault_bu}")"
     rm -f ${vault_bu}
 }
-
+#. }=-
+#. testCoreVaultCreateInternal -={
 function testCoreVaultCreateInternal() {
-    core:import vault
-    assertTrue 0.0 $?
-
-    local vault="${1:-${g_VAULT?}}"
+    local vault="${1:-${vault?}}"
     local vault_tmp=$(::vault:getTempFile ${vault} killme)
     local vault_ts=$(::vault:getTempFile ${vault} timestamp)
     local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
 
     rm -f ${vault}
     :vault:create ${vault} >${stdoutF?} 2>${stderrF?}
-    assertTrue 0.1 $?
+    assertTrue "${FUNCNAME}/1" $?
 
     test -e ${vault}
-    assertTrue 0.2 $?
+    assertTrue "${FUNCNAME}/2" $?
 }
-
+#. }=-
+#. testCoreVaultListPublic -={
 function testCoreVaultListPublic() {
-    core:import vault
-    assertTrue 0.0 $?
-
     core:wrapper vault list >${stdoutF?} 2>${stderrF?}
-    assertTrue 0.1 $?
+    assertTrue "${FUNCNAME}/1" $?
 }
-
+#. }=-
+#. testCoreVaultListInternal -={
 function testCoreVaultListInternal() {
-    core:import vault
-    assertTrue 0.0 $?
-
-    local vault="${1:-${g_VAULT?}}"
+    local vault="${1:-${vault?}}"
     local vault_tmp=$(::vault:getTempFile ${vault} killme)
     local vault_ts=$(::vault:getTempFile ${vault} timestamp)
     local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
 
     :vault:list ${vault} >${stdoutF?} 2>${stderrF?}
-    assertTrue 0.1 $?
+    assertTrue "${FUNCNAME}/1" $?
 }
-
+#. }=-
+#. testCoreVaultEditPublic -={
 function testCoreVaultEditPublic() {
-    core:import vault
-    assertTrue 0.0 $?
-
-    local vault="${1:-${g_VAULT?}}"
+    local vault="${1:-${vault?}}"
     local vault_tmp=$(::vault:getTempFile ${vault} killme)
     local vault_ts=$(::vault:getTempFile ${vault} timestamp)
     local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
 
-    EDITOR=cat core:wrapper vault edit ${vault} >${stdoutF?} 2>${stderrF?}
-    assertTrue 0.1 $?
+    #shellcheck disable=SC2037
+    EDITOR=cat core:wrapper vault edit "${vault}" >${stdoutF?} 2>${stderrF?}
+    assertTrue "${FUNCNAME}/1" $?
 
     #. No amendments, so no back-up should be created
     test ! -e ${vault_bu}
-    assertTrue 0.2 $?
+    assertTrue "${FUNCNAME}/2" $?
 
     if [ -e ${vault_bu} ]; then
         #. TODO: When mid-edit however, check that the backup file created has
         #. TODO: the right mode set
         local mode
         mode=$(:util:statmode ${vault_bu})
-        assertTrue 0.3 $?
-        assertEquals 0.4 400 ${mode}
+        assertTrue "${FUNCNAME}/3" $?
+        assertEquals "${FUNCNAME}/4" 400 ${mode}
     fi
 }
-
+#. }=-
+#. testCoreVaultReadInternal -={
 function testCoreVaultReadInternal() {
-    core:import vault
-    assertTrue 0.0 $?
-
     :vault:read MY_SECRET_1 >${stdoutF?} 2>${stderrF?}
-    assertTrue 0.1 $?
+    assertTrue "${FUNCNAME}/1" $?
 
     :vault:read MY_SECRET_111 >${stdoutF?} 2>${stderrF?}
-    assertFalse 0.2 $?
+    assertFalse "${FUNCNAME}/2" $?
 }
-
+#. }=-
+#. testCoreVaultReadPublic -={
 function testCoreVaultReadPublic() {
-    core:import vault
-    assertTrue 0.0 $?
-
     core:wrapper vault read MY_SECRET_1 >${stdoutF?} 2>${stderrF?}
-    assertTrue 0.1 $?
+    assertTrue "${FUNCNAME}/1" $?
 
     core:wrapper vault read MY_SECRET_111 >${stdoutF?} 2>${stderrF?}
-    assertFalse 0.2 $?
+    assertFalse "${FUNCNAME}/2" $?
 }
-
+#. }=-
+#. testCoreVaultEncryptionInternal -={
 function testCoreVaultEncryptionInternal() {
-    core:import vault
-    assertTrue 0.0 $?
-
     local secret="${SIMBOL_USER_VAR_TMP}/secret.txt"
     rm -f "${secret}"
     echo "Secret" > "${secret}"
     chmod 600 "${secret}"
-    assertTrue 0.1.1 $?
+    assertTrue "${FUNCNAME}/1" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
     [ "${md5}" == "6657d705191a76297fe693296075b400" ]
-    assertTrue 0.1.2 $?
+    assertTrue "${FUNCNAME}/2" $?
 
     :vault:encryption "${secret}" on >${stdoutF?} 2>${stderrF?}
-    assertTrue 0.2.1 $?
+    assertTrue "${FUNCNAME}/3" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
-    assertNotEquals 0.2.2 "6657d705191a76297fe693296075b400" "${md5}"
+    assertNotEquals "${FUNCNAME}/4" "6657d705191a76297fe693296075b400" "${md5}"
 
     :vault:encryption ${secret} off >${stdoutF?} 2>${stderrF?}
-    assertTrue 0.3.1 $?
+    assertTrue "${FUNCNAME}/5" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
-    assertEquals 0.3.2 "6657d705191a76297fe693296075b400" "${md5}"
+    assertEquals "${FUNCNAME}/6" "6657d705191a76297fe693296075b400" "${md5}"
 
     rm -f "${secret}"
 }
-
-function test_1_CoreVaultEncryptPublic() {
-    core:import vault
-    assertTrue 1.0 $?
-
+#. }=-
+#. testCoreVaultEncryptPublic -={
+function testCoreVaultEncryptPublic() {
     local secret="${SIMBOL_USER_VAR_TMP}/secret.txt"
     rm -f "${secret}"
     echo "Secret" > "${secret}"
     chmod 600 "${secret}"
-    assertTrue 1.1.1 $?
+    assertTrue "${FUNCNAME}/1" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
-    assertEquals 1.1.2 "6657d705191a76297fe693296075b400" "${md5}"
+    assertEquals "${FUNCNAME}/2" "6657d705191a76297fe693296075b400" "${md5}"
 
     core:wrapper vault encrypt "${secret}" >${stdoutF?} 2>${stderrF?}
-    assertTrue 1.2.1 $?
+    assertTrue "${FUNCNAME}/3" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
-    assertNotEquals 1.2.2 "6657d705191a76297fe693296075b400" "${md5}"
+    assertNotEquals "${FUNCNAME}/4" "6657d705191a76297fe693296075b400" "${md5}"
 }
-
-function test_2_CoreVaultDecryptPublic() {
-    core:import vault
-    assertTrue 2.0 $?
-
+#. }=-
+#. testCoreVaultDecryptPublic -={
+function testCoreVaultDecryptPublic() {
     local secret="${SIMBOL_USER_VAR_TMP}/secret.txt"
     [ -e "${secret}" ]
-    assertTrue 2.1 $?
+    assertTrue "${FUNCNAME}/1" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
-    assertNotEquals 2.2 "6657d705191a76297fe693296075b400" "${md5}"
+    assertNotEquals "${FUNCNAME}/2" "6657d705191a76297fe693296075b400" "${md5}"
 
     core:wrapper vault decrypt "${secret}" >${stdoutF?} 2>${stderrF?}
-    assertTrue 2.3.1 $?
+    assertTrue "${FUNCNAME}/3" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
-    assertEquals 2.3.2 "6657d705191a76297fe693296075b400" "${md5}"
+    assertEquals "${FUNCNAME}/4" "6657d705191a76297fe693296075b400" "${md5}"
 
     rm -f "${secret}"
 }
+#. }=-
+#. }=-

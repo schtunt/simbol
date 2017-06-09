@@ -1,27 +1,24 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 core:import util
+core:import xplm
 
 #. XPLM -={
-function testCoreXplmImport() {
-    core:softimport xplm
-    assertTrue 0x0 $?
+function xplmOneTimeSetUp() {
+    : pass
+}
+
+function xplmSetUp() {
+    : pass
 }
 
 function xplmTearDown() {
-    : noop
+    : pass
 }
 
-function xplmStartUp() {
-    : noop
+function xplmOneTimeTearDown() {
+    : pass
 }
 
-#. testCoreXplmVersionsInternal() -={
-testCoreXplmVersionsInternal() {
-    core:import xplm
-
-    : noop
-}
-#. }=-
 #. testCoreXplmLoadvirtenvPrivate() -={
 testCoreXplmLoadvirtenvPrivate() {
     : noop

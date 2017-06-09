@@ -1,163 +1,201 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
-declare -A FILES=(
-    [data_orig]="/tmp/simbol-gpg-unit-test-data"
-    [data_encr]="/tmp/simbol-gpg-unit-test-data.enc"
-    [data_decr]="/tmp/simbol-gpg-unit-test-data.dec"
-    [key_cnf]="~/.gnupg/*.UNITTEST.*.conf"
-    [key_sec]="~/.gnupg/*.UNITTEST.*.sec"
-    [key_pub]="~/.gnupg/*.UNITTEST.*.pub"
-)
+core:import gpg
+
+#. GPG -={
+function gpgOneTimeSetUp() {
+    export SIMBOL_PROFILE=UNITTEST
+    export GNUPG_TEST_D="${SIMBOL_USER_VAR_TMP?}/gpg-test-data"
+    export USER_VAULT_PASSPHRASE="SoSecrative"
+    export GNUPGHOME="${SIMBOL_USER_VAR_CACHE?}/dot.gnupg"
+
+    rm -rf "${GNUPGHOME?}"
+    mkdir "${GNUPGHOME?}"
+    chmod 700 "${GNUPGHOME?}"
+
+    rm -rf "${GNUPG_TEST_D?}"
+    mkdir -p "${GNUPG_TEST_D?}"
+
+    mock:clear
+    mock:write <<-!MOCK
+    declare -g -A FILES=(
+        [data_orig]="\${GNUPG_TEST_D?}/gpg-\${SIMBOL_PROFILE?}-data"
+        [data_encr]="\${GNUPG_TEST_D?}/gpg-\${SIMBOL_PROFILE?}-data.enc"
+        [data_decr]="\${GNUPG_TEST_D?}/gpg-\${SIMBOL_PROFILE?}-data.dec"
+        [key_cnf]="\${GNUPGHOME?}/*.\${SIMBOL_PROFILE?}.*.conf"
+        [key_sec]="\${GNUPGHOME?}/*.\${SIMBOL_PROFILE?}.*.sec"
+        [key_pub]="\${GNUPGHOME?}/*.\${SIMBOL_PROFILE?}.*.pub"
+    )
+	!MOCK
+}
 
 function gpgSetUp() {
-    for file in ${!FILES[@]}; do
-        eval rm -f ${FILES[${file}]}
-    done
+    : pass
 }
 
 function gpgTearDown() {
-    for file in ${!FILES[@]}; do
-        eval rm -f ${FILES[${file}]}
+    : pass
+}
+
+function gpgOneTimeTearDown() {
+    local file
+    for file in "${!FILES[@]}"; do
+        rm -f "${FILES[${file}]}"
+    done
+
+    mock:wrapper gpg :list '*' >"${stdoutF?}" 2>"${stderrF?}"
+    local -a gpgkid=( $(cat "${stdoutF?}") )
+    if [ ${#gpgkid[@]} -gt 0 ]; then
+    	mock:wrapper gpg :delete "${gpgkid[1]}" >"${stdoutF?}" 2>"${stderrF?}"
+    fi
+
+    rm -rf "${GNUPGHOME?}"
+    rm -rf "${GNUPG_TEST_D?}"
+
+    mock:clear
+}
+
+#. testCoreGpgVersionInternal -={
+function testCoreGpgVersionInternal() {
+    local gpg_version; gpg_version="$(mock:wrapper gpg :version)"
+    assertTrue "${FUNCNAME?}/1.1" $?
+    assertNotEquals "${FUNCNAME?}/1.2" "" "${gpg_version}"
+}
+#. }=-
+#. testCoreGpgKidPrivate -={
+function testCoreGpgKeyidPrivate() {
+    local kid; kid="$(mock:wrapper gpg ::keyid "/home/nobody/.gnupg/nobody.UNITTEST.0x81C8A8ED.conf")"
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/1.1" "0x81C8A8ED" "${kid}"
+}
+#. }=-
+#. testCoreGpgKeysEvalPrivate -={
+function testCoreGpgKeysEvalPrivate() {
+    eval "$(mock:wrapper gpg ::keys.eval data '*')"
+    assertTrue "${FUNCNAME?}/1.1" $?
+    #shellcheck disable=SC2154
+    assertEquals "${FUNCNAME?}/1.2" 0 ${#data[@]}
+}
+#. }=-
+#. testCoreGpgKeypathPrivate -={
+function testCoreGpgKeypathPrivate() {
+    local path
+    #shellcheck disable=SC2034
+    path="$(mock:wrapper gpg ::keypath)"
+    assertTrue "${FUNCNAME?}/1.1" $?
+    #shellcheck disable=SC2016
+    assertTrue "${FUNCNAME?}/1.2" '[ "${path//${GNUPGHOME}/}" != "${path}" ]'
+}
+#. }=-
+#. testCoreGpgListInternal -={
+function testCoreGpgListInternal() {
+    #. Should be none to list at first
+    mock:wrapper gpg :list '*' >"${stdoutF?}" 2>"${stderrF?}"
+    assertFalse "${FUNCNAME?}/1" $?
+}
+#. }=-
+#. testCoreGpgListPublic -={
+function testCoreGpgListPublic() {
+    SIMBOL_PROFILE=UNITTEST mock:wrapper gpg list >"${stdoutF?}" 2>"${stderrF?}"
+    assertTrue "${FUNCNAME?}/1" $?
+
+    grep -q NO_KEYS "${stdoutF?}"
+    assertTrue "${FUNCNAME?}/2" $?
+}
+#. }=-
+#. testCoreGpgCreateAndDeleteInternal -={
+function testCoreGpgCreateAndDeleteInternal() {
+    #. Create one
+    local kid; kid="$(mock:wrapper gpg :create)"
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/1.1" 10 ${#kid}
+
+    #. List it
+    local kid2
+
+    kid2="$(mock:wrapper gpg :list '*')"
+    assertTrue "${FUNCNAME?}/2" $?
+    assertEquals "${FUNCNAME?}/2.1" "${kid}" "${kid2}"
+
+    kid2="$(mock:wrapper gpg :list "${kid}")"
+    assertTrue "${FUNCNAME?}/3" $?
+    assertEquals "${FUNCNAME?}/3.1" "${kid}" "${kid2}"
+
+    mock:wrapper gpg :delete "${kid}"
+    assertTrue "${FUNCNAME?}/4" $?
+    local ftype
+    for ftype in pub sec conf; do
+        stat "${GNUPGHOME}/${USER_USERNAME}.${SIMBOL_PROFILE}.${kid}.${ftype}" 2>/dev/null
+        assertFalse "${FUNCNAME?}/4.${ftype}" $?
     done
 }
-
-function testCoreGpgImport() {
-    core:softimport gpg
-    assertEquals 0x1 0 $?
+function testCoreGpgCreateInternal() {
+    : noop testCoreGpgCreateAndDeleteInternal
 }
-
-function test_1_1_CoreGpgKeypathPrivate() {
-    core:import gpg
-
-    SIMBOL_PROFILE=UNITTEST ::gpg:keypath '.' >${stdoutF?} 2>${stderrF?}
-    assertTrue 0x1 $?
-    assertEquals 0x2 1 $(cat ${stdoutF}|wc -w)
-
-    SIMBOL_PROFILE=UNITTEST ::gpg:keypath '*' >${stdoutF?} 2>${stderrF?}
-    assertFalse 0x3 $?
-    assertEquals 0x4 0 $(cat ${stdoutF}|wc -w)
+function testCoreGpgDeleteInternal() {
+    : see testCoreGpgCreateAndDeleteInternal
 }
-
-function test_2_1_CoreGpgListInternal() {
-    core:import gpg
-
-    #. Should be none to list at first
-    SIMBOL_PROFILE=UNITTEST :gpg:list '*' >${stdoutF?} 2>${stderrF?}
-    assertFalse 0x1 $?
-}
-
-function test_2_2_CoreGpgCreateInternal() {
-    core:import gpg
-
+#. }=-
+#. testCoreGpgCreateAndDeletePublic -={
+function testCoreGpgCreateAndDeletePublic() {
     #. Create one
-    SIMBOL_PROFILE=UNITTEST :gpg:create >${stdoutF?} 2>${stderrF?}
-    assertTrue 0x1 $?
+    mock:wrapper gpg create >"${stdoutF?}" 2>"${stderrF?}"
+    assertTrue "${FUNCNAME?}/1" $?
 
     #. List it
-    SIMBOL_PROFILE=UNITTEST :gpg:list '*' >${stdoutF?} 2>${stderrF?}
-    assertTrue 0x2 $?
-
-    local -a gpgkid=( $(cat ${stdoutF?}) )
-    assertEquals 0x3 2 ${#gpgkid[@]}
-    assertEquals 0x4 10 ${#gpgkid[1]}
-}
-
-function test_2_3_CoreGpgKidPrivate() {
-    core:import gpg
-
-    local -a gpgkid_a=( $(cat ${stdoutF?}) )
-    local gpgkid_b="$(SIMBOL_PROFILE=UNITTEST ::gpg:kid)"
-    assertEquals 0x1 "${gpgkid_a[1]}" "${gpgkid_b}"
-
-    if [ $? -eq 0 ]; then
-        local gpgkid_c=$(SIMBOL_PROFILE=UNITTEST ::gpg:kid ${gpgkid_b})
-        assertEquals 0x2 "${gpgkid_c}" "${gpgkid_b}"
-    fi
-}
-
-function test_2_4_CoreGpgDeleteInternal() {
-    core:import gpg
-
-    local gpgkid=( $(cat ${stdoutF?}) )
+    local kid; kid="$(mock:wrapper gpg :list '*')"
+    assertTrue "${FUNCNAME?}/2" $?
+    assertEquals "${FUNCNAME?}/2.1" 10 ${#kid}
 
     #. Delete it
-    SIMBOL_PROFILE=UNITTEST :gpg:delete ${gpgkid[1]} >${stdoutF?} 2>${stderrF?}
-    assertTrue 0x1 $?
+    mock:wrapper gpg delete "${kid}" >"${stdoutF?}" 2>"${stderrF?}"
+    assertTrue "${FUNCNAME?}/3" $?
+
+    #. Try to delete it again and fail
+    mock:wrapper gpg delete "${kid}" >"${stdoutF?}" 2>"${stderrF?}"
+    assertFalse "${FUNCNAME?}/3.1" $?
 
     #. Should be none to list again
-    SIMBOL_PROFILE=UNITTEST :gpg:list '*' >${stdoutF?} 2>${stderrF?}
-    assertFalse 0x2 $?
+    mock:wrapper gpg list "${kid}" >"${stdoutF?}" 2>"${stderrF?}"
+    assertFalse "${FUNCNAME?}/3.2" $?
 }
-
-function test_3_1_CoreGpgListPublic() {
-    core:import gpg
-
-    #. Should be none to list at first
-    SIMBOL_PROFILE=UNITTEST core:wrapper gpg list >${stdoutF?} 2>${stderrF?}
-    assertFalse 0x1 $?
+function testCoreGpgCreatePublic() {
+    : see testCoreGpgCreateAndDeletePublic
 }
-
-function test_3_2_CoreGpgCreatePublic() {
-    core:import gpg
-
-    #. Create one
-    SIMBOL_PROFILE=UNITTEST core:wrapper gpg create >${stdoutF?} 2>${stderrF?}
-    assertTrue 0x1 $?
-
-    #. List it
-    SIMBOL_PROFILE=UNITTEST :gpg:list '*' >${stdoutF?} 2>${stderrF?}
-    assertTrue 0x2 $?
-    local gpgkid=( $(cat ${stdoutF?}) )
-    assertEquals 0x3 2 ${#gpgkid[@]}
-    assertEquals 0x4 10 ${#gpgkid[1]}
+function testCoreGpgDeletePublic() {
+    : see testCoreGpgCreateAndDeletePublic
 }
-
-function test_3_3_CoreGpgDeletePublic() {
-    core:import gpg
-
-    local gpgkid=( $(cat ${stdoutF?}) )
-    if assertEquals 0x1 2 ${#gpgkid[@]}; then
-        #. Delete it
-        SIMBOL_PROFILE=UNITTEST core:wrapper gpg delete ${gpgkid[1]} >${stdoutF?} 2>${stderrF?}
-        assertTrue 0x1 $?
-
-        #. Try to delete it again and fail
-        SIMBOL_PROFILE=UNITTEST core:wrapper gpg delete ${gpgkid[1]} >${stdoutF?} 2>${stderrF?}
-        assertFalse 0x2 $?
-
-        #. Should be none to list again
-        SIMBOL_PROFILE=UNITTEST core:wrapper gpg list >${stdoutF?} 2>${stderrF?}
-        assertFalse 0x3 $?
-    fi
-}
-
-function test_4_1_CoreGpgEncryptInternal() {
-    core:import gpg
-
+#. }=-
+#. testCoreGpgEncryptInternal -={
+function testCoreGpgEncryptInternal() {
     #. Create it
-    SIMBOL_PROFILE=UNITTEST :gpg:create >${stdoutF?} 2>${stderrF?}
+    mock:wrapper gpg :create >"${stdoutF?}" 2>"${stderrF?}"
+    assertTrue "${FUNCNAME?}/1" $?
 
-    dd if=/dev/urandom of=${FILES[data_orig]} bs=1024 count=1024 2>/dev/null
-    SIMBOL_PROFILE=UNITTEST :gpg:encrypt\
-        ${FILES[data_orig]} ${FILES[data_encr]} >${stdoutF?} 2>${stderrF?}
-    assertTrue 0x1 $?
+    dd if=/dev/urandom of="${FILES[data_orig]}" bs=1024 count=1024 2>/dev/null
+    mock:wrapper gpg :encrypt\
+        "${FILES[data_orig]}" "${FILES[data_encr]}"
+    # >"${stdoutF?}" 2>"${stderrF?}"
+    assertTrue "${FUNCNAME?}/2" $?
 }
+#. }=-
+#. testCoreGpgDecryptInternal -={
+function testCoreGpgDecryptInternal() {
+    mock:wrapper gpg :decrypt\
+        "${FILES[data_encr]}" "${FILES[data_decr]}" >"${stdoutF?}" 2>"${stderrF?}"
+    assertTrue "${FUNCNAME?}/1" $?
 
-function test_4_2_CoreGpgDecryptInternal() {
-    core:import gpg
-
-    SIMBOL_PROFILE=UNITTEST :gpg:encrypt\
-        ${FILES[data_encr]} ${FILES[data_decr]} >${stdoutF?} 2>${stderrF?}
-    assertTrue 0x1 $?
-
-    local match=$(
-        cat ${FILES[data_orig]} ${FILES[data_decr]} |
-            md5sum | awk '{print$1}' | wc -l
+    local match; let match=$(
+        md5sum "${FILES[data_orig]}" "${FILES[data_decr]}" |
+            awk '{print$1}' | sort -u | wc -l
     )
+    assertEquals "${FUNCNAME?}/2" ${match} 1
 
-    assertEquals 0x2 ${match} 1
+    local kid; kid="$(mock:wrapper gpg :list '*')"
+    assertTrue "${FUNCNAME?}/3" $?
 
     #. Delete it
-    SIMBOL_PROFILE=UNITTEST :gpg:list '*' >${stdoutF?} 2>${stderrF?}
-    local -a gpgkid=( $(cat ${stdoutF?}) )
-    SIMBOL_PROFILE=UNITTEST :gpg:delete ${gpgkid[1]} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper gpg :delete "${kid}" >"${stdoutF?}" 2>"${stderrF?}"
+    assertTrue "${FUNCNAME?}/4" $?
 }
+#. }=-
+#. }=-

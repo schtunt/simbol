@@ -11,13 +11,13 @@ core:import ldap
 function ::ng:tree_data() {
   g_CACHE_OUT "$*" || {
     : ${#g_PROCESSED_NETGROUP[@]?}
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 -o $# -eq 5 ]; then
         local tldid=${1:--} #. Recursive search
-        local -i rflag=${2:-0} #. Recursive search
-        local -i hflag=${3:-0} #. Hosts (too)
-        local -i vflag=${4:-0} #. Verification of netgroups (and hosts)
+        local -i rflag; let rflag=${2:-0} #. Recursive search
+        local -i hflag; let hflag=${3:-0} #. Hosts (too)
+        local -i vflag; let vflag=${4:-0} #. Verification of netgroups (and hosts)
         shift $(($#-1))
 
         local parent=$1
@@ -25,10 +25,10 @@ function ::ng:tree_data() {
         local -a children
 
     #. if(!DEBUG) -={
-        [ -z "${g_PROCESSED_NETGROUP[${parent}]}" ] || return
+        [ "${g_PROCESSED_NETGROUP[${parent}]:-NilOrNotSet}" == 'NilOrNotSet' ] || return
         g_PROCESSED_NETGROUP[${parent}]=1
     #. } else {
-        #if [ -z "${g_PROCESSED_NETGROUP[${parent}]}" ]; then
+        #if [ "${g_PROCESSED_NETGROUP[${parent}]:-NilOrNotSet}" == 'NilOrNotSet' ]; then
         #    g_PROCESSED_NETGROUP[${parent}]=1
         #else
         #    g_PROCESSED_NETGROUP[${parent}]=$((${g_PROCESSED_NETGROUP[${parent}]}+1))
@@ -114,7 +114,7 @@ function ::ng:treecpf() {
         [host_bad]=firebrick3
     )
 
-    local prefix=$(printf " %$((${indent}*4))s%%{wh:|___ }" ' ')
+    local prefix=$(printf " %$((${indent}*4))s%%{w:|___ }" ' ')
 
     if [ ${g_FORMAT?} != 'dot' ]; then
         cpf "${prefix}%{@${cpfid}:%s}\n" "${child}"
@@ -163,10 +163,10 @@ function ::ng:tree_draw() {
     local parent=$2
 
     #. if(!DEBUG) -={
-        [ -z "${g_PROCESSED_NETGROUP[${parent}]}" ] || return
+        [ "${g_PROCESSED_NETGROUP[${parent}]:-NilOrNotSet}" == 'NilOrNotSet' ] || return
         g_PROCESSED_NETGROUP[${parent}]=1
     #. } else {
-        #if [ -z "${g_PROCESSED_NETGROUP[${parent}]}" ]; then
+        #if [ "${g_PROCESSED_NETGROUP[${parent}]:-NilOrNotSet}" == 'NilOrNotSet' ]; then
         #    g_PROCESSED_NETGROUP[${parent}]=1
         #else
         #    g_PROCESSED_NETGROUP[${parent}]=$((${g_PROCESSED_NETGROUP[${parent}]}+1))
@@ -263,7 +263,7 @@ boolean verifyall false "verify-all-entries"                     v
 function ng:tree:usage() { echo "-T|--tldid <tldid> <netgroup>"; }
 function ng:tree:formats() { echo "dot png"; }
 function ng:tree() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ "${g_FORMAT?}" == "dot" -o "${g_FORMAT?}" == "png" ]; then
         core:requires sfdp
@@ -273,9 +273,9 @@ function ng:tree() {
 
     local tldid=${g_TLDID?}
     if [ $# -eq 1 -a ${#tldid} -gt 0 ]; then
-        local -i recursive=${FLAGS_recursive:-0}; ((recursive=~recursive+2)); unset FLAGS_recursive
-        local -i showhosts=${FLAGS_showhosts:-0}; ((showhosts=~showhosts+2)); unset FLAGS_showhosts
-        local -i verifyall=${FLAGS_verifyall:-0}; ((verifyall=~verifyall+2)); unset FLAGS_verifyall
+        local -i recursive; let recursive=${FLAGS_recursive:-0}; ((recursive=~recursive+2)); unset FLAGS_recursive
+        local -i showhosts; let showhosts=${FLAGS_showhosts:-0}; ((showhosts=~showhosts+2)); unset FLAGS_showhosts
+        local -i verifyall; let verifyall=${FLAGS_verifyall:-0}; ((verifyall=~verifyall+2)); unset FLAGS_verifyall
 
         declare -g -A g_TREE
         declare -g -A g_PROCESSED_NETGROUP
@@ -312,7 +312,7 @@ function ng:tree() {
 #. }=-
 #. ng:ping -={
 function :ng:ping() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         hit=$(:ldap:search -2 netgroup cn="$1" cn|wc -l)
@@ -326,7 +326,7 @@ function :ng:ping() {
 #. }=-
 #. ng:resolve -={
 function :ng:resolve() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 2 ]; then
         local tldid="$1"
@@ -367,7 +367,7 @@ function :ng:resolve() {
 #. ng:hosts -={
 function :ng:hosts() {
   g_CACHE_OUT "$*" || {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 2 ]; then
         local -a data
@@ -393,7 +393,7 @@ function :ng:hosts() {
 
 function ng:hosts:usage() { echo "<netgroup>"; }
 function ng:hosts() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     local tldid=${g_TLDID?}
     if [ $# -eq 1 -a ${#tldid} -gt 0 ]; then
@@ -430,11 +430,11 @@ function :ng:host() {
     #. Of course all user-friendly crap such as suggestions and such have been removed.
     #.
     #. That includes the ${hni} variable used for indentation.
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
     local tldid=${g_TLDID?}
 
     if [ $# -eq 1 -o $# -eq 2 ]; then
-        local -i hni=${2:-0}
+        local -i hni; let hni=${2:-0}
         ((hni++))
 
         local ng
@@ -494,11 +494,11 @@ function :ng:host() {
 
 function ng:host:usage() { echo "<hnh>"; }
 function ng:host() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     local tldid=${g_TLDID?}
 
     if [ $# -eq 1 -o $# -eq 2 ]; then
-        local -i hni=${2:-0}
+        local -i hni; let hni=${2:-0}
         ((hni++))
 
         local prefix ng
@@ -557,7 +557,7 @@ function ng:host() {
                 ${FUNCNAME?} "$ng" ${hni}
             done
         else
-            if [ ${g_VERBOSE?} -eq 1 ]; then
+            if [ ${g_VERBOSE?} -eq ${TRUE?} ]; then
                 local -a didumean=( $(:ldap:search -2 netgroup nisNetgroupTriple~="\(${fqdn},,\)" nisNetgroupTriple) )
                 if [ ${#didumean[@]} -gt 0 ]; then
                     printf "? %s\n" ${didumean[@]}
@@ -573,7 +573,7 @@ function ng:host() {
 #. ng:search -={
 function ng:search:usage() { echo "<search-token>"; }
 function ng:search() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 1 ]; then
         :ldap:search -2 netgroup cn description "|(cn=*$1*)(description=*$1*)" |
@@ -586,7 +586,7 @@ function ng:search() {
 #. }=-
 #. ng:summary -={
 function ng:summary() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 0 ]; then
         local -i i=0
@@ -608,7 +608,7 @@ function ng:create() {
     simbol ng create nyNetgroupName /^server1.*/
 :
 
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     if [ $# -eq 2 ]; then
         core:import hgd
