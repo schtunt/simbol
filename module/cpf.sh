@@ -444,6 +444,8 @@ function theme() {
         ERR:*)          c='r'; s='ERROR';          dvc=${FD_STDERR};;
         ALERT:*)        c='r'; s='ALERT';          dvc=${FD_STDERR};;
         ERR_USAGE:*)    c='r'; s='USAGE ERROR';    dvc=${FD_STDERR};;
+        WARN_USAGE:*)   c='y'; s='USAGE WARNING';  dvc=${FD_STDERR};;
+        NOTE_USAGE:*)   c='w'; s='USAGE NOTICE';   dvc=${FD_STDERR};;
         EXCEPTION:*)    c='r'; s='EXCEPTION';      dvc=${FD_STDERR};;
         ERR_INTERNAL:*) c='r'; s='INTERNAL ERROR'; dvc=${FD_STDERR};;
 

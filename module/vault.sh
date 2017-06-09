@@ -153,7 +153,7 @@ function :vault:create() {
         local vault=$1
         if [ ! -f ${vault} ]; then
             local -i pwid=0
-            while read pw; do
+            while read -r pw; do
                 let pwid++
                 echo "MY_SECRET_${pwid} ${pw}"
             done <<< "$(pwgen 64 7)" | :gpg:encrypt - ${vault}
@@ -204,25 +204,23 @@ function :vault:list() {
         if [ -r ${vault} ]; then
             if [ $# -eq 1 ]; then
                 local -a secrets
-                secrets=(
+                if secrets=(
                     $(
                         :gpg:decrypt ${vault} - | awk '$1!~/^[\t ]*#/{print$1}';
                         exit ${PIPESTATUS[0]}
                     )
-                )
-                if [ $? -eq 0 ]; then
+                ); then
                     echo "${secrets[@]}"
-                    e=${CODE_SUCCESS?}
+                    let e=${CODE_SUCCESS?}
                 fi
             else
                 local sid="${2}"
-                local secret=$(
+                local secret
+                if secret=$(
                     :gpg:decrypt ${vault} - | awk '$1~/\<'${sid}'\>/{print$1}';
                     exit ${PIPESTATUS[0]}
-                )
-
-                if [ $? -eq 0 -a ${#secret} -gt 0 ]; then
-                    e=${CODE_SUCCESS?}
+                ) && [ ${#secret} -gt 0 ]; then
+                    let e=${CODE_SUCCESS?}
                 fi
             fi
         else
@@ -258,7 +256,7 @@ function vault:list() {
                     e=${CODE_FAILURE?}
                 fi
             else
-                for sid in ${secrets[@]}; do
+                for sid in "${secrets[@]}"; do
                     cpf " * %{r:%s}\n" ${sid}
                 done
                 e=${CODE_SUCCESS?}
@@ -288,7 +286,7 @@ function vault:edit() {
         local vault_ts=$(::vault:getTempFile ${vault} timestamp)
         local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
 
-        mkdir -p $(dirname ${vault_tmp?})
+        mkdir -p "$(dirname "${vault_tmp?}")"
 
         cpf "Decrypting secrets..."
         umask 377
