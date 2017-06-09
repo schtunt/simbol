@@ -1,21 +1,31 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
+core:import cpf
 
+#. CPF -={
 function cpfOneTimeSetUp() {
-    core:import cpf
-    assertTrue ${FUNCNAME?}/0 $?
-
     declare -g g_PLAYGROUND="/tmp/cpf-pg"
     rm -rf ${g_PLAYGROUND?}
+}
+
+function cpfSetUp() {
+    : pass
+}
+
+function cpfTearDown() {
+    : pass
 }
 
 function cpfOneTimeTearDown() {
     rm -rf ${g_PLAYGROUND?}
 }
 
+#. testCoreCpfInitializePublic -={
 function testCoreCpfInitializePublic() {
     cpf:initialize
+    assertTrue "${FUNCNAME?}/1" $?
 }
-
+#. }=-
+#. testCoreCpfPrintfPublic -={
 function testCoreCpfPrintfPublic() {
     local -a tester=(
         '.%{d:dbg}.'
@@ -67,18 +77,20 @@ SIMBOL_OUTPUT_THEME+=(
         IFS='|' read -ra tstr <<< "${tester[$i]}"
 
         rslt="$(mock:wrapper cpf printf "${tstr[@]}")"
-        assertTrue ${FUNCNAME?}/$i.1 $?
-        assertEquals ${FUNCNAME?}/$i.2 "${expc}" "${rslt}"
+        assertTrue "${FUNCNAME?}/$i.1" $?
+        assertEquals "${FUNCNAME?}/$i.2" "${expc}" "${rslt}"
     done
 
     mock:clear
 }
-
+#. }=-
+#. testCoreCpfModule_is_modifiedPrivate -={
 function testCoreCpfModule_is_modifiedPrivate() {
     ::cpf:module_is_modified "$(core:module_path remote)" remote
-    assertFalse '::cpf:is_modified/1.1' $?
+    assertFalse "${FUNCNAME?}/1" $?
 }
-
+#. }=-
+#. testCoreCpfModule_has_alertsPrivate -={
 function testCoreCpfModule_has_alertsPrivate() {
     local data
 
@@ -90,11 +102,13 @@ function testCoreCpfModule_has_alertsPrivate() {
     assertFalse "${FUNCNAME?}/2.1" $?
     assertEquals "${FUNCNAME?}/2.2" "" "${data}"
 }
-
+#. }=-
+#. testCoreCpfModulePrivate -={
 function testCoreCpfModulePrivate() {
     : noop
 }
-
+#. }=-
+#. testCoreCpfFunction_has_alertsPrivate -={
 function testCoreCpfFunction_has_alertsPrivate() {
     local data
 
@@ -110,36 +124,40 @@ function testCoreCpfFunction_has_alertsPrivate() {
     assertFalse "${FUNCNAME?}/3.1" $?
     assertEquals "${FUNCNAME?}/3.2" "" "${data}"
 }
-
+#. }=-
+#. testCoreCpfFunctionPrivate -={
 function testCoreCpfFunctionPrivate() {
     : noop
 }
-
+#. }=-
+#. testCoreCpfIs_fmtPrivate -={
 function testCoreCpfIs_fmtPrivate() {
     ::cpf:is_fmt '%s'
-    assertTrue '::cpf:is_fmt/1.1' $?
+    assertTrue "${FUNCNAME?}/1.1" $?
 
     ::cpf:is_fmt '%%s'
-    assertTrue '::cpf:is_fmt/1.2' $?
+    assertTrue "${FUNCNAME?}/2" $?
 
     ::cpf:is_fmt '%'
-    assertFalse '::cpf:is_fmt/1.3' $?
+    assertFalse "${FUNCNAME?}/3" $?
 
     ::cpf:is_fmt '%{%ss}'
-    assertTrue '::cpf:is_fmt/1.4' $?
+    assertTrue "${FUNCNAME?}/4" $?
 
     ::cpf:is_fmt '%{%ss}%'
-    assertTrue '::cpf:is_fmt/1.5' $?
+    assertTrue "${FUNCNAME?}/5" $?
 }
-
+#. }=-
+#. testCoreCpfThemePrivate -={
 function testCoreCpfThemePrivate() {
     local out
     out=$(::cpf:theme "@host" "%s")
-    assertTrue '::cpf:theme/1.1' $?
-    assertEquals '::cpf:theme/1.2' "${out}" "@ %{y:%s} %s"
-    assertEquals '::cpf:theme/1.3' "$(::cpf:theme "@netgroup" "%s")" "+ %{c:%s} %s"
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/2" "${out}" "@ %{y:%s} %s"
+    assertEquals "${FUNCNAME?}/3" "$(::cpf:theme "@netgroup" "%s")" "+ %{c:%s} %s"
 }
-
+#. }=-
+#. testCoreCpfIndentPublic -={
 function testCoreCpfIndentPublic() {
     local -i cpf_indent
     let cpf_indent=${CPF_INDENT}
@@ -147,29 +165,31 @@ function testCoreCpfIndentPublic() {
 
     local out
     out=$(cpfi foo)
-    assertTrue 'cpf:indent/1.1' $?
-    assertEquals 'cpf:indent/1.2' "${out}" "foo"
+    assertTrue "${FUNCNAME?}/1.1" $?
+    assertEquals "${FUNCNAME?}/1.2" "${out}" "foo"
     -=[
-    assertEquals 'cpf:indent/2' 1 ${CPF_INDENT}
+    assertEquals "${FUNCNAME?}/2" 1 ${CPF_INDENT}
     out=$(cpfi foo)
-    assertEquals 'cpf:indent/3' "${out}" \
+    assertEquals "${FUNCNAME?}/3" "${out}" \
         "$(printf\
             "%$((CPF_INDENT * USER_CPF_INDENT_SIZE + ${#USER_CPF_INDENT_STR}))s"\
             "${USER_CPF_INDENT_STR}")foo"
     -=[
-    assertEquals 'cpf:indent/4' 2 ${CPF_INDENT}
+    assertEquals "${FUNCNAME?}/4" 2 ${CPF_INDENT}
     -=[
-    assertEquals 'cpf:indent/4' 3 ${CPF_INDENT}
+    assertEquals "${FUNCNAME?}/5" 3 ${CPF_INDENT}
     -=[
-    assertEquals 'cpf:indent/4' 4 ${CPF_INDENT}
+    assertEquals "${FUNCNAME?}/6" 4 ${CPF_INDENT}
     ]=-
-    assertEquals 'cpf:indent/4' 3 ${CPF_INDENT}
+    assertEquals "${FUNCNAME?}/7" 3 ${CPF_INDENT}
     ]=-
-    assertEquals 'cpf:indent/5' 2 ${CPF_INDENT}
+    assertEquals "${FUNCNAME?}/8" 2 ${CPF_INDENT}
     ]=-
-    assertEquals 'cpf:indent/4' 1 ${CPF_INDENT}
+    assertEquals "${FUNCNAME?}/9" 1 ${CPF_INDENT}
     ]=-
-    assertEquals 'cpf:indent/6' 0 ${CPF_INDENT}
+    assertEquals "${FUNCNAME?}/A" 0 ${CPF_INDENT}
 
     let CPF_INDENT=${cpf_indent}
 }
+#. }=-
+#. }=-

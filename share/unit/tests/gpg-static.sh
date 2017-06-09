@@ -1,6 +1,7 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 core:import gpg
 
+#. GPG -={
 function gpgOneTimeSetUp() {
     declare -g -A FILES=(
         [data_orig]="/tmp/simbol-gpg-unit-test-data"
@@ -10,6 +11,14 @@ function gpgOneTimeSetUp() {
         [key_sec]="${HOME}/.gnupg/*.UNITTEST.*.sec"
         [key_pub]="${HOME}/.gnupg/*.UNITTEST.*.pub"
     )
+}
+
+function gpgSetUp() {
+    : pass
+}
+
+function gpgTearDown() {
+    : pass
 }
 
 function gpgOneTimeTearDown() {
@@ -25,18 +34,15 @@ function gpgOneTimeTearDown() {
     fi
 }
 
-function testCoreGpgImport() {
-    assertEquals "${FUNCNAME?}/1.1" 0 $?
-}
-
+#. testCoreGpgVersionInternal -={
 function testCoreGpgVersionInternal() {
     local gpg_version; gpg_version="$(:gpg:version)"
     assertTrue "${FUNCNAME?}/1.1" $?
     assertNotEquals "${FUNCNAME?}/1.2" "" "${gpg_version}"
 }
-
+#. }=-
+#. testCoreGpgKeypathPrivate -={
 function testCoreGpgKeypathPrivate() {
-
     local -i c
 
     SIMBOL_PROFILE=UNITTEST ::gpg:keypath '.' >${stdoutF?} 2>${stderrF?}
@@ -49,13 +55,15 @@ function testCoreGpgKeypathPrivate() {
     let c=$(wc -w < "${stdoutF}")
     assertEquals "${FUNCNAME?}/1.4" 0 $c
 }
-
+#. }=-
+#. testCoreGpgListInternal -={
 function testCoreGpgListInternal() {
     #. Should be none to list at first
     SIMBOL_PROFILE=UNITTEST :gpg:list '*' >${stdoutF?} 2>${stderrF?}
     assertFalse "${FUNCNAME?}/1.1" $?
 }
-
+#. }=-
+#. testCoreGpgCreateInternal -={
 function testCoreGpgCreateInternal() {
     #. Create one
     SIMBOL_PROFILE=UNITTEST :gpg:create >${stdoutF?} 2>${stderrF?}
@@ -69,7 +77,8 @@ function testCoreGpgCreateInternal() {
     assertEquals "${FUNCNAME?}/1.3" 2 ${#gpgkid[@]}
     assertEquals "${FUNCNAME?}/1.4" 10 ${#gpgkid[1]}
 }
-
+#. }=-
+#. testCoreGpgKidPrivate -={
 function testCoreGpgKidPrivate() {
     local -a gpgkid_a=( $(cat ${stdoutF?}) )
     SIMBOL_PROFILE=UNITTEST ::gpg:kid
@@ -80,7 +89,8 @@ function testCoreGpgKidPrivate() {
     local gpgkid_c; gpgkid_c=$(SIMBOL_PROFILE=UNITTEST ::gpg:kid ${gpgkid_b})
     assertEquals "${FUNCNAME?}/1.3" "${gpgkid_c}" "${gpgkid_b}"
 }
-
+#. }=-
+#. testCoreGpgDeleteInternal -={
 function testCoreGpgDeleteInternal() {
     local gpgkid=( $(cat ${stdoutF?}) )
 
@@ -92,13 +102,15 @@ function testCoreGpgDeleteInternal() {
     SIMBOL_PROFILE=UNITTEST :gpg:list '*' >${stdoutF?} 2>${stderrF?}
     assertFalse "${FUNCNAME?}/1.2" $?
 }
-
+#. }=-
+#. testCoreGpgListPublic -={
 function testCoreGpgListPublic() {
     #. Should be none to list at first
     SIMBOL_PROFILE=UNITTEST core:wrapper gpg list >${stdoutF?} 2>${stderrF?}
     assertFalse "${FUNCNAME?}/1.1" $?
 }
-
+#. }=-
+#. testCoreGpgCreatePublic -={
 function testCoreGpgCreatePublic() {
     #. Create one
     SIMBOL_PROFILE=UNITTEST core:wrapper gpg create >${stdoutF?} 2>${stderrF?}
@@ -111,7 +123,8 @@ function testCoreGpgCreatePublic() {
     assertEquals "${FUNCNAME?}/1.3" 2 ${#gpgkid[@]}
     assertEquals "${FUNCNAME?}/1.4" 10 ${#gpgkid[1]}
 }
-
+#. }=-
+#. testCoreGpgDeletePublic -={
 function testCoreGpgDeletePublic() {
     local gpgkid=( $(cat ${stdoutF?}) )
     if assertEquals "${FUNCNAME?}/1.1" 2 ${#gpgkid[@]}; then
@@ -128,7 +141,8 @@ function testCoreGpgDeletePublic() {
         assertFalse "${FUNCNAME?}/1.3" $?
     fi
 }
-
+#. }=-
+#. testCoreGpgEncryptInternal -={
 function testCoreGpgEncryptInternal() {
     #. Create it
     SIMBOL_PROFILE=UNITTEST :gpg:create >${stdoutF?} 2>${stderrF?}
@@ -139,7 +153,8 @@ function testCoreGpgEncryptInternal() {
         ${FILES[data_orig]} ${FILES[data_encr]} >${stdoutF?} 2>${stderrF?}
     assertTrue "${FUNCNAME?}/1.2" $?
 }
-
+#. }=-
+#. testCoreGpgDecryptInternal -={
 function testCoreGpgDecryptInternal() {
     SIMBOL_PROFILE=UNITTEST :gpg:decrypt\
         ${FILES[data_encr]} ${FILES[data_decr]} >${stdoutF?} 2>${stderrF?}
@@ -158,3 +173,5 @@ function testCoreGpgDecryptInternal() {
     SIMBOL_PROFILE=UNITTEST :gpg:delete ${gpgkid[1]} >${stdoutF?} 2>${stderrF?}
     assertTrue "${FUNCNAME?}/1.4" $?
 }
+#. }=-
+#. }=-

@@ -1,6 +1,8 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
+#. Core -={
 declare -g counter=2
+#. coreCacheTester -={
 function coreCacheTester() {
     local -i e
 
@@ -37,13 +39,15 @@ function coreCacheTester() {
 
     return $e
 }
-
+#. }=-
+#. testCoreUnsupportedAssociativeArrayAssignments -={
 function testCoreUnsupportedAssociativeArrayAssignments() {
     local vetted
     vetted="$(git grep -E '^[^#]*[a-zA-Z0-9]+\+=\( *\['|grep -v ^lib/libsh/libsimbol/sanity.sh)"
     assertEquals "${FUNCNAME[0]}/0" "" "${vetted}"
 }
-
+#. }=-
+#. testCoreGlobalArithmeticFailure -={
 function testCoreGlobalArithmeticFailure() {
     core:global g.num 1024
     local -i v; let v=$(core:global g.num)
@@ -55,7 +59,8 @@ function testCoreGlobalArithmeticFailure() {
     v=$(core:global g.num)
     assertEquals "${FUNCNAME?}/1.3" 1024 $v
 }
-
+#. }=-
+#. testCoreGlobalArithmeticSuccess -={
 function testCoreGlobalArithmeticSuccess() {
     core:global g.str 'BATMAN'
 
@@ -69,7 +74,8 @@ function testCoreGlobalArithmeticSuccess() {
     v=$(core:global g.num)
     assertEquals "${FUNCNAME?}/1" 2048 $v
 }
-
+#. }=-
+#. testCoreGlobalAtomicity -={
 function testCoreGlobalAtomicity() {
     #. Generating subshells is easy...
     #.
@@ -90,12 +96,14 @@ function testCoreGlobalAtomicity() {
 
     assertEquals "${FUNCNAME?}/1" 2600 $v
 }
-
+#. }=-
+#. testCoreMockEnv -={
 function testCoreMockEnv() {
     #shellcheck disable=SC2016
     assertTrue "${FUNCNAME?}/0" '[ ${#SIMBOL_USER_MOCKENV} -gt 0 ]'
 }
-
+#. }=-
+#. testCoreMockWrite -={
 function testCoreMockWrite() {
     # Test creation of a mock context
     mock:write <<!
@@ -139,7 +147,8 @@ function testCoreMockWrite() {
 
     mock:clear
 }
-
+#. }=-
+#. testCoreMockDelete -={
 function testCoreMockDelete() {
     local -i size
 
@@ -191,14 +200,16 @@ function testCoreMockDelete() {
     test -e ${SIMBOL_USER_MOCKENV?}.custom
     assertFalse "${FUNCNAME?}/3.4" $?
 }
-
+#. }=-
+#. exitWith -={
 function exitWith() {
   g_CACHE_OUT "$@" || {
     date +%s.%N
     core:return $1
   } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
 }
-
+#. }=-
+#. testCoreCacheExitDoesNotCacheNegatives -={
 function testCoreCacheExitDoesNotCacheNegatives() {
     local o1; o1=$(exitWith 11)
     assertEquals "${FUNCNAME?}/1.1.1" 11 $?
@@ -216,7 +227,8 @@ function testCoreCacheExitDoesNotCacheNegatives() {
     assertEquals "${FUNCNAME?}/2.1" 22 $?
     assertNotEquals "${FUNCNAME?}/2.2" "${o1}" "${o3}"
 }
-
+#. }=-
+#. testCoreCacheExitDoesCachePositives -={
 function testCoreCacheExitDoesCachePositives() {
     #. Positive ones do...
     local o1; o1=$(exitWith 0)
@@ -227,7 +239,8 @@ function testCoreCacheExitDoesCachePositives() {
 
     assertEquals "${FUNCNAME?}/2.3" "${o1}" "${o2}"
 }
-
+#. }=-
+#. testCoreCache -={
 function testCoreCache() {
     local -i hit
 
@@ -258,3 +271,5 @@ function testCoreCache() {
         assertEquals "${FUNCNAME?}/4.${hit}.2" 1092 $counter
     done
 }
+#. }=-
+#. }=-

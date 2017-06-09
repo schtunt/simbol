@@ -1,10 +1,9 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 core:import util
+core:import remote
 
+#. Remote -={
 function remoteOneTimeSetUp() {
-    core:import remote
-    assertTrue "${FUNCNAME?}/0" $?
-
     declare -g g_SSH_MOCK="${SIMBOL_USER_VAR_TMP?}/honeypot"
 }
 
@@ -95,8 +94,6 @@ function remoteTearDown() {
 function remoteOneTimeTearDown() {
     rm -f "${g_SSH_MOCK?}".*
 }
-
-#. Remote -={
 
 #. Execution (ssh)
 #. testCoreRemoteConnectPasswordlessInternal -={
@@ -550,5 +547,4 @@ function testCoreRemoteMonPublic() {
     assertEquals "${FUNCNAME?}/1.4" 0 ${count}
 }
 #. }=-
-
 #. }=-

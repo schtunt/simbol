@@ -1,9 +1,9 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
+core:import hgd
+
+#. HGD -={
 
 function hgdOneTimeSetUp() {
-    core:import hgd
-    assertTrue ${FUNCNAME?}/0 $?
-
     declare -g g_HGD_CACHE_MOCK="${SIMBOL_USER_VAR_TMP?}/hgd.conf"
 }
 
@@ -22,7 +22,7 @@ function hgdOneTimeTearDown() {
     rm -f ${g_HGD_CACHE_MOCK?}
 }
 
-
+#. testCoreHgdSavePublic -={
 function testCoreHgdSavePublic() {
     local session=${FUNCNAME?}
 
@@ -36,7 +36,8 @@ function testCoreHgdSavePublic() {
     local -i c; let c=$(wc -l < ${stdoutF?})
     assertEquals "${FUNCNAME?}/2.1/list" 1 $c
 }
-
+#. }=-
+#. testCoreHgdListPublic -={
 function testCoreHgdListPublic() {
     local session=${FUNCNAME?}
 
@@ -48,7 +49,8 @@ function testCoreHgdListPublic() {
     local -i c; let c=$(wc -l < ${stdoutF?})
     assertEquals "${FUNCNAME?}/2.2" 1 $c
 }
-
+#. }=-
+#. testCoreHgdRenamePublic -={
 function testCoreHgdRenamePublic() {
     local session=${FUNCNAME?}
 
@@ -77,7 +79,8 @@ function testCoreHgdRenamePublic() {
     let c=$(wc -l < ${stdoutF?})
     assertEquals "${FUNCNAME?}/5.2/list" 1 $c
 }
-
+#. }=-
+#. testCoreHgdDeletePublic -={
 function testCoreHgdDeletePublic() {
     local session=${FUNCNAME?}
 
@@ -92,7 +95,8 @@ function testCoreHgdDeletePublic() {
     mock:wrapper hgd delete ${session} >${stdoutF?} 2>${stderrF?}
     assertFalse "${FUNCNAME?}/3.1" $?
 }
-
+#. }=-
+#. testCoreHgdResolvePrivate -={
 function testCoreHgdResolvePrivate() {
     local session="SessionA"
 
@@ -112,7 +116,8 @@ declare -A USER_HGD_RESOLVERS=( [lower]="echo '%s' | tr 'A-Z' 'a-z'" )
     grep -qE "\<${session}\>" ${g_HGD_CACHE_MOCK?}
     assertTrue "${FUNCNAME?}/1.4" $?
 }
-
+#. }=-
+#. testCoreHgdResolvePrivateKnownHosts -={
 function testCoreHgdResolvePrivateKnownHosts() {
     local session="SessionB"
 
@@ -153,11 +158,20 @@ SSH_KNOWN_HOSTS=/tmp/ssh_known_hosts
     grep -qFw "1.2.3.4" ${g_HGD_CACHE_MOCK?}
     assertTrue "${FUNCNAME?}/2.4" $?
 }
-
+#. }=-
+#. testCoreHgdSaveInternal -={
 function testCoreHgdSaveInternal() { return 0; }
+#. }=-
+#. testCoreHgdListInternal -={
 function testCoreHgdListInternal() { return 0; }
+#. }=-
+#. testCoreHgdRenameInternal -={
 function testCoreHgdRenameInternal() { return 0; }
+#. }=-
+#. testCoreHgdDeleteInternal -={
 function testCoreHgdDeleteInternal() { return 0; }
+#. }=-
+#. testCoreHgdMultiInternal -={
 function testCoreHgdMultiInternal() {
     local session=${FUNCNAME?}
     mock:wrapper hgd :save ${session} '|(#10.1.2.3/29)' >${stdoutF?} 2>${stderrF?}
@@ -195,7 +209,8 @@ function testCoreHgdMultiInternal() {
     mock:wrapper hgd :delete ${session} >${stdoutF?} 2>${stderrF?}
     assertFalse "${FUNCNAME?}/5.2" $?
 }
-
+#. }=-
+#. testPySetsAND -={
 function testPySetsAND() {
     cat <<! | sets '&(nucky,rothstein,waxy)' >${stdoutF?} 2>${stderrF?}
 nucky
@@ -216,11 +231,11 @@ ddd
 eee
 fff
 !
-    if assertEquals 0 $?; then
-        assertEquals "ccc ddd" "$(cat ${stdoutF})"
-    fi
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/2" "ccc ddd" "$(cat ${stdoutF})"
 }
-
+#. }=-
+#. testPySetsOR -={
 function testPySetsOR() {
     cat <<! | sets '|(nucky,rothstein,waxy)' >${stdoutF?} 2>${stderrF?}
 nucky
@@ -241,11 +256,12 @@ ddd
 eee
 fff
 !
-    if assertEquals 0 $?; then
-        assertEquals "aaa bbb eee fff ccc ddd" "$(cat ${stdoutF})"
-    fi
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/2" \
+        "aaa bbb eee fff ccc ddd" "$(cat ${stdoutF})"
 }
-
+#. }=-
+#. testPySetsDIFF -={
 function testPySetsDIFF() {
     cat <<! | sets '!(nucky,rothstein)' >${stdoutF?} 2>${stderrF?}
 nucky
@@ -260,7 +276,7 @@ ddd
 eee
 fff
 !
-    if assertEquals 0 $?; then
-        assertEquals "aaa bbb" "$(cat ${stdoutF})"
-    fi
+    assertTrue "${FUNCNAME?}/1" $?
+    assertEquals "${FUNCNAME?}/2" "aaa bbb" "$(cat ${stdoutF})"
 }
+#. }=-
