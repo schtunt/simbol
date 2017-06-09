@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
-set -u
-
-let e=0
 #shellcheck source=lib/libsh/libsimbol/constants.sh
 source ~/.simbol/.scm/lib/libsh/libsimbol/constants.sh
 
@@ -17,43 +14,47 @@ if [ "${SIMBOL_SHELL:-NilOrNotSet}" != 'NilOrNotSet' ]; then
         if [ "${SIMBOL_SHELL?}" != "${BASH?}" ]; then
             BASH_ENV=<(
                 declare -p | grep -E '\<USER_'
-            ) exec ${SIMBOL_SHELL?} -$- "$0" "$@"
+            ) exec "${SIMBOL_SHELL?}" -$- "$0" "$@"
         fi
     else
-        e=127
+        echo "ERROR: The request SIMBOL_SHELL is invalid:" "${SIMBOL_SHELL?}"
+        exit ${CODE_E01?}
     fi
 fi
 
-if [ $e -eq 0 ]; then
-    if [ ${BASH_VERSINFO[0]?} -ge 4 ] && [ ${BASH_VERSINFO[1]?} -ge 1 ]; then
-        SIMBOL_PROFILE="$(${HOME?}/.simbol/bin/activate)"
-        e=$?
-        if [ $e -eq 0 ]; then
-            export SIMBOL_PROFILE
-            #shellcheck source=lib/libsh/libsimbol/sanity.sh
-            source ${SIMBOL_CORE}/lib/libsh/libsimbol/sanity.sh
-            validate_bash
-            e=$?
-            case $e in
-                0)
-                    rm -f "${SIMBOL_DEADMAN?}"
-                    #shellcheck source=lib/libsh/libsimbol/libsimbol.sh
-                    source ${SIMBOL_CORE}/lib/libsh/libsimbol/libsimbol.sh
-                    core:wrapper "$@"
-                    e=$?
-                ;;
-                *)
-                    echo "ERROR: Your version of BASH is not too old, but fails sanity checks."
-                ;;
-            esac
-        else
-            echo "ERROR: No simbol profiles active, either create a new one, or activate an existing one; [e:$e]."
-        fi
-    else
-        echo "ERROR: Your version of BASH is too old; export SIMBOL_SHELL to override system bash; [e:$e]."
-    fi
-else
-    echo "ERROR: The request SIMBOL_SHELL is invalid:" ${SIMBOL_SHELL?}
+#. Check bash version
+#shellcheck disable=SC2086
+if ! [ ${BASH_VERSINFO[0]?} -ge 4 ] && [ ${BASH_VERSINFO[1]?} -ge 3 ]; then
+    let e=CODE_E02
+    echo "ERROR: Your version of BASH is too old; export SIMBOL_SHELL to override system bash; [e:$e]."
+    exit $e
 fi
 
-exit ${e?}
+#. Check simbol profile
+if [ "${SIMBOL_PROFILE:-NilOrNotSet}" == 'NilOrNotSet' ]; then
+    if ! SIMBOL_PROFILE="$("${HOME?}/.simbol/bin/activate")"; then
+        let e=CODE_E03
+        echo "ERROR: No simbol profiles active, either create a new one, or activate an existing one; [e:$e]."
+        exit $e
+    fi
+fi
+export SIMBOL_PROFILE
+
+#shellcheck source=lib/libsh/libsimbol/sanity.sh
+source ${SIMBOL_CORE?}/lib/libsh/libsimbol/sanity.sh
+validate_bash
+case $? in
+    0)
+        rm -f "${SIMBOL_DEADMAN?}"
+        #shellcheck source=lib/libsh/libsimbol/libsimbol.sh
+        source ${SIMBOL_CORE?}/lib/libsh/libsimbol/libsimbol.sh
+        core:wrapper "$@"
+        let e=$?
+    ;;
+    *)
+        echo "ERROR: Your version of BASH is not too old, but fails sanity checks."
+        let e=CODE_E04
+    ;;
+esac
+
+exit $e

@@ -21,7 +21,7 @@ function cpfOneTimeTearDown() {
 
 #. testCoreCpfInitializePublic -={
 function testCoreCpfInitializePublic() {
-    cpf:initialize
+    cpf:initialize 1
     assertTrue "${FUNCNAME?}/1" $?
 }
 #. }=-
@@ -160,7 +160,7 @@ function testCoreCpfThemePrivate() {
 #. testCoreCpfIndentPublic -={
 function testCoreCpfIndentPublic() {
     local -i cpf_indent
-    let cpf_indent=${CPF_INDENT}
+    let cpf_indent=CPF_INDENT
     CPF_INDENT=0
 
     local out
@@ -189,7 +189,7 @@ function testCoreCpfIndentPublic() {
     ]=-
     assertEquals "${FUNCNAME?}/A" 0 ${CPF_INDENT}
 
-    let CPF_INDENT=${cpf_indent}
+    let CPF_INDENT=cpf_indent
 }
 #. }=-
 #. }=-

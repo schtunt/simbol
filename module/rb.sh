@@ -9,7 +9,7 @@ core:import xplm
 
 #. rb:list -={
 function rb:list() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:list rb "$@"
     e=$?
@@ -20,7 +20,7 @@ function rb:list() {
 #. rb:install -={
 function rb:install:usage() { echo "[<pkg> [<pkg> [...]]]"; }
 function rb:install() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:install rb "$@"
     e=$?
@@ -30,7 +30,7 @@ function rb:install() {
 #. }=-
 #. rb:purge -={
 function rb:purge() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:purge rb "$@"
     e=$?
@@ -40,7 +40,7 @@ function rb:purge() {
 #. }=-
 #. rb:shell -={
 function rb:shell() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:shell rb "$@"
     e=$?
@@ -51,7 +51,7 @@ function rb:shell() {
 #. rb:search -={
 function rb:search:usage() { echo "<search-str>"; }
 function rb:search() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:search rb "$@"
     e=$?
@@ -61,7 +61,7 @@ function rb:search() {
 #. }=-
 #. rb:repl -={
 function rb:repl() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:repl rb "$@"
     e=$?
@@ -71,7 +71,7 @@ function rb:repl() {
 #. }=-
 #. rb:run -={
 function rb:run() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:run rb "$@"
     e=$?

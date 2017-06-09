@@ -9,7 +9,7 @@ core:import xplm
 
 #. pl:list -={
 function pl:list() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:list pl "$@"
     e=$?
@@ -20,7 +20,7 @@ function pl:list() {
 #. pl:install -={
 function pl:install:usage() { echo "[<pkg> [<pkg> [...]]]"; }
 function pl:install() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:install pl "$@"
     e=$?
@@ -30,7 +30,7 @@ function pl:install() {
 #. }=-
 #. pl:purge -={
 function pl:purge() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:purge pl "$@"
     e=$?
@@ -40,7 +40,7 @@ function pl:purge() {
 #. }=-
 #. pl:shell -={
 function pl:shell() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:shell pl "$@"
     e=$?
@@ -51,7 +51,7 @@ function pl:shell() {
 #. pl:search -={
 function pl:search:usage() { echo "<search-str>"; }
 function pl:search() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:search pl "$@"
     e=$?
@@ -61,7 +61,7 @@ function pl:search() {
 #. }=-
 #. pl:repl -={
 function pl:repl() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:repl pl "$@"
     e=$?
@@ -71,7 +71,7 @@ function pl:repl() {
 #. }=-
 #. pl:run -={
 function pl:run() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
     xplm:run pl "$@"
     e=$?

@@ -49,55 +49,48 @@ integer delay ${DEFAULT_DELAY?} <delay> d
 !
 }
 
+#shellcheck disable=SC2086,SC2154
 function util:timeout() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
+    [ $# -ge 1 ] || return $e
 
-    if [ $# -ge 1 ]; then
-        e=${CODE_FAILURE?}
-        local -i delay=${FLAGS_delay?}; unset FLAGS_delay
-        local -i timeout=${FLAGS_timeout?}; unset FLAGS_timeout
-        local -i interval=${FLAGS_interval?}; unset FLAGS_interval
-        (
-            local -i t
-            ((t = timeout))
-            while ((t > 0)); do
-                sleep ${interval}
-                kill -0 $$ || exit 0
-                ((t -= interval))
-            done
+    eval "$(core:decl_shflags.eval int delay timeout interval)"
+    (
+        local -i t; let t=timeout
+        while ((t > 0)); do
+            sleep ${interval}
+            kill -0 $$ || exit 0
+            ((t -= interval))
+        done
 
-            # Be nice, post SIGTERM first.
-            # The 'exit 0' below will be executed if any preceeding command fails.
-            kill -s SIGTERM $$ && kill -0 $$ || exit 0
-            sleep $delay
-            kill -s SIGKILL $$
-        ) 2>/dev/null &
+        # Be nice, post SIGTERM first.
+        # The 'exit 0' below will be executed if any preceeding command fails.
+        kill -s SIGTERM $$ && kill -0 $$ || exit 0
+        sleep $delay
+        kill -s SIGKILL $$
+    ) 2>/dev/null &
 
-        exec "$@"
-    fi
-
-    return $e
+    #shellcheck disable=SC2093
+    exec "$@"
 }
 #. }=-
 #. Date -={
 function :util:date_i2s() {
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
+    core:raise_bad_fn_call_unless $# eq 1
 
-    if [ $# -eq 1 ]; then
-        #. Convert seconds to datestamp
-        date --utc --date "1970-01-01 $1 sec" "+%Y%m%d%H%M%S"
-        e=$?
-        #. FIXME: Mac OS X needs this line instead:
-        #. FIXME: date -u -j "010112001970.$1" "+%Y%m%d%H%M%S"
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+    #. Convert seconds to datestamp
+    date --utc --date "1970-01-01 $1 sec" "+%Y%m%d%H%M%S"
+    e=$?
+    #. FIXME: Mac OS X needs this line instead:
+    #. FIXME: date -u -j "010112001970.$1" "+%Y%m%d%H%M%S"
 
     return $e
 }
 
 function :util:date_s2i() {
-    local -i e=${CODE_FAILURE?}
+    core:raise_bad_fn_call_unless $# in 1 2
+    local -i e; let e=CODE_FAILURE
 
     if [ $# -eq 1 ]; then
         local YYYY=${1:0:4}
@@ -109,50 +102,42 @@ function :util:date_s2i() {
 
         #. Convert datestamp to seconds
         date --utc --date "${YYYY?}-${mm}-${dd} ${HH?}:${MM?}:${SS?}" "+%s"
-        e=$?
+        let e=$?
     elif [ $# -eq 2 ]; then
         date --utc --date "${1} ${2}" "+%s"
-        e=$?
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
+        let e=$?
     fi
 
     return $e
 }
 
 function :util:time_i2s() {
-    local -i e=${CODE_FAILURE?}
+    core:raise_bad_fn_call_unless $# eq 1
+    local -i e; let e=CODE_SUCCESS
 
-    if [ $# -eq 1 ]; then
-        e=${CODE_SUCCESS?}
+    local -i secs=$1
 
-        local -i secs=$1
+    local -i days
+    (( days = secs / 86400 ))
+    (( secs %= 86400 ))
 
-        local -i days
-        (( days = secs / 86400 ))
-        (( secs %= 86400 ))
+    local -i hours
+    (( hours = secs / 3600 ))
+    (( secs %= 3600 ))
 
-        local -i hours
-        (( hours = secs / 3600 ))
-        (( secs %= 3600 ))
+    local -i mins
+    (( mins = secs / 60 ))
+    (( secs %= 60 ))
 
-        local -i mins
-        (( mins = secs / 60 ))
-        (( secs %= 60 ))
-
-        [ ${days} -eq 0 ] || printf "%s" "${days} days, "
-        printf "%02d:%02d:%02d\n" ${hours} ${mins} ${secs}
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+    [ ${days} -eq 0 ] || printf "%s" "${days} days, "
+    printf "%02d:%02d:%02d\n" ${hours} ${mins} ${secs}
 
     return $e
 }
-
 #. }=-
 #. Stat -={
 function :util:statmode() {
-    local -i e; let e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
     [ $# -eq 1 ] || return $e
 
     local filepath="$1"
@@ -160,6 +145,42 @@ function :util:statmode() {
 
     stat --printf '%a' "${filepath}"
     e=$?
+
+    return $e
+}
+#. }=-
+#. Lock -={
+function :util:lockfile() {
+    core:raise_bad_fn_call_unless $# in 2
+    local -i e; let e=CODE_SUCCESS
+
+    local -i lid; let lid=$1
+    local -i pid; let pid=$2
+    printf "${SIMBOL_USER_VAR_TMP?}/lock.%d.%d.sct" ${lid} ${pid}
+
+    return $e
+}
+
+function :util:lock() {
+    core:raise_bad_fn_call_unless $# in 3
+    local -i e; let e=CODE_SUCCESS
+
+    local action=$1
+    local -i lid; let lid=$2
+    local -i pid; let pid=$3
+
+    local lockdir; lockdir="$(:util:lockfile ${pid} ${lid})"
+    case ${action} in
+        on)
+            while ! mkdir "${lockdir}" &>/dev/null; do
+                sleep 0.1
+            done
+        ;;
+        off)
+            rmdir "${lockdir}" >&/dev/null
+            let e=$?
+        ;;
+    esac
 
     return $e
 }
@@ -206,38 +227,37 @@ function :util:undelimit() {
 
 function :util:join() {
     #. Usage: array=( a b c ); :util:join $delim array
-
     core:raise_bad_fn_call_unless $# in 2 3
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
-    local -i len; let len=$(core:len $2)
+    local -i len; let len=$(core:len "$2")
     case ${len}:$# in
         0:3)
             if (( $3 > len )); then
                 core:raise EXCEPTION_USER_ERROR\
                     "Array overrun \${$2[*]:$3} when array length is only ${len}"
             else
-                e=${CODE_SUCCESS?}
+                let e=CODE_SUCCESS
             fi
         ;;
         *:3)
             if (( $3 <= len )); then
                 local IFS=$1
                 eval "printf \"\${${2}[*]:${3}}\""
-                e=$?
+                let e=$?
             else
                 core:raise EXCEPTION_USER_ERROR\
                     "Array overrun \${$2[*]:$3} when array length is only ${len}"
             fi
         ;;
         0:2)
-            e=${CODE_SUCCESS?}
+            let e=CODE_SUCCESS
         ;;
         *:2)
             local IFS=$1
             eval "printf \"\${${2}[*]}\""
-            e=$?
+            let e=$?
         ;;
         *:*)
             core:raise EXCEPTION_SHOULD_NOT_GET_HERE
@@ -283,34 +303,32 @@ function :util:is_int() {
 #. }=-
 #. ANSI2HTML -={
 function :util:ansi2html() {
-    ${SIMBOL_CORE_LIBEXEC?}/ansi2html
+    "${SIMBOL_CORE_LIBEXEC?}/ansi2html"
+    return $?
 }
 #. }=-
 #. Markdown Scaffolding -={
 function :util:markdown() {
-    local -i e=${CODE_FAILURE?}
+    core:raise_bad_fn_call_unless $# gt 0
+    local -i e; let e=CODE_FAILURE
 
-    if [ $# -gt 0 ]; then
-        if read -rt 0 -N 0; then
-            local op=$1
-            shift
+    if read -rt 0 -N 0; then
+        local op=$1
+        shift
 
-            {
-                case ${op} in
-                    h1) printf "# %s\n\n" "$@";;
-                    h2) printf "# %s\n\n" "$@";;
-                    h3) printf "# %s\n\n" "$@";;
-                    h4) printf "# %s\n\n" "$@";;
-                    h5) printf "# %s\n\n" "$@";;
-                    h6) printf "# %s\n\n" "$@";;
-                esac
-                cat
-                echo "###### vim:syntax=markdown"
-            } | vimcat
-            e=$?
-        fi
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
+        {
+            case ${op} in
+                h1) printf "# %s\n\n" "$@";;
+                h2) printf "# %s\n\n" "$@";;
+                h3) printf "# %s\n\n" "$@";;
+                h4) printf "# %s\n\n" "$@";;
+                h5) printf "# %s\n\n" "$@";;
+                h6) printf "# %s\n\n" "$@";;
+            esac
+            cat
+            echo "###### vim:syntax=markdown"
+        } | vimcat
+        let e=$?
     fi
 
     return $e

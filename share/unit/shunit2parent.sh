@@ -11,30 +11,22 @@ function moduleScaffold() {
 
     local -i verbose
     case $1 in
-        setUp|tearDown) let verbose=${FALSE?} ;;
-        oneTimeSetUp|oneTimeTearDown) let verbose=${TRUE?} ;;
+        setUp|tearDown) let verbose=FALSE ;;
+        oneTimeSetUp|oneTimeTearDown) let verbose=TRUE ;;
     esac
 
-    [ ${verbose} -eq ${FALSE?} ] || cpfi "%{@comment:%s...}" "${modulefn}"
+    (( verbose == FALSE )) || cpfi "%{@comment:%s...}" "${modulefn}"
 
-    if [ -f ${g_RUNTIME_SCRIPT?} ]; then
+    if [ -f "${g_RUNTIME_SCRIPT?}" ]; then
         if [ "$(type -t "${modulefn}" 2>/dev/null)" == "function" ]; then
             ${modulefn}
-            e=$?
-            if [ ${verbose} -eq ${TRUE} ]; then
-                if [ $e -eq ${CODE_SUCCESS?} ]; then
-                    theme HAS_PASSED
-                else
-                    theme HAS_FAILED
-                fi
-            fi
+            let e=$?
+            (( verbose != TRUE )) || theme HAS_AUTOED $e
         else
-            [ ${verbose} -eq ${FALSE?} ] ||
-                theme HAS_WARNED "UNDEFINED:${modulefn}"
+            (( verbose != TRUE )) || theme HAS_WARNED "UNDEFINED:${modulefn}"
         fi
     else
-        [ ${verbose} -eq ${FALSE?} ] ||
-            theme HAS_PASSED "DYNAMIC_ONLY"
+        (( verbose != TRUE )) || theme HAS_PASSED "DYNAMIC_ONLY"
     fi
 
     return $e
@@ -44,7 +36,7 @@ function oneTimeSetUp() {
     -=[
 
     cpfi "%{@comment:unitSetUp...}"
-    local -i e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     declare -gi tid=0
 
@@ -68,7 +60,7 @@ function oneTimeSetUp() {
 }
 
 function oneTimeTearDown() {
-    local -i e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     ]=-
 

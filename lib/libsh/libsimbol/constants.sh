@@ -1,6 +1,9 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 #shellcheck disable=SC2034
 
+set -f
+set -u
+
 #shellcheck disable=SC2086
 if [ ${SOURCED_CONSTANTS:-0} -eq 0 ]; then
 
@@ -36,17 +39,22 @@ export CODE_USAGE_FN_GUESS=93
 #CODE_USAGE_FN_SHORT=94
 export CODE_USAGE_FN_LONG=95
 
+export CODE_IMPORT_GOOOD=${CODE_SUCCESS} #. good module
+export CODE_IMPORT_ERROR=96              #. invalid/bad module (can't source/parse)
+export CODE_IMPORT_ADMIN=97              #. administratively disabled
+export CODE_IMPORT_UNDEF=98              #. no such module
+export CODE_IMPORT_UNSET=99              #. no module set
+
 #. 128..255 General Error Codes
 export CODE_E01=128
 export CODE_E02=129
 export CODE_E03=130
 export CODE_E04=131
-
-export CODE_IMPORT_GOOOD=${CODE_SUCCESS} #. good module
-export CODE_IMPORT_ERROR=${CODE_E01}     #. invalid/bad module (can't source/parse)
-export CODE_IMPORT_ADMIN=${CODE_E02}     #. administratively disabled
-export CODE_IMPORT_UNDEF=${CODE_E03}     #. no such module
-export CODE_IMPORT_UNSET=${CODE_E04}     #. no module set
+export CODE_E05=132
+export CODE_E06=133
+export CODE_E07=134
+export CODE_E08=135
+export CODE_E09=136
 
 SIMBOL_DELIM="$(printf "\x07")"
 export SIMBOL_DELIM

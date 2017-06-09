@@ -11,223 +11,199 @@ core:requires shred
 
 g_VAULT=${SIMBOL_USER_ETC?}/simbol.vault
 
+#. ::vault:getTempFile -={
 function ::vault:getTempFile() {
+    core:raise_bad_fn_call_unless $# in 2
     echo "${SIMBOL_USER_VAR_TMP?}/${1//\//_}.${2}"
 }
-
-#. vault:clean -={
+#. }=-
+#. ::vault:draw -={
 #function ::vault:draw() {
 #    ${HOME?}/bin/gpg2png $1
 #    cp $1.png ~/vault.png
 #    cp $1-qr.png ~/g_VAULT-QR.PNG
 #    img2txt ~/vault.png ~/g_VAULT-QR.PNG
 #}
-
+#. }=-
+#. ::vault:clean -={
 function ::vault:clean() {
-    local -i e=${CODE_FAILURE?}
+    core:raise_bad_fn_call_unless $# eq 1
+    local -i e; let e=CODE_FAILURE
 
-    if [ $# -le 1 ]; then
-        local vault=${1:-${g_VAULT?}}
-        local vault_tmp=$(::vault:getTempFile ${vault} killme)
-        local vault_ts=$(::vault:getTempFile ${vault} timestamp)
-        local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
+    local vault="${g_VAULT?}"
+    local vault_tmp; vault_tmp="$(::vault:getTempFile "${vault}" killme)"
+    local vault_ts; vault_ts="$(::vault:getTempFile "${vault}" timestamp)"
+    local vault_bu; vault_bu="$(::vault:getTempFile "${vault}" "${NOW?}")"
 
-        local -i e=${CODE_SUCCESS?}
-        test ! -f ${vault}     || chmod 600 ${vault}
-        test ! -f ${vault_bu}  || chmod 400 ${vault_bu}
-        test ! -f ${vault_tmp} || shred -fuz ${vault_tmp}
-        test ! -f ${vault_ts}  || shred -fuz ${vault_ts}
+    test ! -f "${vault}"     || chmod 600 "${vault}"
+    test ! -f "${vault_bu}"  || chmod 400 "${vault_bu}"
+    test ! -f "${vault_tmp}" || shred -fuz "${vault_tmp}"
+    test ! -f "${vault_ts}"  || shred -fuz "${vault_ts}"
 
-        e=${CODE_SUCCESS?}
-    fi
+    let e=CODE_SUCCESS
 
     return $e
 }
-#. DEPRECATED
-#function ::vault:secrets() {
-#    local -i e=${CODE_FAILURE?}
-#
-#    if [ $# -eq 1 ]; then
-#        ${SIMBOL_CORE_LIBEXEC?}/secret $1
-#        e=$?
-#    else
-#        core:raise EXCEPTION_BAD_FN_CALL
-#    fi
-#
-#    return $e
-#}
 #. }=-
-#. vault:encryption -={
+#.  :vault:encryption -={
 function :vault:encryption() {
-    local -i e=${CODE_FAILURE?}
+    core:raise_bad_fn_call_unless $# in 2
+    core:raise_bad_fn_call_unless "$2" in on off
 
-    local vault=${1:-${g_VAULT?}}
-    local vault_tmp=$(::vault:getTempFile ${vault} killme)
-    local vault_ts=$(::vault:getTempFile ${vault} timestamp)
-    local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
+    local -i e; let e=CODE_FAILURE
 
-    case $#:$2 in
-        2:on)
-            if [ -f ${vault} ]; then
-                :gpg:encrypt ${vault} ${vault_bu}
-                if [ $? -eq ${CODE_SUCCESS} ]; then
-                    cat ${vault_bu} > ${vault}
-                    e=$?
-                fi
+    local vault="${1:-${g_VAULT?}}"
+    local vault_tmp; vault_tmp="$(::vault:getTempFile "${vault}" killme)"
+    local vault_ts; vault_ts="$(::vault:getTempFile "${vault}" timestamp)"
+    local vault_bu; vault_bu="$(::vault:getTempFile "${vault}" "${NOW?}")"
+
+    case $2 in
+        on)
+            if [ -f "${vault}" ] && :gpg:encrypt "${vault}" "${vault_bu}"; then
+                cat "${vault_bu}" > "${vault}"
+                let e=$?
             fi
         ;;
-        2:off)
-            if [ -f ${vault} ]; then
-                :gpg:decrypt ${vault} ${vault_bu}
-                if [ $? -eq ${CODE_SUCCESS} ]; then
-                    cat ${vault_bu} > ${vault}
-                    e=$?
-                fi
+        off)
+            if [ -f "${vault}" ] && :gpg:decrypt "${vault}" "${vault_bu}"; then
+                cat "${vault_bu}" > "${vault}"
+                let e=$?
             fi
-        ;;
-        *:*)
-            core:raise EXCEPTION_BAD_FN_CALL
         ;;
     esac
 
     return $e
 }
 #. }=-
-#. vault:encrypt -={
+#.   vault:encrypt -={
 function vault:encrypt:usage() { echo "<file-path:${g_VAULT?}>"; }
 function vault:encrypt() {
-    local -i e=${CODE_DEFAULT?}
+    core:raise_bad_fn_call_unless $# in 1
 
-    if [ $# -eq 1 ]; then
-        cpf "Encrypting %{@path:%s}..." "${vault}"
-        local vault=${1:-${g_VAULT?}}
-        if [ -w ${vault} ]; then
-            :vault:encryption ${vault} on
-            e=$?
-            theme HAS_AUTOED $e
+    local -i e; let e=CODE_DEFAULT
 
-            cpf "Shredding remains..."
-            ::vault:clean ${vault}
-            theme HAS_AUTOED $?
-        else
-            e=${CODE_FAILURE?}
-            theme HAS_FAILED "NO_ACCESS/NOT_FOUND"
-        fi
-    fi
+    local vault="${1:-${g_VAULT?}}"
+    cpf "Encrypting %{@path:%s}..." "${vault}"
 
-    return $e
-}
-#. }=-
-#. vault:decrypt -={
-function vault:decrypt:usage() { echo "<file-path:${g_VAULT?}>"; }
-function vault:decrypt() {
-    local -i e=${CODE_DEFAULT?}
-
-    if [ $# -eq 1 ]; then
-        cpf "Decrypting %{@path:%s}..." "${vault}"
-        local vault=${1:-${g_VAULT?}}
-        if [ -w ${vault} ]; then
-            :vault:encryption ${vault} off
-            e=$?
-            theme HAS_AUTOED $e
-
-            cpf "Shredding remains..."
-            ::vault:clean ${vault}
-            theme HAS_AUTOED $?
-        else
-            e=${CODE_FAILURE?}
-            theme HAS_FAILED "NO_ACCESS/NOT_FOUND"
-        fi
-    fi
-
-    return $e
-}
-#. }=-
-#. vault:create -={
-function :vault:create() {
-    core:requires pwgen
-
-    local -i e=${CODE_FAILURE?}
-
-    if [ $# -eq 1 ]; then
-        local vault=$1
-        if [ ! -f ${vault} ]; then
-            local -i pwid=0
-            while read -r pw; do
-                let pwid++
-                echo "MY_SECRET_${pwid} ${pw}"
-            done <<< "$(pwgen 64 7)" | :gpg:encrypt - ${vault}
-            e=$?
-        fi
+    if [ -w "${vault}" ]; then
+        :vault:encryption "${vault}" on
+        let e=$?
+        theme HAS_AUTOED $e
 
         cpf "Shredding remains..."
-        ::vault:clean ${vault}
+        ::vault:clean "${vault}"
         theme HAS_AUTOED $?
-
     else
-        core:raise EXCEPTION_BAD_FN_CALL
+        let e=CODE_FAILURE
+        theme HAS_FAILED "NO_ACCESS/NOT_FOUND"
     fi
+
+    return $e
+}
+#. }=-
+#.   vault:decrypt -={
+function vault:decrypt:usage() { echo "<file-path:${g_VAULT?}>"; }
+function vault:decrypt() {
+    core:raise_bad_fn_call_unless $# in 1
+
+    local -i e; let e=CODE_DEFAULT
+
+    cpf "Decrypting %{@path:%s}..." "${vault}"
+    local vault="${1:-${g_VAULT?}}"
+    if [ -w "${vault}" ]; then
+        :vault:encryption "${vault}" off
+        let e=$?
+        theme HAS_AUTOED $e
+
+        cpf "Shredding remains..."
+        ::vault:clean "${vault}"
+        theme HAS_AUTOED $?
+    else
+        let e=CODE_FAILURE
+        theme HAS_FAILED "NO_ACCESS/NOT_FOUND"
+    fi
+
+    return $e
+}
+#. }=-
+#.   vault:create -={
+function :vault:create() {
+    core:raise_bad_fn_call_unless $# in 1
+
+    core:requires pwgen
+    local -i e; let e=CODE_FAILURE
+
+    local vault=$1
+    if [ ! -f "${vault}" ]; then
+        local -i pwid=0
+        while read -r pw; do
+            let pwid++
+            echo "MY_SECRET_${pwid} ${pw}"
+        done <<< "$(pwgen 64 7)" | :gpg:encrypt - "${vault}"
+        let e=$?
+    fi
+
+    cpf "Shredding remains..."
+    ::vault:clean "${vault}"
+    theme HAS_AUTOED $?
 
     return $e
 }
 
 function vault:create:usage() { echo "[<vault-path:${g_VAULT}>]"; }
 function vault:create() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
 
-    if [ $# -le 1 ]; then
-        cpf "Generating blank secrets file..."
-        local vault=${1:-${g_VAULT?}}
-        if [ ! -f ${vault} ]; then
-            :vault:create ${vault}
-            e=$?
-            if [ $e -eq ${CODE_SUCCESS?} ]; then
-                theme HAS_PASSED ${vault}
-            else
-                theme HAS_FAILED ${vault}
-            fi
+    cpf "Generating blank secrets file..."
+    local vault=${1:-${g_VAULT?}}
+    if [ ! -f "${vault}" ]; then
+        if :vault:create "${vault}"; then
+            let e=CODE_SUCCESS
+            theme HAS_PASSED "${vault}"
         else
-            e=${CODE_FAILURE?}
-            theme HAS_FAILED "${vault} exists"
+            theme HAS_FAILED "${vault}"
+            let e=CODE_FAILURE
         fi
+    else
+        let e=CODE_FAILURE
+        theme HAS_FAILED "${vault} exists"
     fi
 
     return $e
 }
 #. }=-
-#. vault:list -={
+#.   vault:list -={
 function :vault:list() {
-    local -i e=${CODE_FAILURE?}
+    core:raise_bad_fn_call_unless $# in 1 2
+    local -i e; let e=CODE_FAILURE
 
-    if [ $# -eq 1 -o $# -eq 2 ]; then
-        local vault="$1"
-        if [ -r ${vault} ]; then
-            if [ $# -eq 1 ]; then
-                local -a secrets
-                if secrets=(
-                    $(
-                        :gpg:decrypt ${vault} - | awk '$1!~/^[\t ]*#/{print$1}';
-                        exit ${PIPESTATUS[0]}
-                    )
-                ); then
-                    echo "${secrets[@]}"
-                    let e=${CODE_SUCCESS?}
-                fi
-            else
-                local sid="${2}"
-                local secret
-                if secret=$(
-                    :gpg:decrypt ${vault} - | awk '$1~/\<'${sid}'\>/{print$1}';
+    local vault="$1"
+    if [ -r "${vault}" ]; then
+        if [ $# -eq 1 ]; then
+            local -a secrets
+            if secrets=(
+                $(
+                    :gpg:decrypt "${vault}" - | awk '$1!~/^[\t ]*#/{print$1}';
+                    #shellcheck disable=SC2086
                     exit ${PIPESTATUS[0]}
-                ) && [ ${#secret} -gt 0 ]; then
-                    let e=${CODE_SUCCESS?}
-                fi
+                )
+            ); then
+                echo "${secrets[@]}"
+                let e=CODE_SUCCESS
             fi
         else
-            e=9
+            local sid="${2}"
+            local secret
+            if secret=$(
+                :gpg:decrypt "${vault}" - | awk "\$1~/\<${sid}\>/{print\$1}";
+                #shellcheck disable=SC2086
+                exit ${PIPESTATUS[0]}
+            ) && [ ${#secret} -gt 0 ]; then
+                let e=CODE_SUCCESS
+            fi
         fi
     else
-        core:raise EXCEPTION_BAD_FN_CALL
+        let e=9
     fi
 
     return $e
@@ -235,107 +211,112 @@ function :vault:list() {
 
 function vault:list:usage() { echo "[<sid>]"; }
 function vault:list() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
+    [ $# -le 1 ] || return $e
 
-    if [ $# -le 1 ]; then
-        cpf "Inspecting vault..."
-        local vault=${g_VAULT?}
-        local sid="${1:-}"
-        local -a secrets
-        secrets=( $(:vault:list ${vault}) )
-        if [ $? -eq ${CODE_SUCCESS?} ]; then
-            theme HAS_PASSED ${vault}
+    cpf "Inspecting vault..."
+    local vault=${g_VAULT?}
+    local sid="${1:-}"
+    local -a secrets;
+    if secrets=( $(:vault:list "${vault}") ); then
+        theme HAS_PASSED "${vault}"
 
-            if [ ${#sid} -gt 0 ]; then
-                cpf "Checking for SID %{r:%s}..." ${sid}
-                if :vault:list ${vault} ${sid}; then
-                    theme HAS_PASSED
-                    e=${CODE_SUCCESS?}
-                else
-                    theme HAS_FAILED
-                    e=${CODE_FAILURE?}
-                fi
+        if [ ${#sid} -gt 0 ]; then
+            cpf "Checking for SID %{r:%s}..." "${sid}"
+            if :vault:list "${vault}" "${sid}"; then
+                theme HAS_PASSED
+                let e=CODE_SUCCESS
             else
-                for sid in "${secrets[@]}"; do
-                    cpf " * %{r:%s}\n" ${sid}
-                done
-                e=${CODE_SUCCESS?}
+                theme HAS_FAILED
+                let e=CODE_FAILURE
             fi
-        elif [ $e -eq 9 ]; then
-            theme HAS_FAILED "MISSING_VAULT:${vault}"
-            e=${CODE_FAILURE?}
         else
-            theme HAS_FAILED "CANNOT_DECRYPT:${vault}"
-            e=${CODE_FAILURE?}
-            #. gpg -q --batch --allow-secret-key-import --import ~/.gnupg/ntd.AWS.0xFFFFFFFF.sec
-            #. gpg -q --batch --import ~/.gnupg/ntd.AWS.0xFFFFFFFF.pub
+            for sid in "${secrets[@]}"; do
+                cpf " * %{r:%s}\n" "${sid}"
+            done
+            let e=CODE_SUCCESS
         fi
+    elif [ $e -eq 9 ]; then
+        theme HAS_FAILED "MISSING_VAULT:${vault}"
+        let e=CODE_FAILURE
+    else
+        theme HAS_FAILED "CANNOT_DECRYPT:${vault}"
+        let e=CODE_FAILURE
+        #. gpg -q --batch --allow-secret-key-import --import ~/.gnupg/ntd.AWS.0xFFFFFFFF.sec
+        #. gpg -q --batch --import ~/.gnupg/ntd.AWS.0xFFFFFFFF.pub
     fi
 
     return $e
 }
 #. }=-
-#. vault:edit -={
+#.   vault:edit -={
 function vault:edit:usage() { echo "[<vault>]"; }
 function vault:edit() {
-    local -i e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
+    [ $# -le 1 ] || return $e
 
-    if [ $# -eq 0 -o $# -eq 1 ]; then
-        local vault=${1:-${g_VAULT?}}
-        local vault_tmp=$(::vault:getTempFile ${vault} killme)
-        local vault_ts=$(::vault:getTempFile ${vault} timestamp)
-        local vault_bu=$(::vault:getTempFile ${vault} ${NOW?})
+    local vault="${1:-${g_VAULT?}}"
+    local vault_tmp; vault_tmp="$(::vault:getTempFile "${vault}" killme)"
+    local vault_ts; vault_ts="$(::vault:getTempFile "${vault}" timestamp)"
+    local vault_bu; vault_bu="$(::vault:getTempFile "${vault}" "${NOW?}")"
 
-        mkdir -p "$(dirname "${vault_tmp?}")"
+    mkdir -p "$(dirname "${vault_tmp?}")"
 
-        cpf "Decrypting secrets..."
-        umask 377
-        :gpg:decrypt ${vault} ${vault_tmp}
-        e=$?
-        theme HAS_AUTOED $e
+    local org_umask; org_umask="$(umask)"
+    umask 377
 
-        if [ $e -eq 0 ]; then
-            touch ${vault_ts}
-            ${EDITOR:-vim} -n ${vault_tmp}
-            if [ ${vault_tmp?} -nt ${vault_ts} ]; then
-                cpf "Encrypting secrets..."
-                #::vault:draw ${vault_tmp?}
-                mv --force ${vault} ${vault_bu}
-                :gpg:encrypt ${vault_tmp} ${vault}
-                e=$?
-                theme HAS_AUTOED $e
-            fi
+    cpf "Decrypting secrets..."
+    if :gpg:decrypt "${vault}" "${vault_tmp}"; then
+        let e=CODE_SUCCESS
+        theme HAS_PASSED
+
+        touch "${vault_ts}"
+        ${EDITOR:-vim} -n "${vault_tmp}"
+        if [ "${vault_tmp?}" -nt "${vault_ts}" ]; then
+            cpf "Encrypting secrets..."
+            #::vault:draw ${vault_tmp?}
+            mv --force "${vault}" "${vault_bu}"
+            :gpg:encrypt "${vault_tmp}" "${vault}"
+            let e=$?
+            theme HAS_AUTOED $e
         fi
-
-        cpf "Shredding remains..."
-        ::vault:clean ${vault}
-        theme HAS_AUTOED $?
+    else
+        theme HAS_FAILED
     fi
+
+    umask "${org_umask}"
+
+    cpf "Shredding remains..."
+    ::vault:clean "${vault}"
+    theme HAS_AUTOED $?
 
     return $e
 }
 
 #. }=-
-#. vault:read -={
+#.   vault:read -={
 function :vault:read() {
-    local -i e=${CODE_FAILURE?}
+    core:raise_bad_fn_call_unless $# in 1 2
+
+    local -i e; let e=CODE_FAILURE
 
     local vault="${g_VAULT?}"
     local sid
-    if [ $# -eq 1 ]; then
-        sid="$1"
-    elif [ $# -eq 2 ]; then
-        vault="$1"
-        sid="$2"
-    else
-        core:raise EXCEPTION_BAD_FN_CALL
-    fi
+    case $# in
+        1)
+            sid="$1"
+        ;;
+        2)
+            vault="$1"
+            sid="$2"
+        ;;
+    esac
 
     local secret
     secret="$(:gpg:decrypt "${vault}" - | sed -ne "s/^${sid}\> \+\(.*\)\$/\1/p")"
     if [ ${#secret} -gt 0 ]; then
         printf '%s' "${secret}"
-        e=${CODE_SUCCESS?}
+        let e=CODE_SUCCESS
     else
         core:log WARNING "No such sid: ${secret}"
     fi
@@ -345,34 +326,31 @@ function :vault:read() {
 
 function vault:read:usage() { echo "<secret-id> [<vault>]"; }
 function vault:read() {
-    local -i e=${CODE_DEFAULT?}
+    core:raise_bad_fn_call_unless $# in 1 2
 
-    if [ $# -eq 1 -o $# -eq 2 ]; then
-        local sid="${1}"
-        local vault="${2:-${g_VAULT?}}"
+    local -i e; let e=CODE_DEFAULT
 
-        [ ! -t 1 ] || cpf "Checking for secret id %{r:%s}..." "${sid}"
+    local sid="${1}"
+    local vault="${2:-${g_VAULT?}}"
 
-        local secret
-        secret="$(:vault:read "${vault}" "${sid}")"
-        e=$?
+    [ ! -t 1 ] || cpf "Checking for secret id %{r:%s}..." "${sid}"
 
-        if [ $e -eq 0 ]; then
-            if [ -t 1 ]; then
-                if :core:requires xclip; then
-                    printf "%s" "${secret}" | xclip -i
-                    theme HAS_PASSED "COPIED_TO_CLIPBOARD"
-                else
-                    theme HAS_FAILED "XCLIP_NOT_FOUND"
-                    e=${CODE_FAILURE?}
-                fi
+    local secret
+    if secret="$(:vault:read "${vault}" "${sid}")"; then
+        if [ -t 1 ]; then
+            if :core:requires xclip; then
+                printf "%s" "${secret}" | xclip -i
+                theme HAS_PASSED "COPIED_TO_CLIPBOARD"
             else
-                printf "%s" "${secret}"
+                theme HAS_FAILED "XCLIP_NOT_FOUND"
+                let e=CODE_FAILURE
             fi
         else
-            theme HAS_FAILED "NO_SUCH_SECRET_ID"
+            theme HAS_PASSED
+            printf "%s" "${secret}"
         fi
-
+    else
+        theme HAS_FAILED "NO_SUCH_SECRET_ID"
     fi
 
     return $e

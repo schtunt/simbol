@@ -234,48 +234,50 @@ function tutorial:hello:usage() {
 
 #. Mandatory - the function itself
 function tutorial:hello() {
-    local -i e=${CODE_DEFAULT?}
-    : e=${CODE_DEFAULT?} #. signals to simbol that user is in need of help
-    : e=${CODE_FAILURE?} #. signals to simbol that there is an error condition
-    : e=${CODE_SUCCESS?} #. signals to simbol that all went well
+    local -i e; let e=CODE_DEFAULT
+    [ $# -gt 0 ] || return $e
 
-    if [ $# -gt 0 ]; then
-        #. For shflags, we have a little work to do; here's a string:
-        local name=${FLAGS_name?}; unset FLAGS_name;
+    : let e=CODE_DEFAULT #. signals to simbol that user is in need of help
+    : let e=CODE_FAILURE #. signals to simbol that there is an error condition
+    : let e=CODE_SUCCESS #. signals to simbol that all went well
 
-        #. Here is an int:
-        local -i repeat=${FLAGS_repeat?}; unset FLAGS_repeat;
+    #. For shflags, we have a little work to do; here's a string:
+    local name=${FLAGS_name?}; unset FLAGS_name;
 
-        #. And here is a float:
-        local snooze=${FLAGS_snooze?}; unset FLAGS_snooze;
+    #. Here is an int:
+    core:decl_shflags.eval int repeat
 
-        #. Here is a boolean, the ugliest of them all:
-        local -i greet=${FLAGS_greet?}; ((greet=~greet+2)); unset FLAGS_greet
+    #. And here is a float:
+    local snooze=${FLAGS_snooze?}; unset FLAGS_snooze;
 
-        local greeting="Hello"
-        if [ ${greet} -eq 0 ]; then
-            greeting="Goodbye"
-        fi
+    #. Here is a boolean, the ugliest of them all:
+    core:decl_shflags.eval bool greet
 
-        local -a creatures
-        local whostr
-        shopt -s nocasematch
-        if [ $# -eq 1 ] && [[ $1 == "WORLD" ]]; then
-            whostr="WORLD!"
-        else
-            #shellcheck disable=SC2034
-            creatures=( "$@" )
-            whostr="$(:util:join , creatures), and of course ${name}!"
-        fi
-
-        local -i i
-        for ((i=0; i<repeat; i++)); do
-            cpf "${greeting} ${whostr}\n"
-            sleep ${snooze}
-        done
-
-        e=${CODE_SUCCESS?}
+    local greeting="Hello"
+    #shellcheck disable=SC2154,SC2086
+    if [ ${greet} -eq ${FALSE} ]; then
+        greeting="Goodbye"
     fi
+
+    local -a creatures
+    local whostr
+    shopt -s nocasematch
+    if [ $# -eq 1 ] && [[ $1 == "WORLD" ]]; then
+        whostr="WORLD!"
+    else
+        #shellcheck disable=SC2034
+        creatures=( "$@" )
+        whostr="$(:util:join , creatures), and of course ${name}!"
+    fi
+
+    local -i i
+    #shellcheck disable=SC2154,SC2086
+    for ((i=0; i<repeat; i++)); do
+        cpf "${greeting} ${whostr}\n"
+        sleep "${snooze}"
+    done
+
+    let e=CODE_SUCCESS
 
     return $e
 }

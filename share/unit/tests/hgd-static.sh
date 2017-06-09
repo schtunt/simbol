@@ -14,26 +14,27 @@ function hgdSetUp() {
 }
 
 function hgdTearDown() {
-    rm -f ${g_HGD_CACHE_MOCK?}
     mock:clear
 }
 
 function hgdOneTimeTearDown() {
-    rm -f ${g_HGD_CACHE_MOCK?}
+    mock:clear
+    rm -f "${g_HGD_CACHE_MOCK?}"
 }
 
 #. testCoreHgdSavePublic -={
 function testCoreHgdSavePublic() {
-    local session=${FUNCNAME?}
+    local session="${FUNCNAME?}"
 
-    mock:wrapper hgd save ${session} '|(#10.1.2.3/29)' >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd save "${session}" '|(#10.1.2.3/29)'
+    mock:wrapper hgd save "${session}" '|(#10.1.2.3/29)' >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1.1" $?
-    grep -qE "\<${session}\>" ${g_HGD_CACHE_MOCK?}
+    grep -qE "\<${session}\>" "${g_HGD_CACHE_MOCK?}"
     assertTrue "${FUNCNAME?}/1.2" $?
 
-    mock:wrapper hgd list ${session} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd list "${session}" >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/2.0/list" $?
-    local -i c; let c=$(wc -l < ${stdoutF?})
+    local -i c; let c=$(wc -l < "${stdoutF?}")
     assertEquals "${FUNCNAME?}/2.1/list" 1 $c
 }
 #. }=-
@@ -41,12 +42,12 @@ function testCoreHgdSavePublic() {
 function testCoreHgdListPublic() {
     local session=${FUNCNAME?}
 
-    mock:wrapper hgd save ${session} '|(#10.1.2.3/29)' >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd save "${session}" '|(#10.1.2.3/29)' >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1.1/save" $?
 
-    mock:wrapper hgd list ${session} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd list "${session}" >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/2.1" $?
-    local -i c; let c=$(wc -l < ${stdoutF?})
+    local -i c; let c=$(wc -l < "${stdoutF?}")
     assertEquals "${FUNCNAME?}/2.2" 1 $c
 }
 #. }=-
@@ -54,29 +55,29 @@ function testCoreHgdListPublic() {
 function testCoreHgdRenamePublic() {
     local session=${FUNCNAME?}
 
-    mock:wrapper hgd save ${session} '|(#10.1.2.3/29)' >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd save "${session}" '|(#10.1.2.3/29)' >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1.1/save" $?
 
-    mock:wrapper hgd rename ${session} ${session}Renamed >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd rename "${session}" "${session}Renamed" >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/2.1" $?
-    grep -qE "\<${session}Renamed\>" ${g_HGD_CACHE_MOCK?}
+    grep -qE "\<${session}Renamed\>" "${g_HGD_CACHE_MOCK?}"
     assertTrue "${FUNCNAME?}/2.2" $?
-    grep -qE "\<${session}\>" ${g_HGD_CACHE_MOCK?}
+    grep -qE "\<${session}\>" "${g_HGD_CACHE_MOCK?}"
     assertFalse "${FUNCNAME?}/2.3" $?
 
-    mock:wrapper hgd rename ${session}Renamed ${session} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd rename "${session}Renamed" "${session}" >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/3.1" $?
 
     local -i c
 
-    mock:wrapper hgd list ${session}Renamed >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd list "${session}Renamed" >"${stdoutF?}" 2>"${stderrF?}"
     assertFalse "${FUNCNAME?}/4.1/list" $?
-    let c=$(wc -l < ${stdoutF?})
+    let c=$(wc -l < "${stdoutF?}")
     assertEquals "${FUNCNAME?}/4.2/list" 1 $c
 
-    mock:wrapper hgd list ${session} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd list "${session}" >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/5.1/list" $?
-    let c=$(wc -l < ${stdoutF?})
+    let c=$(wc -l < "${stdoutF?}")
     assertEquals "${FUNCNAME?}/5.2/list" 1 $c
 }
 #. }=-
@@ -84,15 +85,15 @@ function testCoreHgdRenamePublic() {
 function testCoreHgdDeletePublic() {
     local session=${FUNCNAME?}
 
-    mock:wrapper hgd save ${session} '|(#10.1.2.3/29)' >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd save "${session}" '|(#10.1.2.3/29)' >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1.1/save" $?
 
-    mock:wrapper hgd delete ${session} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd delete "${session}" >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/2.2" $?
-    grep -qE "\<${session}\>" ${g_HGD_CACHE_MOCK?}
+    grep -qE "\<${session}\>" "${g_HGD_CACHE_MOCK?}"
     assertFalse "${FUNCNAME?}/2.2" $?
 
-    mock:wrapper hgd delete ${session} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd delete "${session}" >"${stdoutF?}" 2>"${stderrF?}"
     assertFalse "${FUNCNAME?}/3.1" $?
 }
 #. }=-
@@ -104,16 +105,16 @@ function testCoreHgdResolvePrivate() {
 declare -A USER_HGD_RESOLVERS=( [lower]="echo '%s' | tr 'A-Z' 'a-z'" )
 !
 
-    mock:wrapper hgd save ${session} '|(%lower=ABC,%lower=abc)' >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd save "${session}" '|(%lower=ABC,%lower=abc)' >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1.1" $?
 
-    mock:wrapper hgd resolve ${session} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd resolve "${session}" >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1.2" $?
 
-    grep -qE "\<abc\>" ${stdoutF?}
+    grep -qE "\<abc\>" "${stdoutF?}"
     assertTrue "${FUNCNAME?}/1.3" $?
 
-    grep -qE "\<${session}\>" ${g_HGD_CACHE_MOCK?}
+    grep -qE "\<${session}\>" "${g_HGD_CACHE_MOCK?}"
     assertTrue "${FUNCNAME?}/1.4" $?
 }
 #. }=-
@@ -129,33 +130,33 @@ function testCoreHgdResolvePrivateKnownHosts() {
 SSH_KNOWN_HOSTS=/tmp/ssh_known_hosts
 !
 
-    mock:wrapper hgd save ${session?} '/^1\.1\..*/' >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd save ${session?} '/^1\.1\..*/' >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1.1" $?
 
     local -i c
 
-    mock:wrapper hgd resolve ${session?} >${stdoutF?} 2>${stderrF?}
-    let c=$(wc -l < ${stdoutF?})
+    mock:wrapper hgd resolve ${session?} >"${stdoutF?}" 2>"${stderrF?}"
+    let c=$(wc -l < "${stdoutF?}")
     assertEquals "${FUNCNAME?}/1.2" 1 $c
 
-    grep -qFw "1.1.1.1" ${g_HGD_CACHE_MOCK?}
+    grep -qFw "1.1.1.1" "${g_HGD_CACHE_MOCK?}"
     assertTrue "${FUNCNAME?}/1.3" $?
 
-    grep -qFw "1.2.3.4" ${g_HGD_CACHE_MOCK?}
+    grep -qFw "1.2.3.4" "${g_HGD_CACHE_MOCK?}"
     assertFalse "${FUNCNAME?}/1.4" $?
 
-    mock:wrapper hgd save ${session?} '/^1\..*/' >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd save ${session?} '/^1\..*/' >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/2.1" $?
 
-    mock:wrapper hgd resolve '/^1\..*/' >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd resolve '/^1\..*/' >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/2.2" $?
-    let c=$(wc -l < ${stdoutF?})
+    let c=$(wc -l < "${stdoutF?}")
     assertEquals "${FUNCNAME?}/2.2.2" 2 $c
 
-    grep -qFw "1.1.1.1" ${g_HGD_CACHE_MOCK?}
+    grep -qFw "1.1.1.1" "${g_HGD_CACHE_MOCK?}"
     assertTrue "${FUNCNAME?}/2.3" $?
 
-    grep -qFw "1.2.3.4" ${g_HGD_CACHE_MOCK?}
+    grep -qFw "1.2.3.4" "${g_HGD_CACHE_MOCK?}"
     assertTrue "${FUNCNAME?}/2.4" $?
 }
 #. }=-
@@ -174,45 +175,45 @@ function testCoreHgdDeleteInternal() { return 0; }
 #. testCoreHgdMultiInternal -={
 function testCoreHgdMultiInternal() {
     local session=${FUNCNAME?}
-    mock:wrapper hgd :save ${session} '|(#10.1.2.3/29)' >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd :save "${session}" '|(#10.1.2.3/29)' >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
-    grep -qE "\<${session}\>" ${g_HGD_CACHE_MOCK?}
+    grep -qE "\<${session}\>" "${g_HGD_CACHE_MOCK?}"
     assertTrue "${FUNCNAME?}/1.1" $?
 
     local -i c
 
-    mock:wrapper hgd :list ${session} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd :list "${session}" >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/2" $?
-    let c=$(wc -l < ${stdoutF?})
+    let c=$(wc -l < "${stdoutF?}")
     assertEquals "${FUNCNAME?}/2.1" 1 $c
 
-    mock:wrapper hgd :rename ${session} ${session}Renamed >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd :rename "${session}" "${session}Renamed" >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/3" $?
-    grep -qE "\<${session}Renamed\>" ${g_HGD_CACHE_MOCK?}
+    grep -qE "\<${session}Renamed\>" "${g_HGD_CACHE_MOCK?}"
     assertTrue "${FUNCNAME?}/3.1" $?
-    grep -qE "\<${session}\>" ${g_HGD_CACHE_MOCK?}
+    grep -qE "\<${session}\>" "${g_HGD_CACHE_MOCK?}"
     assertFalse "${FUNCNAME?}/3,2" $?
-    mock:wrapper hgd :rename ${session}Renamed ${session} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd :rename "${session}Renamed" "${session}" >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/3.3" $?
 
-    mock:wrapper hgd :list ${session}Renamed >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd :list "${session}Renamed" >"${stdoutF?}" 2>"${stderrF?}"
     assertFalse "${FUNCNAME?}/4" $?
-    mock:wrapper hgd :list ${session} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd :list "${session}" >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/4.1" $?
-    let c=$(wc -l < ${stdoutF?})
+    let c=$(wc -l < "${stdoutF?}")
     assertEquals "${FUNCNAME?}/4.2" 1 $c
 
-    mock:wrapper hgd :delete ${session} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd :delete "${session}" >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/5" $?
-    grep -qE "\<${session}\>" ${g_HGD_CACHE_MOCK?}
+    grep -qE "\<${session}\>" "${g_HGD_CACHE_MOCK?}"
     assertFalse "${FUNCNAME?}/5.1" $?
-    mock:wrapper hgd :delete ${session} >${stdoutF?} 2>${stderrF?}
+    mock:wrapper hgd :delete "${session}" >"${stdoutF?}" 2>"${stderrF?}"
     assertFalse "${FUNCNAME?}/5.2" $?
 }
 #. }=-
 #. testPySetsAND -={
 function testPySetsAND() {
-    cat <<! | sets '&(nucky,rothstein,waxy)' >${stdoutF?} 2>${stderrF?}
+    cat <<! | sets '&(nucky,rothstein,waxy)' >"${stdoutF?}" 2>"${stderrF?}"
 nucky
 aaa
 bbb
@@ -232,12 +233,12 @@ eee
 fff
 !
     assertTrue "${FUNCNAME?}/1" $?
-    assertEquals "${FUNCNAME?}/2" "ccc ddd" "$(cat ${stdoutF})"
+    assertEquals "${FUNCNAME?}/2" "ccc ddd" "$(cat "${stdoutF?}")"
 }
 #. }=-
 #. testPySetsOR -={
 function testPySetsOR() {
-    cat <<! | sets '|(nucky,rothstein,waxy)' >${stdoutF?} 2>${stderrF?}
+    cat <<! | sets '|(nucky,rothstein,waxy)' >"${stdoutF?}" 2>"${stderrF?}"
 nucky
 aaa
 bbb
@@ -258,12 +259,12 @@ fff
 !
     assertTrue "${FUNCNAME?}/1" $?
     assertEquals "${FUNCNAME?}/2" \
-        "aaa bbb eee fff ccc ddd" "$(cat ${stdoutF})"
+        "aaa bbb eee fff ccc ddd" "$(cat "${stdoutF}")"
 }
 #. }=-
 #. testPySetsDIFF -={
 function testPySetsDIFF() {
-    cat <<! | sets '!(nucky,rothstein)' >${stdoutF?} 2>${stderrF?}
+    cat <<! | sets '!(nucky,rothstein)' >"${stdoutF?}" 2>"${stderrF?}"
 nucky
 aaa
 bbb
@@ -277,6 +278,6 @@ eee
 fff
 !
     assertTrue "${FUNCNAME?}/1" $?
-    assertEquals "${FUNCNAME?}/2" "aaa bbb" "$(cat ${stdoutF})"
+    assertEquals "${FUNCNAME?}/2" "aaa bbb" "$(cat "${stdoutF}")"
 }
 #. }=-

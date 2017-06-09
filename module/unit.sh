@@ -313,7 +313,7 @@ function ::unit:blessed() {
     )
 
     local -i e;
-    let e=${CODE_FAILURE?}
+    let e=CODE_FAILURE
     local blessed="${SIMBOL_USER_VAR_CACHE?}/unittest-${module}.blessed"
     [ -e "${blessed}" ] || return $e
 
@@ -330,7 +330,7 @@ function ::unit:blessed() {
     [ "${script_out}" -nt "${modulepath}" ] || rm -f "${blessed}"
     [ "${script_out}" -nt "${csv_in}" ] || rm -f "${blessed}"
 
-    [ ! -e "${blessed}" ] || let e=${CODE_SUCCESS?}
+    [ ! -e "${blessed}" ] || let e=CODE_SUCCESS
 
     return $e
 }
@@ -344,7 +344,7 @@ function ::unit:generate_header() {
     local modulepath
     modulepath="${profiles[${profile}]}/${module}.sh"
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     local script_out=${SIMBOL_USER_VAR_CACHE?}/unittest-${module}.sh
     local modulecaps; modulecaps="$(::unit:modulecaps "${module}")"
@@ -391,7 +391,7 @@ function ::unit:generate_body() {
     local script_in=${SIMBOL_UNIT_TESTS?}/${module}-static.sh
     local script_out=${SIMBOL_USER_VAR_CACHE?}/unittest-${module}.sh
 
-    local -i e=${CODE_FAILURE?}
+    local -i e; let e=CODE_FAILURE
 
     if [ -e "${script_in}" ]; then
         cat <<- !SCRIPT >> "${script_out}"
@@ -511,7 +511,7 @@ function ::unit:generate_tests() {
     local profile="$1"
     local module="$2"
 
-    local -i e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     cpfi "Verifying %{@profile:%s}.%{@module:%s} eligibility..."\
         "${profile}" "${module}"
@@ -549,7 +549,7 @@ function ::unit:generate_tests() {
             fi
         else
             theme HAS_FAILED "MissingTests"
-            let e=${CODE_FAILURE?}
+            let e=CODE_FAILURE
         fi
     ]=-
 
@@ -578,7 +578,7 @@ function ::unit:execute_tests() {
 
 #. unit:core -={
 function unit:core() {
-    local -i e=${CODE_SUCCESS?}
+    local -i e; let e=CODE_SUCCESS
 
     g_MODE="core"
     local profile='core'
@@ -611,7 +611,7 @@ function unit:core() {
 #. unit:test() -={
 function unit:test:usage() { echo "core|user [<module> [<module> [...]]]"; }
 function unit:test() {
-    local -i e; let e=${CODE_DEFAULT?}
+    local -i e; let e=CODE_DEFAULT
     [ $# -ge 2 ] || return $e
 
     local profile="$1"
@@ -628,7 +628,7 @@ function unit:test() {
                 ::unit:bless "${profile}" "${module}"
             else
                 ::unit:unbless "${profile}" "${module}"
-                let e=${CODE_FAILURE?}
+                let e=CODE_FAILURE
             fi
         done
 
@@ -636,7 +636,7 @@ function unit:test() {
         theme HAS_AUTOED $e
     else
         theme ERR_USAGE "${SHUNIT2?} is missing"
-        let e=${CODE_FAILURE?}
+        let e=CODE_FAILURE
     fi
 
     return $e

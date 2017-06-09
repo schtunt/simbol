@@ -27,6 +27,7 @@ function testCoreNetPortpersistInternal() {
     local -A scanned
     local -i tcpPort
     for tcpPort in ${tcpPorts[*]}; do
+        #shellcheck disable=SC2086
         :net:portpersist localhost ${tcpPort} 1
         assertTrue "${FUNCNAME?}/${tcpPort}" $?
         scanned[${tcpPort}]=1
@@ -73,11 +74,11 @@ function testCoreNetMyipInternal() {
 #. testCoreNetI2sInternal -={
 function testCoreNetI2sInternal() {
     local -a ifaces=( $(ifconfig|awk -F: '$0~/^[a-z]/{print$1}') )
-    local iface
     local ip
+    local iface
     for iface in "${ifaces[@]}"; do
         if [[ ${iface} =~ lo.*[0-9]+ ]]; then
-            ip="$(mock:wrapper net :i2s ${iface})"
+            ip="$(mock:wrapper net :i2s "${iface}")"
             assertTrue "${FUNCNAME?}/1" $?
             assertEquals "${FUNCNAME?}/2" "127.0.0.1" "${ip}"
             break

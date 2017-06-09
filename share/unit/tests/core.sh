@@ -1,45 +1,7 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
 #. Core -={
-declare -g counter=2
-#. coreCacheTester -={
-function coreCacheTester() {
-    local -i e
-
-    #shellcheck disable=SC2034
-    local l_CACHE_SIG='cache-test'
-
-    #shellcheck disable=SC2034
-    local -i l_CACHE_TTL=$1
-
-    core:global g.counter ${counter}
-    counter=$(core:global g.counter)
-    case $2 in
-        up)
-          g_CACHE_OUT || {
-            core:global g.counter $((counter+=100))
-            e=$?
-          } > ${g_CACHE_FILE?}; g_CACHE_IN; e=$?
-        ;;
-        down)
-          g_CACHE_OUT || {
-            core:global g.counter $((counter-=10))
-            e=$?
-          } > ${g_CACHE_FILE?}; g_CACHE_IN; e=$?
-        ;;
-        jump)
-          g_CACHE_OUT || {
-            core:global g.counter $((counter+=1000))
-            e=$?
-          } > ${g_CACHE_FILE?}; g_CACHE_IN; e=$?
-        ;;
-    esac
-
-    counter=$(core:global g.counter)
-
-    return $e
-}
-#. }=-
+declare -ig g_COUNTER; let g_COUNTER=2
 #. testCoreUnsupportedAssociativeArrayAssignments -={
 function testCoreUnsupportedAssociativeArrayAssignments() {
     local vetted
@@ -56,7 +18,7 @@ function testCoreGlobalArithmeticFailure() {
     core:global g.num += 'JOKER'
     assertFalse "${FUNCNAME?}/1.2" $?
 
-    v=$(core:global g.num)
+    let v=$(core:global g.num)
     assertEquals "${FUNCNAME?}/1.3" 1024 $v
 }
 #. }=-
@@ -65,14 +27,13 @@ function testCoreGlobalArithmeticSuccess() {
     core:global g.str 'BATMAN'
 
     core:global g.num 1024
-    local -i v=0
-    v=$(core:global g.num)
+    local -i v; let v=$(core:global g.num)
     assertTrue "${FUNCNAME?}/1.1" $?
-    assertEquals "${FUNCNAME?}/1" 1024 $v
+    assertEquals "${FUNCNAME?}/1.2" 1024 $v
 
     core:global g.num += 1024
-    v=$(core:global g.num)
-    assertEquals "${FUNCNAME?}/1" 2048 $v
+    let v=$(core:global g.num)
+    assertEquals "${FUNCNAME?}/2" 2048 $v
 }
 #. }=-
 #. testCoreGlobalAtomicity -={
@@ -92,7 +53,7 @@ function testCoreGlobalAtomicity() {
     )
 
     core:global g.variable += 8
-    v=$(core:global g.variable)
+    let v=$(core:global g.variable)
 
     assertEquals "${FUNCNAME?}/1" 2600 $v
 }
@@ -110,7 +71,7 @@ function testCoreMockWrite() {
         declare -A BATMAN=( [k1]="0xDEADBEEF" )
 !
     local -i size
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default")
+    let size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default")
     #shellcheck disable=SC2016
     assertTrue "${FUNCNAME?}/2.1" '[ ${size} -gt 0 ]'
 
@@ -123,7 +84,7 @@ function testCoreMockWrite() {
     grep -q '0xDEADBEEF' "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/2.2.3" $?
 
-    size=$(wc -l < "${SIMBOL_USER_MOCKENV?}.default")
+    let size=$(wc -l <"${SIMBOL_USER_MOCKENV?}.default")
     assertEquals "${FUNCNAME?}/2.2.4" 1 ${size}
 
     mock:write <<!
@@ -142,7 +103,7 @@ function testCoreMockWrite() {
     grep -q '0xDEADBEEF' "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/3.2.3" $?
 
-    size=$(wc -l < "${SIMBOL_USER_MOCKENV?}.default")
+    let size=$(wc -l < "${SIMBOL_USER_MOCKENV?}.default")
     assertEquals "${FUNCNAME?}/3.2.4" 2 ${size}
 
     mock:clear
@@ -150,63 +111,64 @@ function testCoreMockWrite() {
 #. }=-
 #. testCoreMockDelete -={
 function testCoreMockDelete() {
-    local -i size
-
     # Test deletion for default context
-    echo : > ${SIMBOL_USER_MOCKENV?}.default
+    echo : > "${SIMBOL_USER_MOCKENV?}.default"
 
     mock:clear default
 
-    test -e ${SIMBOL_USER_MOCKENV?}.default
+    local -i size
+
+    test -e "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/1.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default" 2>/dev/null)
+    let size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default" 2>/dev/null)
     assertEquals "${FUNCNAME?}/1.2" 0 ${size}
 
     # Test deletion for custom context
-    echo : > ${SIMBOL_USER_MOCKENV?}.a
-    echo : > ${SIMBOL_USER_MOCKENV?}.b
-    echo : > ${SIMBOL_USER_MOCKENV?}.custom
+    echo : >"${SIMBOL_USER_MOCKENV?}.a"
+    echo : >"${SIMBOL_USER_MOCKENV?}.b"
+    echo : >"${SIMBOL_USER_MOCKENV?}.custom"
 
     mock:clear custom
 
-    test -e ${SIMBOL_USER_MOCKENV?}.a
+    test -e "${SIMBOL_USER_MOCKENV?}.a"
     assertTrue "${FUNCNAME?}/2.1.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.a" 2>/dev/null)
+    let size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.a" 2>/dev/null)
     assertEquals "${FUNCNAME?}/2.1.2" 2 ${size}
 
-    test -e ${SIMBOL_USER_MOCKENV?}.b
+    test -e "${SIMBOL_USER_MOCKENV?}.b"
     assertTrue "${FUNCNAME?}/2.2.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.b" 2>/dev/null)
+    let size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.b" 2>/dev/null)
     assertEquals "${FUNCNAME?}/2.2.2" 2 ${size}
 
-    test -e ${SIMBOL_USER_MOCKENV?}.custom
+    test -e "${SIMBOL_USER_MOCKENV?}.custom"
     assertTrue "${FUNCNAME?}/2.3.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.custom" 2>/dev/null)
+    let size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.custom" 2>/dev/null)
     assertEquals "${FUNCNAME?}/2.3.2" 0 ${size}
 
     # Test deletion of all mock contexts
-    echo : > ${SIMBOL_USER_MOCKENV?}.default
+    echo : >"${SIMBOL_USER_MOCKENV?}.default"
     mock:clear
 
-    test -e ${SIMBOL_USER_MOCKENV?}.default
+    test -e "${SIMBOL_USER_MOCKENV?}.default"
     assertTrue "${FUNCNAME?}/3.1.1" $?
-    size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default" 2>/dev/null)
+    let size=$(stat --printf '%s\n' "${SIMBOL_USER_MOCKENV?}.default" 2>/dev/null)
     assertEquals "${FUNCNAME?}/3.1.2" 0 ${size}
 
-    test -e ${SIMBOL_USER_MOCKENV?}.a
+    test -e "${SIMBOL_USER_MOCKENV?}.a"
     assertFalse "${FUNCNAME?}/3.2" $?
-    test -e ${SIMBOL_USER_MOCKENV?}.b
+    test -e "${SIMBOL_USER_MOCKENV?}.b"
     assertFalse "${FUNCNAME?}/3.3" $?
-    test -e ${SIMBOL_USER_MOCKENV?}.custom
+    test -e "${SIMBOL_USER_MOCKENV?}.custom"
     assertFalse "${FUNCNAME?}/3.4" $?
 }
 #. }=-
 #. exitWith -={
 function exitWith() {
-  g_CACHE_OUT "$@" || {
+  g_CACHE_OUT "$*" || {
+    local -i e; let e=$1
     date +%s.%N
-    core:return $1
-  } > ${g_CACHE_FILE?}; g_CACHE_IN; return $?
+    core:return $e
+  } > "${g_CACHE_FILE?}"; g_CACHE_IN; return $?
 }
 #. }=-
 #. testCoreCacheExitDoesNotCacheNegatives -={
@@ -240,35 +202,82 @@ function testCoreCacheExitDoesCachePositives() {
     assertEquals "${FUNCNAME?}/2.3" "${o1}" "${o2}"
 }
 #. }=-
+#. coreCacheTester -={
+function coreCacheTester() {
+    core:raise_bad_fn_call_unless $# in 3
+    local -i e
+
+    #shellcheck disable=SC2034
+    local l_CACHE_SIG='cache-test'
+
+    #shellcheck disable=SC2034
+    local -i l_CACHE_TTL=$1
+    local op=$2
+    local -i delta; let delta=$3
+
+    core:global g.counter ${g_COUNTER}
+    let g_COUNTER=$(core:global g.counter)
+
+    case ${op} in
+        up)
+          g_CACHE_OUT || {
+            core:global g.counter $((g_COUNTER+=delta))
+            core:return $?
+          } >"${g_CACHE_FILE?}"; g_CACHE_IN; let e=$?
+        ;;
+        down)
+          g_CACHE_OUT || {
+            core:global g.counter $((g_COUNTER-=delta))
+            core:return $?
+          } >"${g_CACHE_FILE?}"; g_CACHE_IN; let e=$?
+        ;;
+    esac
+
+    let g_COUNTER=$(core:global g.counter)
+
+    return $e
+}
+#. }=-
 #. testCoreCache -={
 function testCoreCache() {
+    # The while loop in this function waits for the current second to expire;
+    # with this logic.
+
+    let g_COUNTER=g_COUNTER
+    assertTrue "${FUNCNAME?}/1.1" $?
+    assertEquals "${FUNCNAME?}/1.2" 2 ${g_COUNTER}
+
     local -i hit
+    local -i ttl; let ttl=1
 
-    assertEquals "${FUNCNAME?}/1.1" 2 $counter
-
+    sleep $((ttl-1)); while (( 1$(date +%N) > 1100000000 )); do : noop; done
+    coreCacheTester ${ttl} up 100
+    assertEquals "${FUNCNAME?}/2" 102 ${g_COUNTER}
     for hit in {1..3}; do
-        coreCacheTester 3 up
-        assertEquals "${FUNCNAME?}/2.${hit}.1" 102 $counter
-        coreCacheTester 3 down
-        assertEquals "${FUNCNAME?}/2.${hit}.2" 102 $counter
+        coreCacheTester ${ttl} up ${RANDOM}
+        assertEquals "${FUNCNAME?}/2.${hit}.1" 102 ${g_COUNTER}
+        coreCacheTester ${ttl} down ${RANDOM}
+        assertEquals "${FUNCNAME?}/2.${hit}.2" 102 ${g_COUNTER}
     done
-    sleep 2
 
-    coreCacheTester 1 jump
-    assertEquals "${FUNCNAME?}/3" 1102 $counter
+    sleep $((ttl-1)); while (( 1$(date +%N) > 1100000000 )); do : noop; done
+    coreCacheTester ${ttl} up 1000
+    assertEquals "${FUNCNAME?}/3" 1102 ${g_COUNTER}
     for hit in {1..3}; do
-        coreCacheTester 3 up
-        assertEquals "${FUNCNAME?}/3.${hit}.1" 1102 $counter
-        coreCacheTester 3 down
-        assertEquals "${FUNCNAME?}/3.${hit}.2" 1102 $counter
+        coreCacheTester ${ttl} up ${RANDOM}
+        assertEquals "${FUNCNAME?}/3.${hit}.1" 1102 ${g_COUNTER}
+        coreCacheTester ${ttl} down ${RANDOM}
+        assertEquals "${FUNCNAME?}/3.${hit}.2" 1102 ${g_COUNTER}
     done
-    sleep 4
 
+    sleep $((ttl-1)); while (( 1$(date +%N) > 1100000000 )); do : noop; done
+    coreCacheTester ${ttl} down 10
+    assertEquals "${FUNCNAME?}/4" 1092 ${g_COUNTER}
     for hit in {1..3}; do
-        coreCacheTester 3 down
-        assertEquals "${FUNCNAME?}/4.${hit}.1" 1092 $counter
-        coreCacheTester 3 up
-        assertEquals "${FUNCNAME?}/4.${hit}.2" 1092 $counter
+        coreCacheTester ${ttl} down ${RANDOM}
+        assertEquals "${FUNCNAME?}/4.${hit}.1" 1092 ${g_COUNTER}
+        coreCacheTester ${ttl} up ${RANDOM}
+        assertEquals "${FUNCNAME?}/4.${hit}.2" 1092 ${g_COUNTER}
     done
 }
 #. }=-
