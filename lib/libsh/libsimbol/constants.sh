@@ -8,26 +8,22 @@ set -u
 if [ ${SOURCED_CONSTANTS:-0} -eq 0 ]; then
 
 #. Constants -={
-export SIMBOL_VERSION=1.0-rc2
+export SIMBOL_VERSION="1.0-rc2"
 export SIMBOL_DATE_FORMAT="%x-%X"
 
 #. Magic Numbers -={
-declare -ri FD_STDIN=0
-export FD_STDIN
+declare -rig FD_STDIN=0; export FD_STDIN
+declare -rig FD_STDOUT=1; export FD_STDOUT
+declare -rig FD_STDERR=2; export FD_STDERR
 
-declare -ri FD_STDOUT=1
-export FD_STDOUT
+true; declare -rig TRUE=$?; export TRUE
+false; declare -rig FALSE=$?; export FALSE
+declare -A SIMBOL_BOOL=( [false]=${FALSE?} [true]=${TRUE?} ); export SIMBOL_BOOL
 
-declare -ri FD_STDERR=2
-export FD_STDERR
-
-true
-export TRUE=$?
-export CODE_SUCCESS=${TRUE?}
-
-false
-export FALSE=$?
-export CODE_FAILURE=${FALSE?}
+declare -rig CODE_SUCCESS=0x00; export CODE_SUCCESS
+declare -rig CODE_FAILURE=0x01; export CODE_FAULIRE
+declare -rig CODE_CANCELS=0x82; export CODE_CANCELS
+declare -rig CODE_WARNING=0xf0; export CODE_WARNING
 
 #. 64..127 Internal
 export CODE_NOTIMPL=64
@@ -64,14 +60,7 @@ export SIMBOL_DELOM
 # shellcheck disable=SC2034
 export CODE_DEFAULT=${CODE_USAGE_FN_LONG?}
 
-
 #. }=-
-
-declare -A SIMBOL_BOOL=(
-    [false]=${FALSE?}
-    [true]=${TRUE?}
-)
-export SIMBOL_BOOL
 
 #. Paths -={
 SIMBOL_BASENAME="$(basename -- "$0")"
