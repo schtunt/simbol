@@ -8,7 +8,7 @@ set -u
 if [ ${SOURCED_CONSTANTS:-0} -eq 0 ]; then
 
 #. Constants -={
-export SIMBOL_VERSION=1.0-rc1
+export SIMBOL_VERSION=1.0-rc2
 export SIMBOL_DATE_FORMAT="%x-%X"
 
 #. Magic Numbers -={
