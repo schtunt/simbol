@@ -27,10 +27,10 @@ function ::vault:getTempFile() {
 #. }=-
 #. ::vault:clean -={
 function ::vault:clean() {
-    core:raise_bad_fn_call_unless $# eq 1
+    core:raise_bad_fn_call_unless $# le 1
     local -i e; let e=CODE_FAILURE
 
-    local vault="${g_VAULT?}"
+    local vault="${1:-${g_VAULT?}}"
     local vault_tmp; vault_tmp="$(::vault:getTempFile "${vault}" killme)"
     local vault_ts; vault_ts="$(::vault:getTempFile "${vault}" timestamp)"
     local vault_bu; vault_bu="$(::vault:getTempFile "${vault}" "${NOW?}")"
@@ -143,10 +143,6 @@ function :vault:create() {
         let e=$?
     fi
 
-    cpf "Shredding remains..."
-    ::vault:clean "${vault}"
-    theme HAS_AUTOED $?
-
     return $e
 }
 
@@ -161,13 +157,17 @@ function vault:create() {
             let e=CODE_SUCCESS
             theme HAS_PASSED "${vault}"
         else
-            theme HAS_FAILED "${vault}"
+            theme HAS_FAILED "Failed to create vault \`${vault}'"
             let e=CODE_FAILURE
         fi
     else
         let e=CODE_FAILURE
-        theme HAS_FAILED "${vault} exists"
+        theme HAS_FAILED "Vault \`${vault}' already exists"
     fi
+
+    cpf "Shredding remains..."
+    ::vault:clean "${vault}"
+    theme HAS_AUTOED $?
 
     return $e
 }
@@ -327,7 +327,6 @@ function :vault:read() {
 function vault:read:usage() { echo "<secret-id> [<vault>]"; }
 function vault:read() {
     core:raise_bad_fn_call_unless $# in 1 2
-
     local -i e; let e=CODE_DEFAULT
 
     local sid="${1}"
