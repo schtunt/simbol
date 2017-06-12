@@ -1233,17 +1233,18 @@ function core:wrapper() {
     local fn="${fn_4d9d6c17eeae2754c9b49171261b93bd?}"
     #. }=-
     core:log DEBUG "core:wrapper(module=${module}, fn=${fn}, argv=( $* ))"
+
     #shellcheck disable=SC2086
-    [ ${g_DEBUG} -ne ${TRUE} ] || cpf:initialize 1
+    (( g_DEBUG != TRUE )) || cpf:initialize 1
 
     local regex=':+[a-z0-9]+(:[a-z0-9]+) |*'
 
     core:softimport "${module}"
     case $?/${module?}/${fn?} in
-        ${CODE_IMPORT_UNSET?}/-/-)                                                                                       e=${CODE_USAGE_MODS} ;;
-        ${CODE_IMPORT_GOOOD?}/*/-)    :core:execute          "${module}"                2>&1 | grep --color -E "${regex}"; e=${PIPESTATUS[0]}   ;;
-        ${CODE_IMPORT_GOOOD?}/*/::*) ::core:execute:private  "${module}" "${fn:2}" "${@}" 2>&1 | grep --color -E "${regex}"; e=${PIPESTATUS[0]}   ;;
-        ${CODE_IMPORT_GOOOD?}/*/:*)  ::core:execute:internal "${module}" "${fn:1}" "${@}" 2>&1 | grep --color -E "${regex}"; e=${PIPESTATUS[0]}   ;;
+        ${CODE_IMPORT_UNSET?}/-/-)                                                                                           let e=CODE_USAGE_MODS ;;
+        ${CODE_IMPORT_GOOOD?}/*/-)                                                                                           let e=CODE_USAGE_MOD  ;;
+        ${CODE_IMPORT_GOOOD?}/*/::*) ::core:execute:private  "${module}" "${fn:2}" "${@}" 2>&1 | grep --color -E "${regex}"; let e=PIPESTATUS[0]   ;;
+        ${CODE_IMPORT_GOOOD?}/*/:*)  ::core:execute:internal "${module}" "${fn:1}" "${@}" 2>&1 | grep --color -E "${regex}"; let e=PIPESTATUS[0]   ;;
         ${CODE_IMPORT_GOOOD?}/*/*)
             local -a completed=( $(:core:complete "${module}" "${fn}") )
 
