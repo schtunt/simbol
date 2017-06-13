@@ -350,13 +350,10 @@ function :gpg:encrypt() {
 #. gpg:decrypt -={
 function :gpg:decrypt() {
     core:raise_bad_fn_call_unless $# in 2
-    [ "${USER_VAULT_PASSPHRASE:-NilOrNotSet}" != "NilOrNotSet" ] ||
-        core:raise EXCEPTION_BAD_FN_CALL "USER_VAULT_PASSPHRASE was not set"
-
     local -i e; let e=CODE_FAILURE
 
-    local input="${1}"
-    local output="${2}"
+    local input="$1"
+    local output="$2"
     local -i gpg_version; let gpg_version=$(:gpg:version)
     eval "$(::gpg:keys.eval 'data' '*')"
     local -r gpgkp="$(::gpg:keypath)"
@@ -382,7 +379,7 @@ function :gpg:decrypt() {
         fi
 
         ${gpg_bin} -q\
-            --passphrase "${USER_VAULT_PASSPHRASE}" \
+            --passphrase "${USER_VAULT_PASSPHRASE:-N/A}" \
             --yes \
             --batch\
             --trust-model always\
