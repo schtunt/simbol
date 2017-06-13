@@ -1,4 +1,5 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
+#shellcheck disable=SC2166
 
 :<<[core:docstring]
 Core vault and secrets module
@@ -203,7 +204,7 @@ function :vault:list() {
             fi
         fi
     else
-        let e=9
+        let e=CODE_E09
     fi
 
     return $e
@@ -231,12 +232,14 @@ function vault:list() {
                 let e=CODE_FAILURE
             fi
         else
+            -=[
             for sid in "${secrets[@]}"; do
-                cpf " * %{r:%s}\n" "${sid}"
+                cpfi "%{r:%s}\n" "${sid}"
             done
+            ]=-
             let e=CODE_SUCCESS
         fi
-    elif [ $e -eq 9 ]; then
+    elif (( e == CODE_E09 )); then
         theme HAS_FAILED "MISSING_VAULT:${vault}"
         let e=CODE_FAILURE
     else
@@ -267,7 +270,6 @@ function vault:edit() {
 
     cpf "Decrypting secrets..."
     if :gpg:decrypt "${vault}" "${vault_tmp}"; then
-        let e=CODE_SUCCESS
         theme HAS_PASSED
 
         touch "${vault_ts}"
@@ -279,6 +281,8 @@ function vault:edit() {
             :gpg:encrypt "${vault_tmp}" "${vault}"
             let e=$?
             theme HAS_AUTOED $e
+        else
+            let e=CODE_SUCCESS
         fi
     else
         theme HAS_FAILED
@@ -296,21 +300,12 @@ function vault:edit() {
 #. }=-
 #.   vault:read -={
 function :vault:read() {
-    core:raise_bad_fn_call_unless $# in 1 2
+    core:raise_bad_fn_call_unless $# eq 2
 
     local -i e; let e=CODE_FAILURE
 
-    local vault="${g_VAULT?}"
-    local sid
-    case $# in
-        1)
-            sid="$1"
-        ;;
-        2)
-            vault="$1"
-            sid="$2"
-        ;;
-    esac
+    local vault=$1
+    local sid=$2
 
     local secret
     secret="$(:gpg:decrypt "${vault}" - | sed -ne "s/^${sid}\> \+\(.*\)\$/\1/p")"
@@ -328,25 +323,31 @@ function vault:read:usage() { echo "<secret-id> [<vault>]"; }
 function vault:read() {
     core:raise_bad_fn_call_unless $# in 1 2
     local -i e; let e=CODE_DEFAULT
+    [ $# -eq 1 -o $# -eq 2 ] || return $e
 
     local sid="${1}"
     local vault="${2:-${g_VAULT?}}"
 
-    [ ! -t 1 ] || cpf "Checking for secret id %{r:%s}..." "${sid}"
-
     local secret
     if secret="$(:vault:read "${vault}" "${sid}")"; then
         if [ -t 1 ]; then
+            cpf "Checking for secret id %{r:%s}..." "${sid}"
             if :core:requires xclip; then
-                printf "%s" "${secret}" | xclip -i
-                theme HAS_PASSED "COPIED_TO_CLIPBOARD"
+                printf "%s" "${secret}" | xclip -i 2>/dev/null
+                if (( $? == CODE_SUCCESS )); then
+                    let e=CODE_SUCCESS
+                    theme HAS_PASSED "COPIED_TO_CLIPBOARD"
+                else
+                    let e=CODE_FAILURE
+                    theme HAS_FAILED "NO_CLIPBOARD_ACCESS"
+                fi
             else
-                theme HAS_FAILED "XCLIP_NOT_FOUND"
                 let e=CODE_FAILURE
+                theme HAS_FAILED "XCLIP_NOT_FOUND"
             fi
         else
-            theme HAS_PASSED
             printf "%s" "${secret}"
+            let e=CODE_SUCCESS
         fi
     else
         theme HAS_FAILED "NO_SUCH_SECRET_ID"
