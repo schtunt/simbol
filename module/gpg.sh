@@ -126,6 +126,11 @@ function :gpg:create() {
     mkdir -p "${GNUPGHOME}"
     chmod 700 "${GNUPGHOME}"
 
+    if [ "${SIMBOL_PROFILE}" == "UNITTEST" ]; then 
+        passphrase_setting="Passphrase: ${USER_VAULT_PASSPHRASE}"
+    else
+        passphrase_setting="%ask-passphrase"
+    fi
     local -i keysize=3072
     local gpgkp; gpgkp="$(::gpg:keypath)"
     cat <<! >"${gpgkp}.conf"
@@ -137,7 +142,7 @@ Name-Real: ${USER_FULLNAME?}
 Name-Comment: ${USER_USERNAME?} profile key generated via simbol
 Name-Email: ${USER_EMAIL?}
 Expire-Date: 0
-Passphrase: ${USER_VAULT_PASSPHRASE}
+${passphrase_setting}
 %pubring ${gpgkp}.pub
 %secring ${gpgkp}.sec
 %commit
