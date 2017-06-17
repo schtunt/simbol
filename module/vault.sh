@@ -109,8 +109,8 @@ function vault:decrypt() {
 
     local -i e; let e=CODE_DEFAULT
 
-    cpf "Decrypting %{@path:%s}..." "${vault}"
     local vault="${1:-${g_VAULT?}}"
+    cpf "Decrypting %{@path:%s}..." "${vault}"
     if [ -w "${vault}" ]; then
         :vault:encryption "${vault}" off
         let e=$?
