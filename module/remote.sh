@@ -208,15 +208,17 @@ function :remote:sudo() {
     local lckfile; lckfile="$(mktemp)" || return $e
 
     local passwd
-    if passwd="$(:vault:read SUDO)"; then
+    if passwd="$(:vault:read "${g_VAULT}" SUDO)"; then
         #shellcheck disable=SC2155
         local prompt="$(printf "\r")"
+        #shellcheck disable=SC2016,SC2030
         eval ::remote:pipewrap.eval '${passwd}' '${lckfile}' | (
             :remote:connect "${hcs}" sudo -p "${prompt}" -S "${@:2}"
             let e=$?
             rm -f "${lckfile}"
             exit $e
         )
+        #shellcheck disable=SC2031
         let e=$?
     else
         :remote:connect "${hcs}" sudo -S "${@:2}"
@@ -474,7 +476,7 @@ function ::remote:thread:setup() {
     local -i pid; let pid=$1
 
     local -i e
-    ::remote:thread:cleanup ${LOCK_ID?} ${pid}
+    ::remote:thread:cleanup "${LOCK_ID?}" ${pid}
     let e=$?
 
     exec 3>"${SIMBOL_USER_VAR_TMP?}/thread.${pid}.sct" || let e=CODE_FAILURE
@@ -493,7 +495,7 @@ function ::remote:thread:teardown() {
     exec 3>&-
     exec 4>&-
 
-    ::remote:thread:cleanup ${LOCK_ID?} ${pid}
+    ::remote:thread:cleanup "${LOCK_ID?}" ${pid}
     let e=$?
 
     return $e
@@ -565,7 +567,7 @@ function core:thread.ipc() {
     #. Get the mutex and write all data as null-terminated tokens in the
     #. order of: <hcs>, <exit-code>, <stdout>, <stderr>; note that the latter
     #. two can be 0 or more lines.
-    :util:lock on ${LOCK_ID?} $$
+    :util:lock on "${LOCK_ID?}" $$
     printf "%s\0" "${hcs}"   >&3 #. hcs
     cat <&7 >&3; printf "\0" >&3 #. stdout
     cat <&9 >&3; printf "\0" >&3 #. stderr
@@ -574,7 +576,7 @@ function core:thread.ipc() {
         "tries" ${tries}\
                              >&3 #. metadata
     printf "\0"              >&3 #. metadata
-    :util:lock off ${LOCK_ID?} $$
+    :util:lock off "${LOCK_ID?}" $$
     #. }=-
 
     #. Close all read file descriptors

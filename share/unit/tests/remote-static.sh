@@ -191,8 +191,9 @@ function testCoreRemoteSudoInternal() {
 
     truncate -s0 "${g_SSH_MOCK?}.ssh"
     local who
-    who=$(mock:wrapper remote :sudo ${hn} whoami)
+    mock:wrapper remote :sudo ${hn} whoami >"${stdoutF?}" 2>"${stderrF?}"
     assertTrue "${FUNCNAME?}/1" $?
+    who=$(cat "${stdoutF}")
 
     assertEquals "${FUNCNAME?}/1.1" "$(whoami)" "${who}"
 
