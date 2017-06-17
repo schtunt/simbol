@@ -1385,12 +1385,12 @@ function core:compare() {
 }
 
 function core:in() {
-    local -i -a expected=( ${*:3} )
-
-    local -i exp
-    for exp in ${expected[*]}; do
+    local argv="$1"
+    local -a expected=( ${*:2} )
+    local exp
+    for exp in ${expected[@]}; do
         #shellcheck disable=SC2086
-        if [ ${exp} -eq ${argc} ]; then
+        if [ "${exp}" == "${argv}" ]; then
             return ${CODE_SUCCESS?}
         fi
     done
@@ -1399,24 +1399,24 @@ function core:in() {
 }
 
 function core:raise_bad_fn_call_unless() {
-    local argc="$1"
+    local argv="$1"
     local op="$2"
     case "${op}:$#" in
         'in':*)
             local -a expected=( ${@:3} )
             #shellcheck disable=SC2086
-            if ! core:in ${argc} ${op} ${expected[*]}; then
+            if ! core:in ${argv} ${expected[*]}; then
                 core:raise EXCEPTION_BAD_FN_CALL\
-                    "Expected one of ( ${expected[*]} ) arguments, received \`${argc}'"
+                    "Expected one of ( ${expected[*]} ) arguments, received \`${argv}'"
             fi
         ;;
         eq:3|lt:3|gt:3|ge:3|le:3)
             local -i expected; let expected=$3
             #shellcheck disable=SC2086
-            if ! core:compare ${argc} ${op} ${expected}; then
+            if ! core:compare ${argv} ${op} ${expected}; then
                 local -i limit; let limit=expected
                 core:raise EXCEPTION_BAD_FN_CALL\
-                    "Expected \$# -${op} ${limit}, received \`${argc}'"
+                    "Expected \$# -${op} ${limit}, received \`${argv}'"
             fi
         ;;
     esac
