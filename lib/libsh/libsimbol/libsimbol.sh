@@ -209,7 +209,7 @@ source ${SIMBOL_CORE_MOD?}/cpf.sh
 function cpf() { cpf:printf "$@"; return $?; }
 
 [ ${USER_CPF_INDENT_SIZE} -ne 0 ] || USER_CPF_INDENT_SIZE=2
-[ ${USER_CPF_INDENT_STR} != 'UNSET' ] || USER_CPF_INDENT_STR="$(cpf "%{@comment: \\___}")"
+[ "${USER_CPF_INDENT_STR}" != 'UNSET' ] || USER_CPF_INDENT_STR="$(cpf "%{@comment: \\___}")"
 #. }=-
 
 #. }=-
