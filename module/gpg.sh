@@ -1,5 +1,5 @@
 # vim: tw=0:ts=4:sw=4:et:ft=bash
-#shellcheck disable=SC2166
+#shellcheck disable=SC2166,SC2119,SC2120
 
 :<<[core:docstring]
 Core GNUPG module
@@ -29,16 +29,12 @@ function :gpg:version() {
     local gpg_version;
     if gpg_version="$(${gpg_bin} --version | head -n 1 | cut -d' ' -f3)"; then
         case "${gpg_version}" in
-            2.0.*)
-                echo 20
-                let e=CODE_SUCCESS
-            ;;
             2.*)
-                echo 21
+                echo "${gpg_version// /.}"
                 let e=CODE_SUCCESS
             ;;
             *)
-                theme HAS_FAILED "GnuPG version not supported (v${gpg_version})"
+                theme HAS_FAILED "GnuPG version not supported (v${gpg_version// /.})"
             ;;
         esac
     fi
@@ -126,7 +122,7 @@ function :gpg:create() {
     mkdir -p "${GNUPGHOME}"
     chmod 700 "${GNUPGHOME}"
 
-    if [ "${SIMBOL_PROFILE}" == "UNITTEST" ]; then 
+    if [ "${SIMBOL_PROFILE}" == "UNITTEST" ]; then
         passphrase_setting="Passphrase: ${USER_VAULT_PASSPHRASE}"
     else
         passphrase_setting="%ask-passphrase"
@@ -162,14 +158,19 @@ ${passphrase_setting}
         if [ ${PIPESTATUS[0]} -eq 0 ]; then
             if ${gpg_bin} -q --batch --import "${gpgkp}.pub"; then
                 mv "${gpgkp}.pub" "${gpgkp}.${gpgkid}.pub"
-                local -i gpg_version; let gpg_version=$(:gpg:version)
-                if [ ${gpg_version} -le 20 ]; then
-                    if ${gpg_bin} -q --batch --import "${gpgkp}.sec"; then
-                        mv "${gpgkp}.sec" "${gpgkp}.${gpgkid}.sec"
-                    else
-                        core:raise EXCEPTION_SHOULD_NOT_GET_HERE
-                    fi
-                fi
+                local gpg_version=$(:gpg:version)
+                local major minor
+                read major minor _<<<"${gpg_version//./ }"
+
+                case "${major}.${minor}" in
+                    2.0)
+                        if ${gpg_bin} -q --batch --import "${gpgkp}.sec"; then
+                            mv "${gpgkp}.sec" "${gpgkp}.${gpgkid}.sec"
+                        else
+                            core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+                        fi
+                        ;;
+                esac
                 mv "${gpgkp}.conf" "${gpgkp}.${gpgkid}.conf"
                 echo "${gpgkid}"
                 let e=CODE_SUCCESS
@@ -186,7 +187,6 @@ ${passphrase_setting}
 
     return $e
 }
-
 function gpg:create() {
     local -i e; let e=CODE_DEFAULT
     [ $# -eq 0 ] || return $e
@@ -353,13 +353,15 @@ function :gpg:encrypt() {
 }
 #. }=-
 #. gpg:decrypt -={
+
+#shellcheck disable=SC2119
 function :gpg:decrypt() {
     core:raise_bad_fn_call_unless $# in 2
     local -i e; let e=CODE_FAILURE
 
     local input="$1"
     local output="$2"
-    local -i gpg_version; let gpg_version=$(:gpg:version)
+    local gpg_version=$(:gpg:version)
     eval "$(::gpg:keys.eval 'data' '*')"
     local -r gpgkp="$(::gpg:keypath)"
 
@@ -374,17 +376,23 @@ function :gpg:decrypt() {
 
         local gpgkid="${!data[*]}"
         local options=""
+        local major minor release
+        read major minor release <<<"${gpg_version//./ }"
 
-        if [ ${gpg_version} -ge 21 ]; then
-            options="--pinentry-mode loopback"
-        elif [ ${gpg_version} -eq 20 ]; then
-            options="--secret-keyring ${gpgkp}.${gpgkid}.sec"
-        else
-            core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+        case "${major}.${minor}" in
+            2.0) options="--secret-keyring ${gpgkp}.${gpgkid}.sec";;
+            2.1)
+                if [ $release -ge 15 ]; then
+                    options="--pinentry-mode loopback"
+                fi
+                ;;
+            *) core:raise EXCEPTION_SHOULD_NOT_GET_HERE ;;
+        esac
+        if [ "${SIMBOL_PROFILE}" == "UNITTEST" ]; then
+            options+=" --passphrase ${USER_VAULT_PASSPHRASE:-N/A}"
         fi
 
         ${gpg_bin} -q\
-            --passphrase "${USER_VAULT_PASSPHRASE:-N/A}" \
             --yes \
             --batch\
             --trust-model always\
