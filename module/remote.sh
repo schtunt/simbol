@@ -21,11 +21,9 @@ function :remote:connect:passwordless() {
 
     local hcs="$1"
 
-    local extra_SSH_OPTS="-o PasswordAuthentication=no -o StrictHostKeyChecking=no"
-
     local -i rv
     #shellcheck disable=SC2029,SC2086,SC2154
-    let rv=$(ssh ${g_SSH_OPTS[*]} "${extra_SSH_OPTS?}" "${hcs}" -- echo -n "${NOW?}" 2> /dev/null)
+    rv=$(ssh ${g_SSH_OPTS[*]} -o PasswordAuthentication=no -o StrictHostKeyChecking=no "${hcs}" -- echo -n "${NOW?}" 2> /dev/null)
 
     (( $? == CODE_SUCCESS )) && (( rv == NOW ))
     return $?
