@@ -28,7 +28,7 @@ core:requires python
 core:import net
 core:import util
 
-core:softimport ng
+#core:softimport ng
 
 [ -v g_HGD_CACHE ] || declare -g g_HGD_CACHE="${SIMBOL_USER_ETC?}/hgd.conf"
 [ -e "${g_HGD_CACHE?}" ] || touch "${g_HGD_CACHE?}"
@@ -131,7 +131,10 @@ function ::hgd:explode() {
                     IFS='+' read -r -a v <<< "${kvp[1]}"
                     #shellcheck disable=SC2059
                     ${SIMBOL_SHELL:-${SHELL}} -c "$(printf "${USER_HGD_RESOLVERS[${kvp[0]}]}" "${v[@]}")"
+                    let e=$?
                 else
+                    core:log WARNING "Failed to find \`${kvp}' in USER_HGD_RESOLVERS"
+                    core:log WARNING "Valid keys are: ${!USER_HGD_RESOLVERS[*]}"
                     let e=CODE_FAILURE
                 fi
             else
@@ -242,31 +245,29 @@ function :hgd:resolve() {
 
     #. &(...|...) or |(...|...) patterns
     if [[ ${1:0:2} =~ ^[\|\&\!]\($ ]]; then
-        local eq="${1}"
+        local eq="$1"
 
         local buffer
-        buffer="$(::hgd:resolve "${eq}")"
-        #shellcheck disable=SC2086
-        if [ $? -eq ${CODE_SUCCESS?} ] && [ -n "${buffer}" ]; then
-            echo -e "${buffer}" | sets "$eq"
-            e=$?
-        else
-            e=${CODE_FAILURE?}
+        if buffer="$(::hgd:resolve "${eq}")"; then
+            if [ -n "${buffer}" ]; then
+                echo -e "${buffer}" | sets "${eq}"
+                let e=$?
+            fi
         fi
     #. simple alphanumeric patterns
     elif [[ ${1:0:1} =~ ^[a-zA-Z0-9]$ ]]; then
         local session="$1"
         local -a buflist
-        buflist=( $(awk -F '\t' "\$1~/^${session}$/{print\$0}" "${g_HGD_CACHE?}") )
-        #shellcheck disable=SC2086
-        if [ $? -eq ${CODE_SUCCESS?} ] && [ ${#buflist[@]} -gt 3 ]; then
-            let e=CODE_SUCCESS
-            echo "${buflist[@]:3}"
+        if buflist=( $(awk -F '\t' "\$1~/^${session}$/{print\$0}" "${g_HGD_CACHE?}") ); then
+            if [ ${#buflist[@]} -gt 3 ]; then
+                echo "${buflist[@]:3}"
+                let e=CODE_SUCCESS
+            fi
         fi
     else
         local eq="|(${1})"
         :hgd:resolve "${eq}"
-        e=$?
+        let e=$?
     fi
 
     return $e
