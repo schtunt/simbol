@@ -256,7 +256,7 @@ function :util:join() {
         ;;
         *:2)
             local IFS=$1
-            eval "printf \"\${${2}[*]}\""
+            eval "echo -n \"\${${2}[*]}\""
             let e=$?
         ;;
         *:*)
