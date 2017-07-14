@@ -178,6 +178,7 @@ fi
 
 g_SSH_CONF=${SIMBOL_USER_ETC?}/ssh.conf
 [ ! -e "${g_SSH_CONF}" ] || g_SSH_OPTS+=( '-F' "${g_SSH_CONF}" )
+
 #. Defaults and User-Overridables -={
 declare -gi USER_CPF_INDENT_SIZE=0; export USER_CPF_INDENT_SIZE
 declare -g  USER_CPF_INDENT_STR='UNSET'; export USER_CPF_INDENT_STR
@@ -1243,7 +1244,7 @@ function core:wrapper() {
     case $?/${module?}/${fn?} in
         ${CODE_IMPORT_UNSET?}/-/-)                                                                                           let e=CODE_USAGE_MODS ;;
         ${CODE_IMPORT_GOOOD?}/*/-)                                                                                           let e=CODE_USAGE_MOD  ;;
-        ${CODE_IMPORT_GOOOD?}/*/::*) ::core:execute:private  "${module}" "${fn:2}" "${@}" 2>&1 | grep --color -E "${regex}"; let e=PIPESTATUS[0]   ;;
+        ${CODE_IMPORT_GOOOD?}/*/::*) ::core:execute:private  "${module}" "${fn:2}" "${@}" 2>&1                               let e=PIPESTATUS[0]   ;;
         ${CODE_IMPORT_GOOOD?}/*/:*)  ::core:execute:internal "${module}" "${fn:1}" "${@}" 2>&1 | grep --color -E "${regex}"; let e=PIPESTATUS[0]   ;;
         ${CODE_IMPORT_GOOOD?}/*/*)
             local -a completed=( $(:core:complete "${module}" "${fn}") )
