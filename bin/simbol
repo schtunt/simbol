@@ -18,6 +18,7 @@ if [ "${SIMBOL_SHELL:-NilOrNotSet}" != 'NilOrNotSet' ]; then
         fi
     else
         echo "ERROR: The request SIMBOL_SHELL is invalid:" "${SIMBOL_SHELL?}"
+        #shellcheck disable=SC2086
         exit ${CODE_E01?}
     fi
 fi
