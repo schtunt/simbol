@@ -323,7 +323,7 @@ function vault:read:usage() { echo "<secret-id> [<vault>]"; }
 function vault:read() {
     core:raise_bad_fn_call_unless $# in 1 2
     local -i e; let e=CODE_DEFAULT
-    [ $# -eq 1 -o $# -eq 2 ] || return $e
+    [[ $# -eq 1 || $# -eq 2 ]] || return $e
 
     local sid="${1}"
     local vault="${2:-${g_VAULT?}}"
