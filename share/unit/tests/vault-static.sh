@@ -39,7 +39,7 @@ function vaultOneTimeSetUp() {
 }
 
 function vaultSetUp() {
-   assertTrue "{FUNCNAME}/1" $?
+   assertTrue "{FUNCNAME[0]}/1" $?
 
 }
 
@@ -84,19 +84,19 @@ function testCoreVaultCleanPrivate() {
     done
 
     core:wrapper vault ::clean >"${stdoutF?}" 2>"${stderrF?}"
-    assertTrue "${FUNCNAME}/1" $?
-    assertEquals "${FUNCNAME}/2" 600 "$(:util:statmode "${g_VAULT}")"
+    assertTrue "${FUNCNAME[0]}/1" $?
+    assertEquals "${FUNCNAME[0]}/2" 600 "$(:util:statmode "${g_VAULT}")"
 
     test ! -e "${vault_ts}"
-    assertTrue "${FUNCNAME}/3" $?
+    assertTrue "${FUNCNAME[0]}/3" $?
 
     test ! -e "${vault_tmp}"
-    assertTrue "${FUNCNAME}/4" $?
+    assertTrue "${FUNCNAME[0]}/4" $?
 
     #. Back-up should not be removed, just fixed
     test -e "${vault_bu}"
-    assertTrue "${FUNCNAME}/5" $?
-    assertEquals "${FUNCNAME}/6" 400 "$(:util:statmode "${vault_bu}")"
+    assertTrue "${FUNCNAME[0]}/5" $?
+    assertEquals "${FUNCNAME[0]}/6" 400 "$(:util:statmode "${vault_bu}")"
     rm -f "${vault_bu}"
 }
 #. }=-
@@ -104,60 +104,60 @@ function testCoreVaultCleanPrivate() {
 function testCoreVaultCreateInternal() {
     rm -f "${g_VAULT}"
     vault:create "${g_VAULT}" >"${stdoutF?}" 2>"${stderrF?}"
-    assertTrue "${FUNCNAME}/1" $?
+    assertTrue "${FUNCNAME[0]}/1" $?
 
     test -e "${g_VAULT}"
-    assertTrue "${FUNCNAME}/2" $?
+    assertTrue "${FUNCNAME[0]}/2" $?
 }
 #. }=-
 #. testCoreVaultListPublic -={
 function testCoreVaultListPublic() {
     core:wrapper vault list >"${stdoutF?}" 2>"${stderrF?}"
-    assertTrue "${FUNCNAME}/1" $?
+    assertTrue "${FUNCNAME[0]}/1" $?
 }
 #. }=-
 #. testCoreVaultListInternal -={
 function testCoreVaultListInternal() {
     core:wrapper vault :list "${g_VAULT}" >"${stdoutF?}" 2>"${stderrF?}"
-    assertTrue "${FUNCNAME}/1" $?
+    assertTrue "${FUNCNAME[0]}/1" $?
 }
 #. }=-
 #. testCoreVaultEditPublic -={
 function testCoreVaultEditPublic() {
     #shellcheck disable=SC2037
     EDITOR=cat core:wrapper vault edit "${g_VAULT}" >"${stdoutF?}" 2>"${stderrF?}"
-    assertTrue "${FUNCNAME}/1" $?
+    assertTrue "${FUNCNAME[0]}/1" $?
 
     #. No amendments, so no back-up should be created
     test ! -e "${vault_bu}"
-    assertTrue "${FUNCNAME}/2" $?
+    assertTrue "${FUNCNAME[0]}/2" $?
 
     if [ -e $"{vault_bu}" ]; then
         #. TODO: When mid-edit however, check that the backup file created has
         #. TODO: the right mode set
         local mode
         mode=$(:util:statmode "${vault_bu}")
-        assertTrue "${FUNCNAME}/3" $?
-        assertEquals "${FUNCNAME}/4" 400 "${mode}"
+        assertTrue "${FUNCNAME[0]}/3" $?
+        assertEquals "${FUNCNAME[0]}/4" 400 "${mode}"
     fi
 }
 #. }=-
 #. testCoreVaultReadInternal -={
 function testCoreVaultReadInternal() {
     vault:read MY_SECRET_1 >"${stdoutF?}" 2>"${stderrF?}"
-    assertTrue "${FUNCNAME}/1" $?
+    assertTrue "${FUNCNAME[0]}/1" $?
 
     vault:read MY_SECRET_111 >"${stdoutF?}" 2>"${stderrF?}"
-    assertFalse "${FUNCNAME}/2" $?
+    assertFalse "${FUNCNAME[0]}/2" $?
 }
 #. }=-
 #. testCoreVaultReadPublic -={
 function testCoreVaultReadPublic() {
     core:wrapper vault read MY_SECRET_1 >"${stdoutF?}" 2>"${stderrF?}"
-    assertTrue "${FUNCNAME}/1" $?
+    assertTrue "${FUNCNAME[0]}/1" $?
 
     core:wrapper vault read MY_SECRET_111 >"${stdoutF?}" 2>"${stderrF?}"
-    assertFalse "${FUNCNAME}/2" $?
+    assertFalse "${FUNCNAME[0]}/2" $?
 }
 #. }=-
 #. testCoreVaultEncryptionInternal -={
@@ -166,23 +166,23 @@ function testCoreVaultEncryptionInternal() {
     rm -f "${secret}"
     echo "Secret" > "${secret}"
     chmod 600 "${secret}"
-    assertTrue "${FUNCNAME}/1" $?
+    assertTrue "${FUNCNAME[0]}/1" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
     [ "${md5}" == "6657d705191a76297fe693296075b400" ]
-    assertTrue "${FUNCNAME}/2" $?
+    assertTrue "${FUNCNAME[0]}/2" $?
 
     core:wrapper vault :encryption "${secret}" on >"${stdoutF?}" 2>"${stderrF?}"
-    assertTrue "${FUNCNAME}/3" $?
+    assertTrue "${FUNCNAME[0]}/3" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
-    assertNotEquals "${FUNCNAME}/4" "6657d705191a76297fe693296075b400" "${md5}"
+    assertNotEquals "${FUNCNAME[0]}/4" "6657d705191a76297fe693296075b400" "${md5}"
 
     core:wrapper vault :encryption "${secret}" off >"${stdoutF?}" 2>"${stderrF?}"
-    assertTrue "${FUNCNAME}/5" $?
+    assertTrue "${FUNCNAME[0]}/5" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
-    assertEquals "${FUNCNAME}/6" "6657d705191a76297fe693296075b400" "${md5}"
+    assertEquals "${FUNCNAME[0]}/6" "6657d705191a76297fe693296075b400" "${md5}"
 
     rm -f "${secret}"
 }
@@ -193,32 +193,32 @@ function testCoreVaultEncryptPublic() {
     rm -f "${secret}"
     echo "Secret" > "${secret}"
     chmod 600 "${secret}"
-    assertTrue "${FUNCNAME}/1" $?
+    assertTrue "${FUNCNAME[0]}/1" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
-    assertEquals "${FUNCNAME}/2" "6657d705191a76297fe693296075b400" "${md5}"
+    assertEquals "${FUNCNAME[0]}/2" "6657d705191a76297fe693296075b400" "${md5}"
 
     core:wrapper vault encrypt "${secret}" >"${stdoutF?}" 2>"${stderrF?}"
-    assertTrue "${FUNCNAME}/3" $?
+    assertTrue "${FUNCNAME[0]}/3" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
-    assertNotEquals "${FUNCNAME}/4" "6657d705191a76297fe693296075b400" "${md5}"
+    assertNotEquals "${FUNCNAME[0]}/4" "6657d705191a76297fe693296075b400" "${md5}"
 }
 #. }=-
 #. testCoreVaultDecryptPublic -={
 function testCoreVaultDecryptPublic() {
     local secret="${SIMBOL_USER_VAR_TMP}/secret.txt"
     [ -e "${secret}" ]
-    assertTrue "${FUNCNAME}/1" $?
+    assertTrue "${FUNCNAME[0]}/1" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
-    assertNotEquals "${FUNCNAME}/2" "6657d705191a76297fe693296075b400" "${md5}"
+    assertNotEquals "${FUNCNAME[0]}/2" "6657d705191a76297fe693296075b400" "${md5}"
 
     core:wrapper vault decrypt "${secret}" >"${stdoutF?}" 2>"${stderrF?}"
-    assertTrue "${FUNCNAME}/3" $?
+    assertTrue "${FUNCNAME[0]}/3" $?
 
     md5="$(md5sum "${secret}" | awk '{print$1}')"
-    assertEquals "${FUNCNAME}/4" "6657d705191a76297fe693296075b400" "${md5}"
+    assertEquals "${FUNCNAME[0]}/4" "6657d705191a76297fe693296075b400" "${md5}"
 
     rm -f "${secret}"
 }
