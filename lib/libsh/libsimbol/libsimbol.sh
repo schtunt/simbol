@@ -1242,13 +1242,16 @@ function core:wrapper() {
 
     core:softimport "${module}"
     case $?/${module?}/${fn?} in
-        ${CODE_IMPORT_UNSET?}/-/-)                                                                                           let e=CODE_USAGE_MODS ;;
-        ${CODE_IMPORT_GOOOD?}/*/-)                                                                                           let e=CODE_USAGE_MOD  ;;
-        ${CODE_IMPORT_GOOOD?}/*/::*) ::core:execute:private  "${module}" "${fn:2}" "${@}" 2>&1                               let e=PIPESTATUS[0]   ;;
-        ${CODE_IMPORT_GOOOD?}/*/:*)  ::core:execute:internal "${module}" "${fn:1}" "${@}" 2>&1 | grep --color -E "${regex}"; let e=PIPESTATUS[0]   ;;
+        ${CODE_IMPORT_UNSET?}/-/-) let e=CODE_USAGE_MODS ;;
+        ${CODE_IMPORT_GOOOD?}/*/-) let e=CODE_USAGE_MOD  ;;
+        ${CODE_IMPORT_GOOOD?}/*/::*)
+            ::core:execute:private  "${module}" "${fn:2}" "${@}" 2>&1;
+            let e=PIPESTATUS[0] ;;
+        ${CODE_IMPORT_GOOOD?}/*/:*)
+            ::core:execute:internal "${module}" "${fn:1}" "${@}" 2>&1 | grep --color -E "${regex}";
+            let e=PIPESTATUS[0]   ;;
         ${CODE_IMPORT_GOOOD?}/*/*)
             local -a completed=( $(:core:complete "${module}" "${fn}") )
-
             local -A supported_formats=( [html]=1 [email]=1 [ansi]=1 [text]=1 [dot]=0 )
             local format
             if format="$(type -t "${module}:${fn}:formats")"; then
