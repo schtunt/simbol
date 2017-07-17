@@ -28,6 +28,7 @@ env:
     - CONTEXT=execute   MODULE=gpg
     - CONTEXT=execute   MODULE=help
     - CONTEXT=execute   MODULE=hgd
+    - CONTEXT=execute   MODULE=ldap
     - CONTEXT=execute   MODULE=net
     - CONTEXT=execute   MODULE=remote
     - CONTEXT=execute   MODULE=tunnel
@@ -44,6 +45,7 @@ matrix:
     - env: CONTEXT=execute   MODULE=tunnel
     - env: CONTEXT=execute   MODULE=tutorial
     - env: CONTEXT=execute   MODULE=xplm
+    - env: CONTEXT=execute   MODULE=ldap
 
 before_install:
   - sudo apt-get update -qq
