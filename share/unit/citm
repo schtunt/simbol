@@ -21,6 +21,7 @@ declare -g -A PACKAGES=(
     [net]='iproute,net-tools,netcat,socat'
     #[dns,remote]='dnsutils'
     [remote]='tmux,socat,dnsutils'
+    [ldap]='ldap-utils'
 )
 
 function citm:apt_get_install_for() {
