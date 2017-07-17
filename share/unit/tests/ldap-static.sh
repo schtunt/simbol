@@ -10,8 +10,8 @@ function ldapOneTimeSetUp() {
         declare -a USER_LDAPHOSTS_RW=( ldap1.rw.mockery.net ldap2.rw.mochery.net )
         declare USER_GDN="ou=groups,dc=mockery,dc=net"
         export USER_LDAPHOSTS USER_LDAPHOSTS_RW
-	function :vault:read() { return "pa55w0rd; }
-	function ldapsearch() { return true; }
+	    function :vault:read() { echo "pa55w0rd; return 0 }
+	    function ldapsearch() { return 0; }
 !MOCK
 
 }
