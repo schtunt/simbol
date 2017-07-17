@@ -1,4 +1,4 @@
-#shellcheck disable=SC2155
+#shellcheck disable=SC2155,SC2154
 # vim: tw=0:ts=4:sw=4:et:ft=bash
 
 :<<[core:docstring]
@@ -27,13 +27,8 @@ core:requires ldapmodify
 
 #. ldap:host -={
 function :ldap:host() {
-    #. <arguments> = -1:
-    #.    Returns a random LDAP host from the pool
-    #.
-    #. {no-argument} or <arguments> = -2:
-    #.    Returns a random LDAP host from the pool, unless global option for
-    #.    a specific <lhi> (LDAP host identifier) has been set, in which case 
-    #.    that ldap host is returned.
+    #. {no-arguments} = 
+    #.    Returns a random LDAP host from the pool or the globally set g_LDAPHOST
     #.
     #. <arguments> = 0..
     #.    Returns a specific LDAP host if 1 argument is supplied which is
@@ -46,36 +41,26 @@ function :ldap:host() {
     local user_ldaphost=
     case $# in
         0)
-            [ "${g_LDAPHOST?}" -ge 0 ] || g_LDAPHOST=-1
-            user_ldaphost=$(:ldap:host "${g_LDAPHOST?}")
-            let e=$?
+            if (( g_LDAPHOST >= 0 )); then
+            	user_ldaphost=$(:ldap:host "${g_LDAPHOST?}")
+            	let e=$?
+	    else
+            	let e=CODE_SUCCESS
+	    fi
             ;;
         1)
             local -i lhi; let lhi=$1
-            if [ ${lhi} -lt ${#USER_LDAPHOSTS[@]} ]; then
-                case ${lhi} in
-                    0)
-                        user_ldaphost="${USER_LDAPHOSTS[${lhi}]}"
-                        let e=CODE_SUCCESS
-                        ;;
-                    -1)
-                        let e=CODE_SUCCESS
-                        ;;
-                    -2)
-                        [ "${g_LDAPHOST?}" -ge 0 ] || g_LDAPHOST=-1
-                        user_ldaphost=$(:ldap:host "${g_LDAPHOST?}")
-                        let e=$?
-                        ;;
-                     *) core:raise EXCEPTION_BAD_FN_CALL "BAD_INDEX" ;;
-                esac
-            else
+            if [[ ${lhi} -lt ${#USER_LDAPHOSTS[@]} && ${lhi} -ge 0 ]]; then
+            	user_ldaphost="${USER_LDAPHOSTS[${lhi}]}"
+               	let e=CODE_SUCCESS
+	    else
                 core:raise EXCEPTION_BAD_FN_CALL "BAD_INDEX"
-            fi
+            fi 
             ;;
         *) core:raise EXCEPTION_BAD_FN_CALL ;;
     esac
 
-    if (( e == CODE_SUCCESS )) ; then
+    if (( e == CODE_SUCCESS )); then
         if [ ${#user_ldaphost} -eq 0 ]; then
             user_ldaphost="${USER_LDAPHOSTS[$((${RANDOM?}%${#USER_LDAPHOSTS[@]}))]}"
         fi
