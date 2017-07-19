@@ -100,7 +100,7 @@ function :ldap:authenticate() {
     local -i e; let e=CODE_FAILURE
 
     if [ ${#g_PASSWD_CACHED} -eq 0 ]; then
-        g_PASSWD_CACHED="$(:vault:read LDAP)"
+        g_PASSWD_CACHED="$(:vault:read "${g_VAULT}" LDAP)"
         let e=$?
 
         #shellcheck disable=SC2119
@@ -135,7 +135,6 @@ function :ldap:authenticate() {
 
 function ldap:mkldif:usage() { echo "add|modify|replace|delete user|group|netgroup <name> <attr1> <val1> [<val2> [...]] [- <attr2> ...]"; }
 function ldap:mkldif() {
-    core:raise_bad_fn_call_unless $# ge 4
     local -i e; let e=CODE_DEFAULT
 
     vimcat <<< "$(::ldap:mkldif "$@")" >&2
@@ -147,6 +146,8 @@ function ::ldap:mkldif() {
 : <<!
     This function generates an ldif; which is suitable for feeding into
     ldapmodify.
+    <action> <context> <attr> <value> [ <value2> <value3> ... ]
+
 !
     core:raise_bad_fn_call_unless $# gt 3
     local -i e; let e=CODE_FAILURE
@@ -209,6 +210,10 @@ function ::ldap:mkldif() {
 }
 
 function :ldap:modify() {
+: <<!
+    <context> <name> <change> <attr> <value> [ <value2> ... ]
+    Note: maybe consider putting the <change> into first position to align with mkldif
+!
     core:raise_bad_fn_call_unless $# ge 3
     local -i e; let e=CODE_FAILURE
 
