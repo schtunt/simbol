@@ -2,7 +2,8 @@
 #. LDAP -={
 #core|ldap|ngldif|public||foo|||1
 #core|ldap|mkldif|public||add user freddy/fatass balls one-medium one-large - shlong high-girth very-short|||0
-#core|ldap|mkldif|private||add user freddy/fatass balls one-medium one-large - shlong high-girth very-short|55d303f117d5e1b7b4772b4a36aa3c3e||0
+core|ldap|mkldif|private||add netgroup mockery_ng nisNetgroupTriple (host1.mockery.net,,) (host2.mockery.net,,)|52fe9fd001f46d11360c15d11b746b45||0
+core|ldap|mkldif|public||add netgroup mockery_ng nisNetgroupTriple (host1.mockery.net,,) (host2.mockery.net,,)||52fe9fd001f46d11360c15d11b746b45|0
+core|ldap|authenticate|internal|||||0
 #core|ldap|modify|internal
-#core|ldap|modify|private
 #. }=-
