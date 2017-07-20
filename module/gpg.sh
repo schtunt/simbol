@@ -158,9 +158,9 @@ ${passphrase_setting}
         if [ ${PIPESTATUS[0]} -eq 0 ]; then
             if ${gpg_bin} -q --batch --import "${gpgkp}.pub"; then
                 mv "${gpgkp}.pub" "${gpgkp}.${gpgkid}.pub"
-                local gpg_version=$(:gpg:version)
+                local gpg_version; gpg_version=$(:gpg:version)
                 local major minor
-                read major minor _<<<"${gpg_version//./ }"
+                read -r major minor _<<<"${gpg_version//./ }"
 
                 case "${major}.${minor}" in
                     2.0)
@@ -270,7 +270,7 @@ function :gpg:delete() {
     )
     let e=$?
     #shellcheck disable=SC2086
-    if [ $e -eq ${CODE_SUCCESS} -a "${secretkeys:-NilOrNotSet}" != "NilOrNotSet" ]; then
+    if [[ $e -eq ${CODE_SUCCESS} && "${secretkeys:-NilOrNotSet}" != "NilOrNotSet" ]]; then
         local sk
         for sk in "${secretkeys[@]}"; do
             if ! ${gpg_bin} --batch --yes --delete-secret-key "${sk}" 2>/dev/null; then
@@ -295,7 +295,7 @@ function :gpg:delete() {
     rm -f "${gpgkp}.pub" || core:log WARNING "There is no ${gpgkp}.pub to delete."
     rm -f "${gpgkp}.conf" || core:log WARNING "There is no ${gpgkp}.conf to delete"
 
-    if [ -e "${gpgkp}.${gpgkid}.sec" -o -e "${gpgkp}.${gpgkid}.pub" -o -e "${gpgkp}.${gpgkid}.conf" ]; then
+    if [[ -e "${gpgkp}.${gpgkid}.sec" || -e "${gpgkp}.${gpgkid}.pub" || -e "${gpgkp}.${gpgkid}.conf" ]]; then
         let e=CODE_FAILURE
     fi
 
@@ -361,7 +361,7 @@ function :gpg:decrypt() {
 
     local input="$1"
     local output="$2"
-    local gpg_version=$(:gpg:version)
+    local gpg_version; gpg_version=$(:gpg:version)
     eval "$(::gpg:keys.eval 'data' '*')"
     local -r gpgkp="$(::gpg:keypath)"
 
@@ -377,7 +377,7 @@ function :gpg:decrypt() {
         local gpgkid="${!data[*]}"
         local options=""
         local major minor release
-        read major minor release <<<"${gpg_version//./ }"
+        read -r major minor release <<<"${gpg_version//./ }"
 
         case "${major}.${minor}" in
             2.0) options="--secret-keyring ${gpgkp}.${gpgkid}.sec";;

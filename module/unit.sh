@@ -19,7 +19,9 @@ function ::unit:functions() {
         [public]='^function %s:[a-z0-9_]+\(\)'
     )
 
-    local regex; regex="$(printf "${fnregexes[${context}]}" "${module}")"
+    local regex; 
+    #shellcheck disable=SC2059
+    regex="$(printf "${fnregexes[${context}]}" "${module}")"
     grep -oE "${regex}" "${modulepath}" |
         sed -re "s/^function :{0,2}${module?}:([^.()]+)(\.([a-z]+))?\(\)/\1\u\3/"
 }
@@ -172,6 +174,7 @@ function ${utf}Dyn${i}NoArgs() {
         dynamic_tests+=( "${utf}Dyn${i}" )
 
         eval "${testVarDatum}"
+        #shellcheck disable=SC2154
         cat <<!SCRIPT >> "${script_out}"
 #. Dynamic function ${i} for ${utf} [ simbol:${auto_profile}:${auto_module}.${auto_fn}() ] -={
 
@@ -590,7 +593,9 @@ function unit:core() {
     if [ -r "${script}" ]; then
         (
             export g_RUNTIME_SCRIPT="${script}"
+            #shellcheck disable=SC1090
             source "${script}"
+            #shellcheck disable=SC1090
             SHUNIT_PARENT="${script}" source "${SHUNIT2?}"
         )
         ee=$?

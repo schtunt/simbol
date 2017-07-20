@@ -206,6 +206,7 @@ function :remote:sudo() {
     local lckfile; lckfile="$(mktemp)" || return $e
 
     local passwd
+    #shellcheck disable=SC2154
     if passwd="$(:vault:read "${g_VAULT}" SUDO)"; then
         #shellcheck disable=SC2155
         local prompt="$(printf "\r")"
