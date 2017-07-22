@@ -1,0 +1,2 @@
+dn: cn=host1.mockery.net,ou=hosts,dc=mockery,dc=net
+ipHostNumber: 1.2.3.4

@@ -1,0 +1,5 @@
+dn: cn=schtunts,ou=groups,dc=mockery,dc=net
+cn: schtunts
+objectClass: posixGroup
+objectClass: top
+gidNumber: 1000

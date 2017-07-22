@@ -1,0 +1,6 @@
+# vim:syntax=ldif
+dn: cn=mockery_ng,ou=netgroups,dc=sirca,dc=org,dc=au
+changetype: modify
+add: nisNetgroupTriple
+nisNetgroupTriple: (host1.mockery.net,,)
+nisNetgroupTriple: (host2.mockery.net,,)

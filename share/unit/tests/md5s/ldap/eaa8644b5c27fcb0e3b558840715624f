@@ -1,0 +1,13 @@
+dc=mockery,dc=net '(&(uid=schtunt))'
+dn: uid=schtunt,ou=users,dc=mockery,dc=net
+uid: schtunt
+cn: Simbol Schtunt
+sn: Schtunt
+uidNumber: 2128
+gidNumber: 2128
+homeDirectory: /home/schtunt
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetOrgPerson
+objectClass: posixAccount

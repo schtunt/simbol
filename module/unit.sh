@@ -175,6 +175,11 @@ function ${utf}Dyn${i}NoArgs() {
 
         eval "${testVarDatum}"
         #shellcheck disable=SC2154
+        local fnpre=
+        case "${context}" in
+            internal) fnpre=":" ;;
+            private) fnpre="::" ;;
+        esac
         cat <<!SCRIPT >> "${script_out}"
 #. Dynamic function ${i} for ${utf} [ simbol:${auto_profile}:${auto_module}.${auto_fn}() ] -={
 
@@ -202,10 +207,10 @@ function ${utf}Dyn${i}() {
                     if [ "\${regex_stdin:-NilOrNotSet}" == 'NilOrNotSet' ]; then
                         #. We go via the outer core wrapper to ensure user short
                         #. and long options are resovled properly for public functions.
-                        core:wrapper ${auto_module} ${auto_fn} \${argv} >\${stdoutF?} 2>\${stderrF?}
+                        mock:wrapper ${auto_module} ${auto_fn} \${argv} >\${stdoutF?} 2>\${stderrF?}
                         e=\$?
                     else
-                        echo "\${regex_stdin}" | core:wrapper ${auto_module} ${auto_fn} \${argv} >\${stdoutF?} 2>\${stderrF?}
+                        echo "\${regex_stdin}" | mock:wrapper ${auto_module} ${auto_fn} \${argv} >\${stdoutF?} 2>\${stderrF?}
                         e=\$?
                     fi
                 else
@@ -214,10 +219,10 @@ function ${utf}Dyn${i}() {
                         #. for non-public function calls as they do not support
                         #. this, only public functions do, so we can call the
                         #. inner functions directly.
-                        ${ffn} \${argv} >\${stdoutF?} 2>\${stderrF?}
+                        mock:wrapper ${auto_module} ${fnpre}${auto_fn##*:} \${argv} >\${stdoutF?} 2>\${stderrF?}
                         e=\$?
                     else
-                        echo -e "\${regex_stdin}" | ${ffn} \${argv} >\${stdoutF?} 2>\${stderrF?}
+                        echo -e "\${regex_stdin}" | mock:wrapper ${auto_module} ${fnpre}${auto_fn##*:} \${argv} >\${stdoutF?} 2>\${stderrF?}
                         e=\$?
                     fi
                 fi

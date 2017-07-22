@@ -1,0 +1,8 @@
+dn: cn=10.0.0.0/24,ou=subnets,dc=mockery,dc=net
+cn: services
+ipNetmaskNumber: 255.255.255.0
+ipNetworkNumber: 10.0.0.0
+objectClass: ipNetwork
+objectClass: top
+objectClass: labeledURIObject
+objectClass: extensibleObject

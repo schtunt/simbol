@@ -2,8 +2,18 @@
 #. LDAP -={
 #core|ldap|ngldif|public||foo|||1
 #core|ldap|mkldif|public||add user freddy/fatass balls one-medium one-large - shlong high-girth very-short|||0
-core|ldap|mkldif|private||add netgroup mockery_ng nisNetgroupTriple (host1.mockery.net,,) (host2.mockery.net,,)|52fe9fd001f46d11360c15d11b746b45||0
-core|ldap|mkldif|public||add netgroup mockery_ng nisNetgroupTriple (host1.mockery.net,,) (host2.mockery.net,,)||52fe9fd001f46d11360c15d11b746b45|0
+core|ldap|mkldif|private||add netgroup mockery_ng nisNetgroupTriple (host1.mockery.net,,) (host2.mockery.net,,)|a5c04cee101a2b2aa9aeb3302098b29e||0
+core|ldap|mkldif|public||add netgroup mockery_ng nisNetgroupTriple (host1.mockery.net,,) (host2.mockery.net,,)||a5c04cee101a2b2aa9aeb3302098b29e|0
 core|ldap|authenticate|internal|||||0
+core|ldap|search|internal||host cn=host1.mockery.net ipHostNumber|1.2.3.4||0
+core|ldap|search|internal||user uid=schtunt homeDirectory|/home/schtunt||0
+core|ldap|search|internal||group cn=schtunts gidNumber|1000||0
+core|ldap|search|internal||subnet cn=services ipNetworkNumber|10.0.0.0||0
+core|ldap|search|internal||netgroup cn=schtunt-hosts nisNetgroupTriple|(host1.mockery.net,,)*(host2.mockery.net,,)||0
+core|ldap|search|public||host cn=host1.mockery.net ipHostNumber|ipHostNumber.*1.2.3.4||0
+core|ldap|search|public||user uid=schtunt homeDirectory|homeDirectory.*/home/schtunt||0
+core|ldap|search|public||group cn=schtunts gidNumber|gidNumber.*1000||0
+core|ldap|search|public||subnet cn=services ipNetworkNumber|ipNetworkNumber.*10.0.0.0||0
+core|ldap|search|public||netgroup cn=schtunt-hosts nisNetgroupTriple|1b3f75bf07e520aacb19034478456662||0
 #core|ldap|modify|internal
 #. }=-
