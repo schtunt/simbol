@@ -219,10 +219,10 @@ function ${utf}Dyn${i}() {
                         #. for non-public function calls as they do not support
                         #. this, only public functions do, so we can call the
                         #. inner functions directly.
-                        mock:wrapper ${auto_module} ${fnpre}${auto_fn##*:} \${argv} >\${stdoutF?} 2>\${stderrF?}
+                        mock:wrapper ${auto_module} ${fnpre}${ffn##*:} \${argv} >\${stdoutF?} 2>\${stderrF?}
                         e=\$?
                     else
-                        echo -e "\${regex_stdin}" | mock:wrapper ${auto_module} ${fnpre}${auto_fn##*:} \${argv} >\${stdoutF?} 2>\${stderrF?}
+                        echo -e "\${regex_stdin}" | mock:wrapper ${auto_module} ${fnpre}${ffn##*:} \${argv} >\${stdoutF?} 2>\${stderrF?}
                         e=\$?
                     fi
                 fi
