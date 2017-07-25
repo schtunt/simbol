@@ -74,7 +74,7 @@ declare -ri${BASH_DECLARE_GLOBAL_OPTS} CODE_CANCELS=0x82; export CODE_CANCELS
 declare -ri CODE_DEFAULT=CODE_USAGE_FN_LONG; export CODE_DEFAULT
 
 declare -r SIMBOL_DELIM="$(printf "\x07")"; export SIMBOL_DELIM
-declare -r SIMBOL_DELOM="$(printf "\x08")"; export SIMBOL_DELOM
+declare -r SIMBOL_DELOM="$(printf "\x06 ")"; export SIMBOL_DELOM
 
 #. }=-
 
