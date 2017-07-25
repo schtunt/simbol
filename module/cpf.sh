@@ -72,6 +72,8 @@ SIMBOL_OUTPUT_THEME+=(
     [host]='%{y:@%s}'
 
     [int]='%{g:%s}'
+    [key]='%{y:%s}'
+    [val]='%{g:%s}'
 
     [pass]='%{g:%s}'
     [warn]='%{y:%s}'
