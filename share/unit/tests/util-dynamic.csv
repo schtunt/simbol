@@ -8,7 +8,7 @@ core|util|date_i2s|internal||1369369079|20130524041759||0
 core|util|date_s2i|internal||20131230235959|1388447999||0
 core|util|listify|internal||, b,a,d,b,e,e,f|b a d b e e f||0
 core|util|uniq|internal||b a d b e e f|a b d e f||0
-core|util|is_int|internal||-1|||0
+core|util|is_int|internal||-- -1|||0
 core|util|is_int|internal||0|||0
 core|util|is_int|internal||1|||0
 core|util|is_int|internal||a2|||1
