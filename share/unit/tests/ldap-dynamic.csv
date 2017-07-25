@@ -15,5 +15,6 @@ core|ldap|search|public||user uid=schtunt homeDirectory|homeDirectory.*/home/sch
 core|ldap|search|public||group cn=schtunts gidNumber|gidNumber.*1000||0
 core|ldap|search|public||subnet cn=services ipNetworkNumber|ipNetworkNumber.*10.0.0.0||0
 core|ldap|search|public||netgroup cn=schtunt-hosts nisNetgroupTriple|1b3f75bf07e520aacb19034478456662||0
-#core|ldap|modify|internal
+core|ldap|modify|internal||add user schtunt givenName Schtuntson|||0
+core|ldap|modify|internal||add group schtunts memberUid schtunt|||0
 #. }=-

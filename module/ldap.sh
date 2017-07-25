@@ -148,7 +148,9 @@ function ::ldap:mkldif() {
 : <<!
     This function generates an ldif; which is suitable for feeding into
     ldapmodify.
-    <action> <context> <attr> <value> [ <value2> <value3> ... ]
+    <action> <context> <name> <value> [ <value2> <value3> ... ]
+    <context> <name> <change> <attr> <value> [ <value2> ... ]
+    <action> <context> <name> <attr> <value>
 
 !
     core:raise_bad_fn_call_unless $# gt 3
@@ -213,18 +215,17 @@ function ::ldap:mkldif() {
 
 function :ldap:modify() {
 : <<!
-    <context> <name> <change> <attr> <value> [ <value2> ... ]
-    Note: maybe consider putting the <change> into first position to align with mkldif
+    <action> <context> <name> <attr> <value> [ <value2> ... ]
 !
     core:raise_bad_fn_call_unless $# ge 3
     local -i e; let e=CODE_FAILURE
 
-    local context=$1
+    local context=$2
     case ${context} in
         user)
             if :ldap:authenticate; then
-                local username=$2
-                local change=$3
+                local username=$3
+                local change=$1
                 case ${change} in
                     delete|add|replace)
                         shift 3
@@ -248,8 +249,8 @@ function :ldap:modify() {
         ;;
         group)
             if :ldap:authenticate; then
-                local groupname=$2
-                local change=$3
+                local groupname=$3
+                local change=$1
                 case ${change} in
                     modify|delete|add|replace)
                         shift 3
@@ -279,6 +280,7 @@ function :ldap:modify() {
 
 function :ldap:add() {
 :<<:
+    ??? <context> <name> <attr> <value> [ <value2> ... ]
 ...
 :
     core:raise_bad_fn_call_unless $# ge 3

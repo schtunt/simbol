@@ -84,6 +84,11 @@ SIMBOL_OUTPUT_THEME+=(
     [net]='%{c:#%s}'
     [port]='%{g:%s}'
     [ip]='%{m:#%s}'
+    [fqdn]='%{y:%s}'
+    [netgroup]="%{c:%s}"
+    [netgroup_empty]="%{+bo}%{n:%s}%{-bo}"
+    [netgroup_direct]="%{+bo}%{c:%s}%{-bo}"
+    [netgroup_indirect]="%{c:%s}"
 )
 
 #. cpf:module -={

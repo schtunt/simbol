@@ -1,0 +1,16 @@
+#. format: profile|module|function|context|stdin|arguments|stdout|stderr|exitcode
+#. NG -={
+#core|ng|fn|public||foo|||1
+core|ng|summary|public|||dca0ce2ee1321839e54644f724941246||0
+core|ng|search|public||mockery_ng2|8d62dbdbc5d35909015db6c54438207e||0
+core|ng|host|public||host1.mockery.net|f2cd62d1674b4237cdf4790a3137b13c||0
+core|ng|host|internal||host1.mockery.net|2e0374960e65463d3ea3eb2348b53a90||0
+core|ng|hosts|public||mockery_ng_level1|840a474546473897ad29d3670bf77c60||0
+core|ng|hosts|public||mockery_ng_top|ac2bf7dbe3005329a6e12474792633c5||0
+core|ng|hosts|internal||mockery_ng_level1|host1.mockery.net||0
+core|ng|hosts|internal||mockery_ng_top|host1.mockery.net||0
+core|ng|ping|internal||mockery_ng_level1|||0
+core|ng|resolve|internal||mockery_ng_level1|host1.mockery.net||0
+core|ng|resolve|internal||mockery_ng_top|host1.mockery.net||0
+core|ng|tree|public||mockery_ng_top|6e283ad74febdd268b0daa3a476a0e6e||0
+#. }=-
