@@ -55,14 +55,16 @@ function :ldap:host() {
                	let e=CODE_SUCCESS
 	    else
                 core:raise EXCEPTION_BAD_FN_CALL "BAD_INDEX"
-            fi 
+            fi
             ;;
         *) core:raise EXCEPTION_BAD_FN_CALL ;;
     esac
 
     if (( e == CODE_SUCCESS )); then
         if [ ${#user_ldaphost} -eq 0 ]; then
-            user_ldaphost="${USER_LDAPHOSTS[$((${RANDOM?}%${#USER_LDAPHOSTS[@]}))]}"
+            local -i rand; let rand=$((${RANDOM?}%${#USER_LDAPHOSTS[@]}))
+            user_ldaphost="${USER_LDAPHOSTS[${rand}]}"
+            let g_LDAPHOST=${rand}
         fi
         echo "${user_ldaphost}"
     else
@@ -236,7 +238,7 @@ function :ldap:modify() {
                             -c <<< "${ldif}"  >/dev/null 2>&1
                         let e=$?
                         if (( e !=  CODE_SUCCESS )); then
-                            cpf "%{@comment:#. } LDIF %{@err:Failed} with status code %{@int:$e}:\n" >&2
+                            cpf "%{@comment:#. } LDIF %{@error:Failed} with status code %{@int:$e}:\n" >&2
                             vimcat <<< "${ldif}" >&2
                         fi
                     ;;
@@ -567,10 +569,9 @@ function :ldap:search() {
     local -i e; let e=CODE_FAILURE
 
     local bdn
-    local -i lhi; let lhi=0
-    local ldaphost=$(:ldap:host ${lhi})
+    local ldaphost=$(:ldap:host)
 
-    case $2 in
+    case $1 in
         host)     bdn=${USER_HDN?};;
         user)     bdn=${USER_UDN?};;
         group)    bdn=${USER_GDN?};;
@@ -581,9 +582,9 @@ function :ldap:search() {
     if [ ${#bdn} -gt 0 ]; then
         #. Look for filter tokens
         local -a filter
-        local -a display
+        local -a display=( )
         local token
-        for token in "${@:3}"; do
+        for token in "${@:2}"; do
             if [[ ${token} =~ \([-a-zA-Z0-9_]+([~\<\>]?=).+\) ]]; then
                 filter+=( "${token}" )
             elif [[ ${token} =~ [-a-zA-Z0-9_]+([~\<\>]?=).+ ]]; then
@@ -598,7 +599,8 @@ function :ldap:search() {
         done
 
         #. 2 for dn_key and dn_value, and 2 for each additional attr key/value pair requested
-        local -i awknf; let awknf=$((2 + 2*${#display[@]}))
+        local arrlen; let arrlen=$(core:len display)
+        local -i awknf; let awknf=$((2 + 2*arrlen))
 
         #shellcheck disable=SC2016
         local awkfields='$4'
@@ -611,7 +613,7 @@ function :ldap:search() {
         local -l displaystr=$(:util:join ',' display)
         local querystr="ldapsearch -x -LLL -h '${ldaphost}'\
             -p ${USER_LDAPPORT:-389} -x\
-            -b '${bdn}' '${filterstr}' ${display[*]}"
+            -b '${bdn}' '${filterstr}' ${display[*]:-}"
         #cpf "%{@cmd:%s}\n" "${querystr}"
 
         #. TITLE: echo ${display[@]^^}
@@ -620,7 +622,7 @@ function :ldap:search() {
         eval "${querystr}" |
             grep -vE '^#' |
             gawk -v fields=${#display[@]} -v displaystr="${displaystr}" \
-                -v delom="${SIMBOL_DELOM?}" -v delim="${SIMBOL_DELIM?}" '
+                -v delom="${SIMBOL_DELOM}" -v delim="${SIMBOL_DELIM?}" '
 BEGIN{
     FS="\n";
     RS="\n\n";
@@ -669,8 +671,8 @@ function ldap:search() {
     #. If any of the specified attributes are missing, every attribute will
     #. fail.  This can be fixed, but at relatively great expense as each
     #. attribute will result in a dedicated ldap query.
-    core:raise_bad_fn_call_unless $# in 1
     local -i e; let e=CODE_DEFAULT
+    [ $# -gt 1 ] || return $e
 
     local bdn
     case $1 in
@@ -679,10 +681,11 @@ function ldap:search() {
         user)     bdn=${USER_UDN?};;
         group)    bdn=${USER_GDN?};;
         netgroup) bdn=${USER_NDN?};;
+        *) core:raise EXCEPTION_SHOULD_NOT_GET_HERE ;;
     esac
 
     if [ ${#bdn} -gt 0 ]; then
-        local data="$(:ldap:search -2 "$@")"
+        local data="$(:ldap:search "$@")"
         let e=$?
 
         if (( e == CODE_SUCCESS )); then
@@ -702,22 +705,25 @@ function ldap:search() {
                 fi
             done
 
-            while IFS="${SIMBOL_DELIM?}" read -r "${display[@]}"; do
-                for attr in "${display[@]}"; do
-                    local values_raw=${!attr}
-                    if [ ${#values_raw} -gt 0 ]; then
-                        IFS="${SIMBOL_DELOM?}" read -r -a values <<< "${values_raw}"
-                        local value
-                        for value in "${values[@]}"; do
-                            cpf "%{@key:%-32s}%{@val:%s}\n" "${attr}" "${value}"
-                        done
-                    else
-                        cpf "%{@key:%-32s}%{@err:%s}\n" "${attr}" "ERROR"
-                        let e=CODE_FAILURE
-                    fi
-                done
-                echo
-            done <<< "${data}"
+            local -i displaylen; displaylen=$(core:len display)
+            if (( displaylen > 0 )); then
+                while IFS="${SIMBOL_DELIM?}" read -r "${display[@]}" ; do
+                    for attr in "${display[@]}"; do
+                        local values_raw=${!attr}
+                        if [ ${#values_raw} -gt 0 ]; then
+                            IFS="${SIMBOL_DELOM?}" read -r -a values <<< "${values_raw}"
+                            local value
+                            for value in "${values[@]}"; do
+                                cpf "%{@key:%-32s}%{@val:%s}\n" "${attr}" "${value}"
+                            done
+                        else
+                            cpf "%{@key:%-32s}%{@error:%s}\n" "${attr}" "ERROR"
+                            let e=CODE_FAILURE
+                        fi
+                    done
+                    echo
+                done <<< "${data}"
+            fi
         else
             theme HAS_FAILED "UNKNOWN ERROR"
         fi
