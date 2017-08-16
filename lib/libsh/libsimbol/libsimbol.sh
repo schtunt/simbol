@@ -338,10 +338,10 @@ function core:imported() {
     local -i e; let e=CODE_FAILURE
 
     local module=$1
-    if [ ! -z "${g_SIMBOL_IMPORTED_EXIT[${module}]}" ]; then
-        e=${g_SIMBOL_IMPORTED_EXIT[${module}]}
-    else
+    if [ "${g_SIMBOL_IMPORTED_EXIT[${module}]:-NilOrNotSet}" == 'NilOrNotSet' ]; then
         core:raise EXCEPTION_SHOULD_NOT_GET_HERE
+    else
+        e=${g_SIMBOL_IMPORTED_EXIT[${module}]}
     fi
 
     return $e
